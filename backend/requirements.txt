@@ -1,0 +1,25 @@
+
+fastapi
+uvicorn
+motor
+celery
+redis
+python-multipart
+python-jose
+passlib
+bcrypt
+httpx
+beautifulsoup4
+pytest
+pydantic[email]
+pydantic-settings
+email-validator
+requests
+aiohttp
+selenium
+webdriver-manager
+loguru
+pandas
+numpy
+transformers # For simulated AI logic if needed
+langchain-core # if needed for AI

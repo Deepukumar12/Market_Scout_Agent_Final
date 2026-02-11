@@ -1,0 +1,50 @@
+{
+    "name": "scoutiq-frontend",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@hookform/resolvers": "^5.2.2",
+        "@radix-ui/react-accordion": "^1.2.12",
+        "@radix-ui/react-slot": "^1.2.4",
+        "@react-three/drei": "^9.100.0",
+        "@react-three/fiber": "^8.15.0",
+        "@tanstack/react-query": "^5.90.20",
+        "@types/jsonwebtoken": "^9.0.10",
+        "axios": "^1.6.0",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "framer-motion": "^11.18.2",
+        "hamburger-react": "^2.5.2",
+        "jsonwebtoken": "^9.0.3",
+        "jwt-decode": "^4.0.0",
+        "lucide-react": "^0.300.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-hook-form": "^7.71.1",
+        "react-router-dom": "^7.13.0",
+        "recharts": "^2.10.0",
+        "tailwind-merge": "^2.6.1",
+        "tailwindcss-animate": "^1.0.7",
+        "three": "^0.160.0",
+        "zod": "^4.3.6",
+        "zustand": "^4.5.0"
+    },
+    "devDependencies": {
+        "@types/node": "^25.2.3",
+        "@types/react": "^18.2.43",
+        "@types/react-dom": "^18.3.7",
+        "@vitejs/plugin-react": "^4.2.1",
+        "autoprefixer": "^10.4.16",
+        "postcss": "^8.4.32",
+        "tailwindcss": "^3.4.0",
+        "typescript": "^5.3.3",
+        "vite": "^5.0.0"
+    }
+}
