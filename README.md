@@ -137,4 +137,4 @@ TAVILY_API_KEY=your_tavily_key
 
 ---
 
-Developed with ❤️ by the **ScoutIQ Engineering Team**.
+Developed with ❤️ by the **SingularSolution Team**.
