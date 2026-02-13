@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { Plus, Rocket, AlertTriangle, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import ThreeHero from './ThreeHero';
 
 const CompetitorCard = ({ name, status, risk, last_scan }: any) => (
   <motion.div
@@ -123,6 +124,9 @@ const DashboardPage = () => {
           </Button>
         </motion.div>
       </div>
+      
+      {/* 3D Hero Section */}
+      <ThreeHero />
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
