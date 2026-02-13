@@ -13,6 +13,8 @@ import RiskPage from '@/features/dashboard/RiskPage';
 import SettingsPage from '@/features/dashboard/SettingsPage';
 import AddCompetitorPage from '@/features/dashboard/AddCompetitorPage';
 import IntelligenceReportPage from '@/features/dashboard/IntelligenceReportPage';
+import PredictiveAnalyticsPage from '@/features/dashboard/PredictiveAnalyticsPage';
+import SentimentAnalysisPage from '@/features/dashboard/SentimentAnalysisPage';
 import { AuthLayout } from '@/features/auth/AuthLayout';
 import { LoginForm } from '@/features/auth/LoginForm';
 import { RegisterForm } from '@/features/auth/RegisterForm';
@@ -72,6 +74,14 @@ const router = createBrowserRouter([
           {
             path: "add-competitor",
             element: <AddCompetitorPage />,
+          },
+          {
+            path: "predictive-analytics",
+            element: <PredictiveAnalyticsPage />,
+          },
+          {
+            path: "sentiment-analysis",
+            element: <SentimentAnalysisPage />,
           },
           {
             path: "competitors",

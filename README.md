@@ -1,133 +1,140 @@
-
 # 🦅 SCOUTIQ: Autonomous Competitive Intelligence Platform
 
-**ScoutIQ** is an enterprise-grade AI market intelligence system designed to autonomously monitor competitors, analyze market trends, and extract real-time insights using a sophisticated 5-step agentic pipeline.
+**ScoutIQ** is a state-of-the-art AI-driven market intelligence platform. It empowers enterprises to monitor competitors, track industry trends, and synthesize technical intelligence with surgical precision. Unlike traditional tools, ScoutIQ uses an autonomous agentic architecture to eliminate hallucinations and deliver verified, actionable insights.
 
 ---
 
-## 🚀 Key Features
+## ✨ Premium Features
 
-### 🧠 Autonomous Agentic Pipeline
-Our proprietary 5-step pipeline ensures high-fidelity intelligence gathering without hallucinations:
-1.  **Query Planning**: Breaks down complex market research tasks into multi-layered search objectives.
-2.  **Search Execution**: Orchestrates high-speed data retrieval via Serper.dev and Tavily API.
-3.  **Intelligent Scraping**: Leverages ZenRows for anti-bot bypass and headless browsing to capture raw web content.
-4.  **Content Filtering**: Processes unstructured data to extract technically relevant and time-sensitive information.
-5.  **Gemini Analysis**: Utilizes Google Gemini to synthesize gathered data into structured, actionable intelligence reports.
+### 🧠 Dual-Core AI Architecture
+ScoutIQ operates with two distinct intelligence pipelines tailored for different depth levels:
 
-### 📊 Investor-Grade Dashboard
-- **Real-time Statistics**: Live monitoring of competitor activity.
-- **Glassmorphic UI**: High-end aesthetic with frosted glass effects and smooth transitions.
-- **Interactive 3D Visuals**: Integrated Three.js globe for global market presence visualization.
-- **Log Console**: Real-time WebSocket-based streaming of AI agent activities for full transparency.
+1.  **The Strict 5-Step Pipeline (Structured)**:
+    -   **Step 1: Query Planning**: LLM-driven decomposition of research objectives into multi-layered search queries.
+    -   **Step 2: Distributed Search**: High-speed data retrieval using Serper.dev, orchestrating multiple concurrent searches.
+    -   **Step 3: Intelligence Scraping**: Headless browsing via ZenRows with built-in anti-bot bypass and precision timestamp extraction.
+    -   **Step 4: Technical Filtering**: Advanced discarding of irrelevant content (hiring, financing, marketing fluff) to focus solely on product and technology updates.
+    -   **Step 5: Synthesized Analysis**: Google Gemini 1.5 Pro performs structured data extraction, ensuring every insight is tied to a verified source URL.
 
-### 🔐 Enterprise Security
-- **JWT Authentication**: Secure user sessions with profile management.
-- **Role-Based Access**: Designed for multi-tenant organizations.
+2.  **The Markdown Agent (Ad-hoc Analysis)**:
+    -   Powered by **Groq (Llama 3)** and **Tavily**.
+    -   Designed for rapid, high-context markdown reports during live research sessions.
 
----
-
-## 🛠 Tech Stack
-
-### Backend
-- **Framework**: FastAPI (Python)
-- **Database**: MongoDB (Motor / Async)
-- **AI/LLM**: Google Gemini, Groq, LangChain
-- **Search & Scraping**: Serper.dev, Tavily, ZenRows, BeautifulSoup4
-- **Real-time**: WebSockets
-- **Task Management**: Celery & Redis (Async Pipeline Support)
-
-### Frontend
-- **Framework**: React 18, Vite, TypeScript
-- **Styling**: Tailwind CSS, Framer Motion (Animations), Lucid React
-- **Visualization**: Three.js (@react-three/fiber, @react-three/drei), Recharts
-- **State Management**: Zustand, React Query (TanStack)
+### 📊 Next-Gen Dashboard Experience
+-   **Glassmorphic Interface**: A sleek, dark-mode UI built with Tailwind CSS and Framer Motion for a premium feel.
+-   **Live Log Streaming**: Real-time feedback via WebSockets, allowing users to watch the AI's "thought process" as it scans the web.
+-   **Advanced Analytics Suite**:
+    -   **Predictive Analysis**: Forecast move probability based on historical data.
+    -   **Sentiment Tracking**: Monitor market perception across technical documentation and news.
+    -   **Risk Assessment**: Automated SWOT analysis based on competitor product releases.
+-   **Interactive Data Visuals**: Recharts and Three.js integration for visualizing market share and global technical presence.
 
 ---
 
-## ⚙️ Installation & Setup
+## 🛠 Advanced Tech Stack
+
+| Layer | Technologies |
+| :--- | :--- |
+| **Backend** | Python 3.10+, FastAPI, MongoDB (Motor), Redis, Celery |
+| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS, Framer Motion |
+| **AI Models** | Google Gemini 1.5 Pro, Groq (Llama 3), LangChain |
+| **Infrastructure** | Serper.dev (Search), Tavily (Discovery), ZenRows (Anti-Bot Scraper) |
+| **Real-time** | Native WebSockets for live agent log streaming |
+
+---
+
+## 📂 Project Architecture
+
+```text
+MarketScoutAgent/
+├── backend/
+│   ├── app/
+│   │   ├── api/             # FastAPI Route Handlers (Auth, Competitors, Scans, Logs)
+│   │   ├── services/        # Orchestration (Scan Pipelines, Gemini Client, Search)
+│   │   ├── models/          # MongoDB & Pydantic Schemas
+│   │   ├── core/            # Config, Security (JWT), Database Init
+│   │   └── agent.py         # Markdown Agent Implementation
+│   └── .env                 # Backend Configuration Settings
+├── frontend/
+│   ├── src/
+│   │   ├── features/        # Modular Feature logic (Dashboard, Competitors, Analytics)
+│   │   ├── services/        # API communication layer (Axios)
+│   │   ├── store/           # Global State (Zustand)
+│   │   ├── components/      # UI Components (Glassmorphism, Animations)
+│   │   └── hooks/           # Custom React Hooks
+│   └── tailwind.config.js   # Custom Design System
+└── run.bat                  # Unified startup script
+```
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (v18+)
-- Python (v3.9+)
-- MongoDB (Running locally or MongoDB Atlas)
-- Redis (Optional, required for Celery tasks)
+- Python 3.9+ & Node.js 18+
+- MongoDB instance (Local or Atlas)
+- Serper, ZenRows, and Gemini/Groq API Keys
 
-### 1. Backend Configuration
+### 1. Repository Setup
 ```bash
-# Navigate to backend
+git clone https://github.com/suman4132/Market_Scout_Agent.git
+cd Market_Scout_Agent
+```
+
+### 2. Backend Initialization
+```bash
 cd backend
-
-# Create and activate virtual environment
 python -m venv venv
-.\venv\Scripts\activate  # Windows
-source venv/bin/activate # Unix/macOS
-
-# Install dependencies
+.\venv\Scripts\activate
 pip install -r requirements.txt
-
-# Create .env file from template (see Environment Variables section below)
-# Then run the server
+# Configure your .env (see below)
 python app/main.py
 ```
-Backend API will be available at `http://localhost:8000`
 
-### 2. Frontend Configuration
+### 3. Frontend Initialization
 ```bash
-# Navigate to frontend
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
-Frontend will be available at `http://localhost:5173`
 
 ---
 
-## 🔑 Environment Variables
+## 🔑 Environment Configuration
 
-Create a `.env` file in the `/backend` directory:
+Create a `.env` file in the `backend/` directory:
 
 ```env
 # Database
 MONGODB_URL=mongodb://localhost:27017
 DATABASE_NAME=scoutiq_db
 
-# Security
-SECRET_KEY=your-super-secret-key-here
+# Security & Auth
+SECRET_KEY=your_secure_random_string
 
-# API Keys (Required for full functionality)
-GEMINI_API_KEY=your_gemini_api_key
-SERPER_API_KEY=your_serper_api_key
-ZENROWS_API_KEY=your_zenrows_api_key
-TAVILY_API_KEY=your_tavily_api_key
-GROQ_API_KEY=your_groq_api_key
+# API Keys
+GEMINI_API_KEY=your_gemini_key
+GROQ_API_KEY=your_groq_key
+SERPER_API_KEY=your_serper_key
+ZENROWS_API_KEY=your_zenrows_key
+TAVILY_API_KEY=your_tavily_key
 ```
 
 ---
 
-## 📂 Project Structure
+## 🗺 Roadmap & Current Status
 
-- `backend/app/api`: FastAPI route handlers.
-- `backend/app/services`: Core logic for AI agents and external API clients.
-- `backend/app/models`: Pydantic and MongoDB data models.
-- `frontend/src/features`: Feature-based modular UI components.
-- `frontend/src/store`: Centralized state management using Zustand.
-- `frontend/src/services`: API abstraction layer.
+### Verified Working ✅
+- Fully functional JWT Authentication & Profile management.
+- Dual-pipeline agentic execution with real search and anti-bot scraping.
+- Live log streaming dashboard.
+- Modular React architecture with unified state management.
 
----
-
-## 📖 Usage Guide
-
-1.  **Launch the System**: Run both backend and frontend.
-2.  **Authentication**: Register a new account or log in.
-3.  **Add Competitors**: Navigate to the "Add Competitor" page to start monitoring a company.
-4.  **Run Pipeline**: Click "Trigger Scan" or use the "ScoutIQ Agent" from the dashboard to run the 5-step intelligence pipeline.
-5.  **Monitor Logs**: Open the "Live Logs" console in the bottom right to see the agent's real-time step-by-step progress.
+### In Progress / Planned 🏗
+- **Historical Reports**: Implementation of a persistent report archive to track changes over time.
+- **Competitor Deletion**: Finalizing the soft-delete mechanism for tracked companies.
+- **Multi-Tenant Workspaces**: Inviting team members to shared market intelligence boards.
 
 ---
 
-Developed with ❤️ by the ScoutIQ Team.
+Developed with ❤️ by the **ScoutIQ Engineering Team**.
