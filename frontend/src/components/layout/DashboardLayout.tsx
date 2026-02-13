@@ -2,10 +2,18 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
 import { Button } from '@/components/ui/button';
-import { Search, Bell } from 'lucide-react';
+import { Search, Bell, User } from 'lucide-react';
 import LogConsole from '@/features/dashboard/LogConsole';
+import { useAuthStore } from '@/store/authStore';
 
 const DashboardLayout = () => {
+  const { user } = useAuthStore();
+  
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
+  };
+
   return (
     <div className="flex w-full h-screen bg-black text-white">
       <Sidebar />
@@ -24,7 +32,20 @@ const DashboardLayout = () => {
             <Button variant="ghost" size="icon" className="hover:bg-white/10">
               <Bell className="h-5 w-5 text-gray-400" />
             </Button>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 border border-white/20"></div>
+            
+            <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+                <div className="flex flex-col items-end hidden md:flex">
+                    <span className="text-sm font-medium text-white">
+                        {user?.full_name || 'User'}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                        {user?.email || ''}
+                    </span>
+                </div>
+                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 border border-white/20 flex items-center justify-center text-sm font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                    {user?.full_name ? getInitials(user.full_name) : <User className="h-4 w-4" />}
+                </div>
+            </div>
           </div>
         </header>
         

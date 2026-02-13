@@ -1,9 +1,17 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { Terminal, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
+
+// WebSocket must connect to the backend. In dev, Vite proxies /ws to backend; fallback to direct backend URL.
+const getWsBase = () => {
+  const env = import.meta.env.VITE_WS_URL;
+  if (env) return env.replace(/^http/, 'ws');
+  if (import.meta.env.DEV) return 'ws://localhost:8000';
+  const { protocol, host } = window.location;
+  return protocol === 'https:' ? `wss://${host}` : `ws://${host}`;
+};
 
 export default function LogConsole() {
   const [logs, setLogs] = useState<string[]>([]);
@@ -13,31 +21,36 @@ export default function LogConsole() {
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    // Only establish a WebSocket connection when we have an auth token
-    if (!token) {
-      return;
-    }
+    // Connect regardless of token to show demo logs
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host; // Use current host (localhost:5173) which proxies to backend
-    const url = `${protocol}//${host}/ws/logs?token=${encodeURIComponent(token)}`;
+    const wsBase = getWsBase();
+    const url = token 
+      ? `${wsBase}/ws/logs?token=${encodeURIComponent(token)}`
+      : `${wsBase}/ws/logs`;
+    const socket = new WebSocket(url);
 
-    ws.current = new WebSocket(url);
-
-    ws.current.onopen = () => {
+    socket.onopen = () => {
       setLogs((prev) => [...prev, "SYSTEM: Connected to ScoutIQ Agent Network..."]);
     };
 
-    ws.current.onmessage = (event) => {
-      setLogs((prev) => [...prev.slice(-100), event.data]); // Keep last 100 logs
+    socket.onmessage = (event) => {
+      setLogs((prev) => [...prev.slice(-100), event.data]);
     };
 
-    ws.current.onclose = () => {
+    socket.onclose = () => {
       setLogs((prev) => [...prev, "SYSTEM: Connection closed."]);
     };
 
+    socket.onerror = () => {
+      setLogs((prev) => [...prev, "SYSTEM: WebSocket error."]);
+    };
+
+    ws.current = socket;
     return () => {
-      ws.current?.close();
+      if (ws.current === socket) {
+        socket.close();
+        ws.current = null;
+      }
     };
   }, [token]);
 

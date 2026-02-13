@@ -1,77 +1,51 @@
-
-from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional
-
-from app.core import database
-from app.core import config
-from app.api.api import api_router
 from contextlib import asynccontextmanager
-
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import os
+import logging
 
-# Create async context manager for lifespan events (startup/shutdown)
+from app.core.database import db
+from app.api.api import api_router
+from app.api.auth import router as auth_router
+# from app.agent import run_agent # Removed as moved to router
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Connect to DB
-    print("Connecting to MongoDB...")
-    await database.db.connect()
-    
-    # Create demo user
-    try:
-        from app.core.security import get_password_hash
-        collection = database.db.db["users"]
-        if not await collection.find_one({"email": "demo@scoutiq.ai"}):
-            demo_user = {
-                "email": "demo@scoutiq.ai",
-                "hashed_password": get_password_hash("demo123"),
-                "full_name": "Demo Agent",
-                "role": "user",
-                "is_active": True
-            }
-            await collection.insert_one(demo_user)
-            print("Demo user created: demo@scoutiq.ai / demo123")
-    except Exception as e:
-        print(f"Failed to create demo user: {e}")
-
+    await db.connect()
+    from app.core.config import settings
+    logger.info(f"SERPER_API_KEY configured: {bool(settings.SERPER_API_KEY)}")
+    logger.info(f"GROQ_API_KEY configured: {bool(settings.GROQ_API_KEY)}")
     yield
-    
-    # Shutdown: Disconnect from DB
-    print("Disconnecting from MongoDB...")
-    database.db.disconnect()
+    # Shutdown: Disconnect DB
+    db.disconnect()
 
-app = FastAPI(
-    title="SCOUTIQ API", 
-    version="1.0.0",
-    lifespan=lifespan
-)
+app = FastAPI(title="MarketScout Agent Backend", lifespan=lifespan)
 
-# Origins for CORS
-origins = [
-    "http://localhost:5173", # Vite dev server
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "*" # For now, allow all
-]
-
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
+    allow_origins=["*"],  # Restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Include API Routers
+# api_router includes: /competitors, /reports, /scan, /websockets AND NOW /agent (markdown)
+# All under /api/v1 prefix
 app.include_router(api_router)
-from app.api.auth import router as auth_router
+
+# Include Auth Router
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
-from app.api.websockets import router as ws_router
-app.include_router(ws_router)
 
 @app.get("/")
 def read_root():
-    return {"status": "ok", "message": "SCOUTIQ API is running."}
+    return {"message": "MarketScout Agent API is running."}
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

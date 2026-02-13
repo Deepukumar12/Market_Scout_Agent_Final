@@ -1,4 +1,3 @@
-
 fastapi
 uvicorn
 motor
@@ -7,7 +6,7 @@ redis
 python-multipart
 python-jose
 passlib
-bcrypt
+argon2-cffi
 httpx
 beautifulsoup4
 pytest
@@ -21,5 +20,9 @@ webdriver-manager
 loguru
 pandas
 numpy
-transformers # For simulated AI logic if needed
-langchain-core # if needed for AI
+transformers
+langchain-core
+groq
+tavily-python
+python-dotenv
+bcrypt

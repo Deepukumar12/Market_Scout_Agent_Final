@@ -12,6 +12,7 @@ import AnalyticsPage from '@/features/dashboard/AnalyticsPage';
 import RiskPage from '@/features/dashboard/RiskPage';
 import SettingsPage from '@/features/dashboard/SettingsPage';
 import AddCompetitorPage from '@/features/dashboard/AddCompetitorPage';
+import IntelligenceReportPage from '@/features/dashboard/IntelligenceReportPage';
 import { AuthLayout } from '@/features/auth/AuthLayout';
 import { LoginForm } from '@/features/auth/LoginForm';
 import { RegisterForm } from '@/features/auth/RegisterForm';
@@ -28,7 +29,11 @@ const App = () => {
 };
 
 const ProtectedDashboard = () => {
-  const token = useAuthStore((state) => state.token);
+  const { token, loading } = useAuthStore();
+  
+  if (loading) {
+    return <div className="h-screen w-screen flex items-center justify-center bg-[#030711] text-white">Loading...</div>;
+  }
 
   if (!token) {
     return <Navigate to="/login" replace />;
@@ -71,6 +76,10 @@ const router = createBrowserRouter([
           {
             path: "competitors",
             element: <CompetitorsPage />,
+          },
+          {
+            path: "competitors/:id/report",
+            element: <IntelligenceReportPage />,
           },
           {
             path: "reports",

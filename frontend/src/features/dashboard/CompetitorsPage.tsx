@@ -71,11 +71,12 @@ const CompetitorsPage = () => {
         <div className="divide-y divide-white/5">
           {competitors.map((c: any, idx: number) => (
             <motion.div
-              key={c._id || c.name || idx}
+              key={c._id || c.id || c.name || idx}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: idx * 0.03 }}
-              className="grid grid-cols-[minmax(0,1fr)_96px_128px_160px] items-center px-6 py-3 text-sm text-gray-200 hover:bg-white/5 transition-colors"
+              className="grid grid-cols-[minmax(0,1fr)_96px_128px_160px] items-center px-6 py-3 text-sm text-gray-200 hover:bg-white/5 transition-colors cursor-pointer"
+              onClick={() => navigate(`/dashboard/competitors/${c._id || c.id}/report`)}
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-xs font-mono text-cyan-300 border border-white/10">

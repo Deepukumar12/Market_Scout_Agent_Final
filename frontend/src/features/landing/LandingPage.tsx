@@ -31,7 +31,7 @@ export default function LandingPage() {
           <Link to="/login">
             <Button variant="ghost" className="text-gray-300 hover:text-white">Log in</Button>
           </Link>
-            <Link to="/register">
+            <Link to="/dashboard">
               <Button variant="neon" className="font-bold">
                 Get Intelligence <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
@@ -71,7 +71,7 @@ export default function LandingPage() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
-              <Link to="/register">
+              <Link to="/dashboard">
                 <Button variant="neon" size="lg" className="w-full sm:w-auto text-md px-8 py-6 h-auto shadow-[0_0_20px_rgba(6,182,212,0.4)]">
                   Launch Console
                 </Button>
@@ -181,7 +181,7 @@ export default function LandingPage() {
              <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
                Join the top 1% of strategy teams using ScoutIQ to stay ahead of the curve.
              </p>
-             <Link to="/register">
+             <Link to="/dashboard">
                 <Button variant="neon" size="lg" className="px-12 py-8 text-xl rounded-full shadow-[0_0_40px_rgba(0,240,255,0.3)] hover:shadow-[0_0_60px_rgba(0,240,255,0.5)] transition-shadow duration-500">
                   Start Deployment <ArrowRight className="ml-2 w-6 h-6" />
                 </Button>

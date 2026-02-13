@@ -7,9 +7,12 @@ class Database:
     db = None
 
     async def connect(self):
+        from app.core.config import settings
+        # Ensure we are using the current event loop
         self.client = AsyncIOMotorClient(settings.MONGODB_URL)
+        print(f"Connecting to MongoDB at {settings.MONGODB_URL}...")
         self.db = self.client[settings.DATABASE_NAME]
-        print("Connected to MongoDB")
+        print(f"Connected to DB: {settings.DATABASE_NAME}")
 
     def disconnect(self):
         if self.client:
@@ -19,4 +22,6 @@ class Database:
 db = Database()
 
 async def get_database():
+    if db.db is None:
+        await db.connect()
     return db.db

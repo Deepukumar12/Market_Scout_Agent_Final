@@ -3,10 +3,11 @@ import { create } from 'zustand';
 import { getCompetitors, createCompetitor } from '../services/api';
 
 interface Competitor {
-    id: string;
+    id?: string;
+    _id?: string;
     name: string;
     url: string;
-    count: number;
+    count?: number;
 }
 
 interface CompetitorState {
@@ -14,7 +15,7 @@ interface CompetitorState {
     loading: boolean;
     error: string | null;
     fetchCompetitors: () => Promise<void>;
-    addCompetitor: (name: string, url: string) => Promise<void>;
+    addCompetitor: (name: string, url: string) => Promise<Competitor | null>;
 }
 
 // @ts-ignore
@@ -33,11 +34,17 @@ export const useCompetitorStore = create<any>((set: any) => ({
     },
     addCompetitor: async (name: string, url: string) => {
         try {
-            // Optimistic update logic could go here
-            const newOne = await createCompetitor({ name, url, monitoring_enabled: true, scan_frequency: 'Daily' });
-            set((state) => ({ competitors: [...state.competitors, newOne] }));
+            const newOne = await createCompetitor({
+                name,
+                url,
+                monitoring_enabled: true,
+                scan_frequency: 'Daily',
+            });
+            set((state: any) => ({ competitors: [...state.competitors, newOne] }));
+            return newOne;
         } catch (err) {
             console.error(err);
+            return null;
         }
     },
 }));

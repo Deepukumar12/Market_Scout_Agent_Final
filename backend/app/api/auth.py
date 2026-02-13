@@ -5,8 +5,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core import config
 from app.core.database import db
-from app.core.security import create_access_token, get_password_hash, verify_password
-from app.models.user import UserCreate
+from app.core.security import create_access_token, get_current_user, get_password_hash, verify_password
+from app.models.user import User, UserCreate
 
 router = APIRouter()
 
@@ -18,11 +18,11 @@ async def register(user: UserCreate):
     considered authenticated right after signup.
     """
     print(f"DEBUG: Registering user {user.email}")
-    if db.db is None:
-        print("ERROR: db.db is None")
-        raise HTTPException(status_code=500, detail="Database not connected")
+    
+    from app.core.database import get_database
+    database = await get_database()
 
-    collection = db.db["users"]
+    collection = database["users"]
     existing_user = await collection.find_one({"email": user.email})
     if existing_user:
         print(f"ERROR: Email {user.email} already exists")
@@ -72,11 +72,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     OAuth2 password flow-compatible login endpoint that returns a signed JWT.
     """
     try:
-        if db.db is None:
-            raise HTTPException(status_code=500, detail="Database not connected")
+        from app.core.database import get_database
+        database = await get_database()
 
-        collection = db.db["users"]
+        collection = database["users"]
         user = await collection.find_one({"email": form_data.username})
+        
+        print(f"DEBUG: Login attempt for {form_data.username}, found user: {user is not None}")
 
         if not user or not verify_password(form_data.password, user["hashed_password"]):
             raise HTTPException(
@@ -106,3 +108,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             raise e
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+@router.get("/me", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    """
+    Get current logged in user details.
+    """
+    return current_user

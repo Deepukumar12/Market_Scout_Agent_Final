@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import api, { login, register } from '../services/api';
+import api, { login, register, getCurrentUser } from '../services/api';
 
 interface AuthState {
     user: any | null;
@@ -11,6 +11,7 @@ interface AuthState {
     register: (data: any) => Promise<void>;
     logout: () => void;
     initialize: () => void;
+    fetchUser: () => Promise<void>;
 }
 
 // Simple JWT decoder for client-side use
@@ -41,7 +42,7 @@ function isTokenExpired(token: string): boolean {
     }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
     token: localStorage.getItem('scoutiq_token'),
     loading: false,
@@ -58,12 +59,26 @@ export const useAuthStore = create<AuthState>((set) => ({
 
             try {
                 const decoded = parseJwt(token);
+                // Set initial state from token
                 set({ user: decoded, token });
                 api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+                // Fetch fresh user data from backend
+                get().fetchUser();
             } catch (e) {
                 localStorage.removeItem('scoutiq_token');
                 set({ token: null, user: null });
             }
+        }
+    },
+
+    fetchUser: async () => {
+        try {
+            const userData = await getCurrentUser();
+            set({ user: userData });
+        } catch (error) {
+            console.error("Failed to fetch user profile", error);
+            // Optionally logout if 401?
         }
     },
 
