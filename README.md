@@ -20,14 +20,21 @@ ScoutIQ operates with two distinct intelligence pipelines tailored for different
     -   Powered by **Groq (Llama 3)** and **Tavily**.
     -   Designed for rapid, high-context markdown reports during live research sessions.
 
+### 🚀 Strategic Intelligence Engine (NEW)
+-   **AI Feature Lab**: A specialized module that generates detailed "Feature Proposals" based on market signals. Includes:
+    -   **Market Triggers**: Explains *why* a feature should be built based on competitor moves.
+    -   **Core Capabilities**: detailed technical specs for implementation.
+    -   **Financial Projections**: AI-estimated ROI and Time-to-Market analysis.
+    -   **PDF Export**: Professional, board-ready one-pager generation.
+
 ### 📊 Next-Gen Dashboard Experience
 -   **Glassmorphic Interface**: A sleek, dark-mode UI built with Tailwind CSS and Framer Motion for a premium feel.
 -   **Live Log Streaming**: Real-time feedback via WebSockets, allowing users to watch the AI's "thought process" as it scans the web.
+-   **Console Settings**: Full profile management, security toggles (2FA), and notification preferences.
 -   **Advanced Analytics Suite**:
     -   **Predictive Analysis**: Forecast move probability based on historical data.
     -   **Sentiment Tracking**: Monitor market perception across technical documentation and news.
     -   **Risk Assessment**: Automated SWOT analysis based on competitor product releases.
--   **Interactive Data Visuals**: Recharts and Three.js integration for visualizing market share and global technical presence.
 
 ---
 
@@ -125,10 +132,11 @@ TAVILY_API_KEY=your_tavily_key
 ## 🗺 Roadmap & Current Status
 
 ### Verified Working ✅
-- Fully functional JWT Authentication & Profile management.
-- Dual-pipeline agentic execution with real search and anti-bot scraping.
-- Live log streaming dashboard.
-- Modular React architecture with unified state management.
+- **Authentication**: Secure JWT Login/Register with session management.
+- **Intelligence**: Dual-pipeline agentic execution (Structured + Markdown).
+- **Strategy Engine**: AI-powered feature generation with PDF exports.
+- **Settings Console**: User profile and preference management.
+- **Real-time**: Live log streaming and market signal interception.
 
 ### In Progress / Planned 🏗
 - **Historical Reports**: Implementation of a persistent report archive to track changes over time.
