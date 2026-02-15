@@ -1,42 +1,31 @@
 # 🦅 ScoutIQ - Autonomous Market Intelligence Platform
 
 ## 1. Project Overview
-**ScoutIQ** is an enterprise-grade competitive intelligence platform that uses autonomous AI agents to monitor market signals, track competitor moves, and generate strategic insights. Unlike traditional RSS aggregators, ScoutIQ employs a multi-agent architecture to perform deep web research, filter out marketing fluff, and synthesize high-fidelity technical intelligence.
+**ScoutIQ** is an enterprise-grade competitive intelligence platform designed for high-stakes decision-making. It employs a multi-agent AI architecture to autonomously monitor market signals, track competitor moves, and virtually eliminate hallucinations through a rigorous "verify-then-synthesize" pipeline.
 
-The platform features a "Command Center" dashboard with real-time threat monitoring, predictive analytics, and an AI-driven strategy engine.
+The platform provides a "Command Center" experience, combining real-time threat monitoring, predictive analytics, and an AI-driven strategy generation engine into a single glassmorphic interface.
 
 ## 2. Technology Stack
 
 ### Frontend (Client)
 - **Core Framework**: React 18 + Vite (TypeScript)
 - **Styling**: Tailwind CSS + Custom CSS Variables (Dark Mode Theme)
-- **UI Components**: 
-  - Radix UI Primitives (Switch, Dialog, etc.)
-  - `lucide-react` (Iconography)
-  - `framer-motion` (Animations & Transitions)
-- **Data Visualization**: `recharts` (Area Charts, Radar Charts)
-- **State Management**: `zustand` (Auth, Competitors, UI State)
-- **Routing**: `react-router-dom` (Nested Layouts, Protected Routes)
-- **PDF Generation**: `jspdf` (Report Export)
+- **UI Architecture**: Component-based with Radix UI primitives for accessible interactivity.
+- **State Management**: `zustand` for high-performance, predictable global state (Auth, Competitors, UI).
+- **Visualization**: `recharts` for data-heavy analytics; `framer-motion` for fluid, GPU-accelerated transitions.
+- **Network Layer**: `axios` with interceptors for JWT injection and error handling.
 
 ### Backend (Server)
-- **API Framework**: FastAPI (Python 3.10+)
-- **Database**: MongoDB (Motor Async Client)
-- **Authentication**: JWT (JSON Web Tokens) with bcrypt hashing
-- **Real-time**: Native WebSockets for live agent logs
-- **Validation**: Pydantic v2
+- **API Framework**: FastAPI (Python 3.10+) for high-concurrency async endpoints.
+- **Database**: MongoDB (via Motor) for flexible, schema-less storage of complex intelligence documents.
+- **Authentication**: OAuth2 compliant JWT implementation with bcrypt password hashing.
+- **Real-time Engine**: Native WebSockets for streaming agent logs and live signal updates.
 
-### AI & Intelligence Layer
-- **Primary Intelligence Engine (Structured)**: 
-  - **LLM**: Google Gemini 1.5 Pro
-  - **Search**: Serper.dev (Google Search API)
-  - **Scraping**: ZenRows (Anti-bot Headless Browsing)
-- **Rapid Analysis Agent (Markdown)**:
-  - **LLM**: Groq (Llama 3 70B)
-  - **Search**: Tavily Search API
-- **Simulation Engines**:
-  - `RiskEngine`: Calculates threat levels based on global signals.
-  - `SignalInterceptor`: Simulates real-time market wire feeds.
+### Intelligence Layer
+- **Structured Agent**: Google Gemini 1.5 Pro (JSON output optimization).
+- **Rapid Agent**: Groq (Llama 3 70B) for low-latency text synthesis.
+- **Search Infrastructure**: Serper.dev (Google Index) + Tavily (Deep Search).
+- **Scraping**: ZenRows (Headless Chrome) for handling dynamic JS-heavy targets.
 
 ---
 
@@ -54,117 +43,122 @@ MarketScoutAgent/
 │   │   │   ├── websockets.py    # Live Log Streaming
 │   │   │   └── ...              # Other routes (reports, intel)
 │   │   ├── core/                # Configuration & Security
-│   │   │   ├── config.py        # Environment Variables
-│   │   │   ├── database.py      # MongoDB Connection
-│   │   │   └── security.py      # JWT & Password Logic
 │   │   ├── models/              # Pydantic Schemas
 │   │   ├── services/            # Business Logic
-│   │   │   ├── scan_pipeline.py # Orchestrator for 5-Step Scan
-│   │   │   ├── gemini_client.py # AI Analysis
-│   │   │   └── scraper.py       # Web Scraping Logic
 │   │   └── main.py              # Application Entry Point
 │   └── .env                     # Secrets (API Keys)
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── layout/          # DashboardShell, Sidebar, NotificationCenter
-│   │   │   └── ui/              # Buttons, Cards, Inputs, Switches
-│   │   ├── features/            # Feature-based Modules
-│   │   │   ├── auth/            # Authentication Forms
-│   │   │   └── dashboard/       # Main App Pages
-│   │   │       ├── DashboardPage.tsx       # Command Center
+│   │   ├── components/          # Shared UI Components
+│   │   ├── features/            # Business Domain Modules
+│   │   │   ├── auth/            # Authentication Screens
+│   │   │   ├── dashboard/       # Main Console Modules
+│   │   │       ├── DashboardPage.tsx       # Overview Command Center
 │   │   │       ├── AiSuggestionPage.tsx    # Strategy Generator
-│   │   │       ├── SettingsPage.tsx        # User Preferences
-│   │   │       ├── AddCompetitorPage.tsx   # New Entity Setup
-│   │   │       ├── CompetitorsPage.tsx     # Entity List
+│   │   │       ├── CompetitorsPage.tsx     # Entity Grid & Monitoring
+│   │   │       ├── TargetUniversePage.tsx  # Sector Radar Analysis
 │   │   │       ├── RiskPage.tsx            # Threat Matrix
-│   │   │       └── ...                     # Analytics, Target Universe
-│   │   ├── store/               # Zustand Stores (authStore)
-│   │   ├── services/            # API Client (Axios)
-│   │   └── main.tsx             # Entry Point & Router Config
+│   │   │       └── SettingsPage.tsx        # User Prefs Console
+│   │   ├── store/               # Zustand Global Stores
+│   │   └── main.tsx             # App Entry & Router
 │   └── vite.config.ts
 └── README.md
 ```
 
 ---
 
-## 4. Key Modules & Workflows
+## 4. Feature Deep Dive
 
-### 4.1. The Intelligence Pipelines
+### 4.1. Command Center (`DashboardPage`)
+The landing interface for the platform, designed as a comprehensive HUD (Heads-Up Display) for market awareness.
+-   **Temporal Analysis**: Toggle between **7D**, **30D**, and **90D** viewing windows to filter trend data.
+-   **Key Performance Indicators (KPIs)**:
+    -   **Competitor Volume**: Tracks the total number of monitored entities with trend deltas.
+    -   **Market Anomalies**: AI-detected shifts in competitor behavior (e.g., sudden pricing changes, leadership exits).
+    -   **Pipeline Activity**: Real-time counter of processed data signals.
+-   **Live Competitor Grid**: A responsive grid of cards displaying:
+    -   **Health Status**: Visual indicators (Active/Scanning/Failed).
+    -   **Data Confidence Score**: A calculated 0-100% metric showing the reliability of gathered intel.
+    -   **Latency Tracker**: "Last Scan" timestamp to ensure freshness.
 
-#### A. Structured Deep Scan (`/api/v1/scan`)
-This is the core "ScoutIQ" engine used for updating competitor data.
-1.  **Query Planning**: Decomposes `company_name` into search queries (Product, Pricing, Technical).
-2.  **Distributed Search**: Hits Serper.dev for URLs.
-3.  **Smart Filtering**: Discards job boards, stock tickers, and generic marketing pages.
-4.  **Anti-Bot Scraping**: ZenRows fetches full HTML from technical blogs/docs.
-5.  **Gemini Analysis**: Google's 1.5 Pro model extracts structured fields (Last Update, Tech Stack, Pricing Model).
+### 4.2. AI Feature Lab (`AiSuggestionPage`)
+A strategic engine that converts raw intelligence into actionable product roadmaps.
+-   **Neural Configuration**:
+    -   **Focus Objectives**: Revenue, Efficiency, Innovation, Market Share.
+    -   **Risk Appetite**: Low/Medium/High selectors that adjust the aggressiveness of suggestions.
+-   **Feature Generator**: Uses the configured parameters to hallucinate (creatively generate) feature specs.
+    -   **Market Triggers**: Explains the "Why" (e.g., "Competitor X just launched Y").
+    -   **Core Capabilities**: Lists specific technical requirements.
+    -   **Financial Projections**: Dynamic charts forecasting 12-month ROI.
+-   **Export Capability**: Generates professional PDF "One-Pagers" for executive stakeholder review.
 
-#### B. Rapid Markdown Report (`/api/v1/analyze`)
-This powers the "Quick Analysis" feature.
-1.  **Agent Orchestration**: `agent.py` coordinates the workflow.
-2.  **Fast Search**: Uses Tavily for high-speed retrieval.
-3.  **Synthesis**: Groq (Llama 3) streams a markdown-formatted executive summary.
+### 4.3. Market Watchlist (`TargetUniversePage`)
+A macro-level view of the entire competitive landscape.
+-   **Sector Radar**: A Recharts-powered Radar Chart visualizing competitor density across verticals (Fintech, Edtech, Healthtech).
+-   **Live Signal Feed**: A scrolling ticker of raw intercepted signals (simulated "Live Wire" effect).
+-   **Entity Distribution**: Visual breakdowns of where the AI is focusing its resources.
 
-### 4.2. Frontend Features
+### 4.4. Risk Assessment (`RiskPage`)
+A specialized security-focused view for threat modeling.
+-   **Threat Matrix**: Categorizes competitors based on "Aggressiveness" vs "Market Power".
+-   **SWOT Automation**: Auto-generated Strengths, Weaknesses, Opportunities, and Threats based on recent scans.
+-   **Defcon Levels**: Global threat level indicator (1-5) based on aggregate market volatility.
 
-#### **Dashboard (`DashboardPage.tsx`)**
-The central hub. Orchestrates parallel data fetching for:
--   **Threat Level**: Visualized by the `RiskEngine`.
--   **Live Wire**: Real-time websocket feed of "intercepted" signals.
--   **Quick Actions**: Access to scanning and reporting tools.
+### 4.5. Settings Console (`SettingsPage`)
+A complete user management interface.
+-   **Profile Management**: View and edit user identity and role.
+-   **Notification Center**: Granular toggles for Email Alerts, Push Notifications, and Weekly Digests.
+-   **Security Ops**: Session management, 2FA enforcement toggles, and "Active Session" auditing.
 
-#### **AI Feature Lab (`AiSuggestionPage.tsx`)**
-A strategic generator that:
-1.  Accepts user parameters (Focus Area: Revenue/Innovation, Risk: High/Low).
-2.  Generates detailed "Feature Proposals" formatted as mini-PRDs.
-3.  Includes "Market Triggers" (Why build this?) and "Core Capabilities" (What to build?).
-4.  Exports to PDF for board presentations.
-
-#### **Competitor Management**
--   **Add Competitor (`AddCompetitorPage.tsx`)**: Onboarding flow for new entities.
--   **Monitoring (`CompetitorsPage.tsx`)**: List view with status indicators (Scanning, Active, Failed).
-
-#### **Settings Console (`SettingsPage.tsx`)**
-A fully functional user preference experience:
--   **Profile**: manage identity.
--   **Notifications**: Toggle email/push alerts.
--   **Security**: Session management and 2FA toggles.
+### 4.6. Competitor Management
+-   **Onboarding Flow (`AddCompetitorPage`)**: A wizard-style input for tracking new companies.
+-   **Deep Dive (`IntelligenceReportPage`)**: The full detail view for a single competitor, showing their tech stack, recent news, and pricing models.
 
 ---
 
-## 5. Development Guide
+## 5. Intelligence Pipelines (Backend)
 
-### Environment Setup
-Ensure your `.env` file in `backend/` has the following:
-```env
-# Core
-MONGODB_URL=mongodb://localhost:27017
-SECRET_KEY=dev-secret
+### A. The "Deep Scan" Protocol
+Used for primary competitor monitoring.
+1.  **Decomposition**: The user's target (e.g., "Stripe") is broken down into sub-queries ("Stripe pricing 2024", "Stripe API changes").
+2.  **Federated Search**: Concurrently searches Google (via Serper) for high-authority domains.
+3.  **Sanatization**: Filters out generic content (Careers pages, Login screens) to focus on Documentation and Blog posts.
+4.  **Extraction**: ZenRows fetches the raw HTML, bypassing Cloudflare/WAFs.
+5.  **Synthesis**: Gemini 1.5 Pro reconstructs a structured JSON profile from the chaotic HTML data.
 
-# Intelligence Cloud
-GEMINI_API_KEY=...    # Google AI Studio
-SERPER_API_KEY=...    # Google Search
-ZENROWS_API_KEY=...   # Scraping
-GROQ_API_KEY=...      # Llama 3 Inference
-TAVILY_API_KEY=...    # Rapid Search
-```
+### B. The "Flash Report" Agent
+Used for ad-hoc queries ("What is Stripe's latest feature?").
+1.  **Orchestrator**: `agent.py` manages the state.
+2.  **Tool Use**: Calls `Tavily` for rapid search.
+3.  **Streaming**: Groq (Llama 3) streams the response character-by-character to the frontend via WebSockets.
 
-### Running Locally
+---
+
+## 6. Development Workflow
+
+### Prerequisites
+-   **Node.js 18+** (Frontend)
+-   **Python 3.10+** (Backend)
+-   **MongoDB** (Persistence)
+
+### Setup Commands
 1.  **Backend**:
     ```bash
     cd backend
-    uvicorn app.main:app --reload --port 8000
+    python -m venv venv
+    source venv/bin/activate  # or .\venv\Scripts\activate on Windows
+    pip install -r requirements.txt
+    python app/main.py
     ```
 2.  **Frontend**:
     ```bash
     cd frontend
+    npm install
     npm run dev
     ```
 
-### Adding New Features
-1.  **Backend**: Define new Pydantic models in `app/models/` and routes in `app/api/`.
-2.  **Frontend**: Create a new page in `features/dashboard/`.
-3.  **Routing**: Register the new route in `src/main.tsx` under the `ProtectedDashboard` layout.
-4.  **Navigation**: Add the link to `Sidebar.tsx` config.
+### Deployment Strategy
+-   **Frontend**: Deployed via Vercel/Netlify (Static generation).
+-   **Backend**: Deployed via Docker/Render (Python container).
+-   **Database**: MongoDB Atlas (Managed Cloud).
