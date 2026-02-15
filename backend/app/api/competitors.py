@@ -25,6 +25,7 @@ async def get_competitor_collection():
 
 @router.get("/competitors", response_model=List[Competitor])
 async def list_competitors(
+    q: str = None,
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_user),
@@ -36,6 +37,14 @@ async def list_competitors(
     competitors = []
     # Filter by user_id to ensure users only see their own competitors
     query = {"user_id": str(current_user.id)}
+    
+    if q:
+        # Simple case-insensitive regex search on name and url
+        query["$or"] = [
+            {"name": {"$regex": q, "$options": "i"}},
+            {"url": {"$regex": q, "$options": "i"}}
+        ]
+        
     cursor = collection.find(query).skip(skip).limit(limit)
     async for document in cursor:
         doc = document.copy()

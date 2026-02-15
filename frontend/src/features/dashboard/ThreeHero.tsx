@@ -221,7 +221,7 @@ const Beacon = ({ data, isHovered, onHover }: { data: VisualCompetitor, isHovere
                     
                     <div className="flex items-center gap-2 text-[10px] text-slate-500 border-t border-white/10 pt-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                        LIVE INTEL FEED ACTIVE
+                        ACTIVE MONITORING
                     </div>
                 </div>
             </motion.div>
@@ -318,13 +318,13 @@ const ThreeHero = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-white tracking-tight">Global Signal Map</h2>
+                        <h2 className="text-2xl font-bold text-white tracking-tight">Market Activity Map</h2>
                         <div className="flex items-center gap-2 text-xs text-indigo-300">
                              <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
                             </span>
-                            LIVE SATELLITE FEED
+                            LIVE DATA FEED
                         </div>
                     </div>
                 </div>

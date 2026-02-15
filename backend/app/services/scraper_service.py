@@ -187,12 +187,23 @@ async def scrape_url(url: str) -> dict[str, Any] | None:
                 f"&url={quote_plus(url)}"
                 "&js_render=true"
             )
-            async with httpx.AsyncClient(timeout=25, follow_redirects=True) as client:
-                resp = await client.get(zenrows_url)
-                if resp.status_code >= 400:
-                    return None
-                text = resp.text
-        except Exception:
+            import asyncio
+            for attempt in range(3):
+                async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+                    resp = await client.get(zenrows_url)
+                    if resp.status_code == 429:
+                        wait = (attempt + 1) * 2
+                        logger.warning(f"ZenRows 429 for {url}. Retrying in {wait}s...")
+                        await asyncio.sleep(wait)
+                        continue
+                    if resp.status_code >= 400:
+                        return None
+                    text = resp.text
+                    break
+            else:
+                return None
+        except Exception as e:
+            logger.error(f"Scrape error for {url}: {e}")
             return None
 
     soup = BeautifulSoup(text, "html.parser")

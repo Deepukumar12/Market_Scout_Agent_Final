@@ -12,12 +12,12 @@ def generate_search_queries(company_name: str, days: int = 7) -> list[str]:
     Uses Llama 3 on Groq.
     """
     prompt = f"""
-    Generate 2 specific Google search queries to find new technical features, 
-    product updates, release notes, or changelogs for the company "{company_name}" 
-    released in the last {days} days.
+    You are a query planner for technical intelligence.
+    Generate 4 specific Google search queries to find chronological technical updates for "{company_name}".
+    Focus on specific technical nodes like: "changelog", "release notes", "API documentation update", "vX.X release", "engineering blog".
+    Ensure the queries target technical signals from the last 7 days.
     
-    Return ONLY a raw JSON list of strings, e.g. ["query1", "query2"]. 
-    Do not add markdown formatting or explanations.
+    Return ONLY a raw JSON list of 4 strings. No markdown, no text.
     """
 
     try:
@@ -41,7 +41,7 @@ def generate_search_queries(company_name: str, days: int = 7) -> list[str]:
         import json
         queries = json.loads(content)
         if isinstance(queries, list):
-            return queries[:2]  # limit to 2 as per doc
+            return queries[:4]  # limit to 4 for better coverage
         return [f"{company_name} new features last week", f"{company_name} release notes last week"]
         
     except Exception as e:

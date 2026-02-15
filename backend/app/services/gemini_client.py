@@ -14,6 +14,10 @@ class GeminiClientError(Exception):
     """Base error for Gemini client failures."""
 
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 # Schema for Step 1: LLM-generated search queries only
 QUERIES_SCHEMA = {
     "type": "object",
@@ -85,6 +89,7 @@ class GeminiClient:
                 "responseSchema": schema,
             },
         }
+        import asyncio
         last_error: Optional[Exception] = None
         for attempt in range(max_retries + 1):
             try:
@@ -99,8 +104,14 @@ class GeminiClient:
                 return queries
             except (GeminiClientError, json.JSONDecodeError, KeyError) as exc:
                 last_error = exc
-                if attempt < max_retries:
+                if "429" in str(exc) and attempt < max_retries:
+                    wait = (attempt + 1) * 3
+                    logger.warning(f"Gemini 429 (Quota). Retrying in {wait}s...")
+                    await asyncio.sleep(wait)
+                elif attempt < max_retries:
                     continue
+                else:
+                    break
         raise GeminiClientError(f"Query planning failed: {last_error}")
 
     async def generate_competitor_intel(
@@ -205,6 +216,7 @@ IMPORTANT:
             },
         }
 
+        import asyncio
         last_error: Optional[Exception] = None
         for attempt in range(max_retries + 1):
             try:
@@ -213,8 +225,14 @@ IMPORTANT:
                 return CIReport.model_validate(parsed)
             except (GeminiClientError, ValidationError, json.JSONDecodeError) as exc:
                 last_error = exc
-                if attempt < max_retries:
+                if "429" in str(exc) and attempt < max_retries:
+                    wait = (attempt + 1) * 3
+                    logger.warning(f"Gemini 429 (Quota). Retrying in {wait}s...")
+                    await asyncio.sleep(wait)
+                elif attempt < max_retries:
                     continue
+                else:
+                    break
 
         raise GeminiClientError(f"Gemini intelligence generation failed: {last_error}")
 
@@ -281,6 +299,7 @@ Return only the JSON object. No additional text or explanation.
             },
         }
 
+        import asyncio
         last_error: Optional[Exception] = None
         for attempt in range(max_retries + 1):
             try:
@@ -291,8 +310,14 @@ Return only the JSON object. No additional text or explanation.
                 return report.model_dump()
             except (GeminiClientError, ValidationError, json.JSONDecodeError) as exc:
                 last_error = exc
-                if attempt < max_retries:
+                if "429" in str(exc) and attempt < max_retries:
+                    wait = (attempt + 1) * 3
+                    logger.warning(f"Gemini 429 (Quota). Retrying in {wait}s...")
+                    await asyncio.sleep(wait)
+                elif attempt < max_retries:
                     continue
+                else:
+                    break
 
         raise GeminiClientError(f"Gemini scan report failed: {last_error}")
 

@@ -27,7 +27,7 @@ def search_web(queries: List[str]) -> List[str]:
                 "search_depth": "basic",
                 "include_answer": False,
                 "include_images": False,
-                "max_results": 3,
+                "max_results": 5,
             }
             response = requests.post(ENDPOINT, json=payload, timeout=10)
             

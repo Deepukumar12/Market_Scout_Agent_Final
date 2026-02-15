@@ -1,22 +1,27 @@
 
 import { cn } from '@/lib/utils';
-import { Home, Users, BarChart3, FileText, Settings, ShieldAlert, LogOut, TrendingUp, Heart, Sparkles } from 'lucide-react';
+import { 
+  Users, BarChart3, FileText, Settings, 
+  ShieldAlert, LogOut, Heart, Sparkles,
+  ChevronRight, LayoutDashboard, BrainCircuit, Activity, X
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
+import { motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 
 type NavItemConfig = {
   label: string;
-  icon: JSX.Element;
+  icon: any;
   to: string;
-  extraClass?: string;
+  category?: string;
 };
 
-const Sidebar = () => {
+const Sidebar = ({ onClose }: { onClose?: () => void }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuthStore();
+  // const [hoveredIndex, setHoveredIndex] = useState<number | null>(null); // Removed unused state
 
   const handleLogout = () => {
     logout();
@@ -24,111 +29,153 @@ const Sidebar = () => {
   };
 
   const navItems: NavItemConfig[] = [
-    { label: 'Overview', icon: <Home size={20} />, to: '/dashboard' },
-    { 
-        label: 'Predictive Analytics', 
-        icon: <TrendingUp size={20} className="text-purple-400" />, 
-        to: '/dashboard/predictive-analytics',
-        extraClass: "hover:shadow-[0_0_15px_rgba(192,132,252,0.4)] transition-all duration-300 border border-purple-500/10 hover:border-purple-500/40 relative overflow-hidden"
-    },
-    { 
-        label: 'Sentiment Analysis', 
-        icon: <Heart size={20} className="text-pink-400" />, 
-        to: '/dashboard/sentiment-analysis',
-        extraClass: "hover:bg-gradient-to-r hover:from-pink-900/20 hover:to-transparent border border-pink-500/10 hover:border-pink-500/40"
-    },
-    { label: 'Competitors', icon: <Users size={20} />, to: '/dashboard/competitors' },
-    { label: 'Reports', icon: <FileText size={20} />, to: '/dashboard/reports' },
-    { label: 'Analytics', icon: <BarChart3 size={20} />, to: '/dashboard/analytics' },
-    { label: 'Risk Analysis', icon: <ShieldAlert size={20} />, to: '/dashboard/risk' },
+    { label: 'Overview', icon: LayoutDashboard, to: '/dashboard', category: 'General' },
+    { label: 'AI Strategy', icon: Sparkles, to: '/dashboard/ai-suggestion', category: 'General' },
+    { label: 'Predictive Analytics', icon: BrainCircuit, to: '/dashboard/predictive-analytics', category: 'Intelligence' },
+    { label: 'Market Sentiment', icon: Heart, to: '/dashboard/sentiment-analysis', category: 'Intelligence' },
+    { label: 'Market Watchlist', icon: Users, to: '/dashboard/target-universe', category: 'Network' },
+    { label: 'Intelligence Reports', icon: FileText, to: '/dashboard/reports', category: 'Assets' },
+    { label: 'Signal Metrics', icon: BarChart3, to: '/dashboard/analytics', category: 'Stats' },
+    { label: 'Risk Assessment', icon: ShieldAlert, to: '/dashboard/risk', category: 'Security' },
   ];
 
-  const settingsItem: NavItemConfig = {
-    label: 'Settings',
-    icon: <Settings size={20} />,
-    to: '/dashboard/settings',
-  };
-
   const isActive = (to: string) => {
-    if (to === '/dashboard') {
-      return location.pathname === '/dashboard';
-    }
+    if (to === '/dashboard') return location.pathname === '/dashboard';
     return location.pathname.startsWith(to);
   };
 
   return (
-    <div className="w-64 h-full bg-black border-r border-white/10 flex flex-col p-4">
-      <div className="flex items-center gap-2 mb-8 px-2">
-        <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.5)]">
-          <span className="text-cyan-400 font-bold">Q</span>
+    <motion.div 
+      initial={{ x: -20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      className="w-72 h-full bg-[#0B0F19] border-r border-[#1E293B] flex flex-col relative z-20 group/sidebar"
+    >
+      
+      <div className="p-8 mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <motion.div 
+            className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20"
+          >
+            <Activity className="w-5 h-5 text-white" />
+          </motion.div>
+          <div className="flex flex-col text-left">
+            <span className="text-lg font-bold tracking-tight text-white leading-none">Scout<span className="text-blue-500">IQ</span></span>
+            <span className="text-[11px] text-slate-400 font-medium">Market Intelligence</span>
+          </div>
         </div>
-        <span className="text-xl font-bold tracking-tighter text-white">SCOUTIQ</span>
+
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onClose} 
+          className="lg:hidden text-slate-500 hover:text-white"
+        >
+          <X size={20} />
+        </Button>
       </div>
 
-      <nav className="flex-1 space-y-2">
-        {navItems.map((item) => (
-          <NavItem
-            key={item.label}
-            icon={item.icon}
-            label={item.label}
-            active={isActive(item.to)}
-            onClick={() => navigate(item.to)}
-            extraClass={item.extraClass}
-          />
+      <div className="flex-1 px-4 overflow-y-auto custom-scrollbar space-y-8 scroll-smooth pb-10">
+        {['General', 'Intelligence', 'Network', 'Assets', 'Stats', 'Security'].map((cat) => (
+          <div key={cat} className="space-y-1">
+            <h3 className="px-4 text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">{cat}</h3>
+            {navItems.filter(item => item.category === cat).map((item) => (
+              <NavItem
+                key={item.label}
+                icon={item.icon}
+                label={item.label}
+                active={isActive(item.to)}
+                onClick={() => navigate(item.to)}
+              />
+            ))}
+          </div>
         ))}
-      </nav>
+      </div>
 
-      <div className="mt-auto pt-4 border-t border-white/10 space-y-2">
+      <div className="p-4 mt-auto border-t border-[#1E293B] space-y-1">
         <NavItem
-          icon={settingsItem.icon}
-          label={settingsItem.label}
-          active={isActive(settingsItem.to)}
-          onClick={() => navigate(settingsItem.to)}
+          icon={Settings}
+          label="Settings"
+          active={isActive('/dashboard/settings')}
+          onClick={() => navigate('/dashboard/settings')}
         />
         <Button
           onClick={handleLogout}
           variant="ghost"
-          className="w-full justify-start text-red-500 hover:text-red-400 hover:bg-red-900/20"
+          className="w-full justify-start text-slate-500 hover:text-rose-400 hover:bg-rose-500/5 rounded-2xl h-12 transition-all group border border-transparent hover:border-rose-500/10"
         >
-          <LogOut size={20} className="mr-2" /> Logout
+          <LogOut size={16} className="mr-3 group-hover:-translate-x-1 transition-transform" />
+          <span className="text-[11px] font-bold uppercase tracking-wider">Sign Out</span>
         </Button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
 const NavItem = ({
-  icon,
+  icon: Icon,
   label,
   active = false,
   onClick,
-  extraClass = '',
+  onHover,
+  onLeave
 }: {
-  icon: JSX.Element;
+  icon: any;
   label: string;
   active?: boolean;
   onClick?: () => void;
-  extraClass?: string;
+  onHover?: () => void;
+  onLeave?: () => void;
 }) => {
   return (
-    <Button
-      type="button"
-      onClick={onClick}
-      variant="ghost"
-      className={cn(
-        'w-full justify-start transition-all duration-200 rounded-xl px-3',
-        active
-          ? 'bg-cyan-900/40 text-cyan-300 border-r-2 border-cyan-500 shadow-[0_0_18px_rgba(6,182,212,0.4)]'
-          : 'text-gray-400 hover:text-white hover:bg-white/5',
-        extraClass
-      )}
+    <motion.div
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
+      whileHover={{ x: 4 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
     >
-      <span className="mr-3">{icon}</span>
-      {label}
-      {label.includes('Predictive') && (
-        <Sparkles className="ml-auto w-3 h-3 text-purple-400 animate-pulse" />
-      )}
-    </Button>
+      <Button
+        type="button"
+        onClick={onClick}
+        variant="ghost"
+        className={cn(
+          'w-full justify-start transition-all duration-200 rounded-lg px-3 h-10 relative overflow-hidden group',
+          active
+            ? 'bg-blue-500/10 text-blue-400 font-medium'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+        )}
+      >        <div className={cn(
+          "w-5 h-5 flex items-center justify-center mr-3 transition-colors",
+          active ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"
+        )}>
+          <Icon size={18} />
+        </div>
+        
+        <span className="text-sm font-medium relative z-10 transition-colors">
+          {label}
+        </span>
+        
+        {label.includes('Futures') && (
+          <motion.div
+            animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="ml-auto"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+          </motion.div>
+        )}
+
+        {active && (
+          <motion.div 
+            layoutId="active-indicator"
+            className="ml-auto w-1 h-5 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+          />
+        )}
+        
+        {!active && (
+          <ChevronRight className="ml-auto w-4 h-4 text-slate-700 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
+        )}
+      </Button>
+    </motion.div>
   );
 };
 

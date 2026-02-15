@@ -18,26 +18,22 @@ def synthesize_report(company_name: str, scraped_texts: list[str]) -> str:
     context = "\n\n---\n\n".join(scraped_texts)
     
     prompt = f"""
-    You are a technical market scout.
-    Analyze the following scraped content about "{company_name}".
-    Extract ONLY NEW technical features, product updates, release notes, or changelogs mentioned in the text.
-    Ignore general marketing fluff, hiring announcements, or old news.
+    You are a Senior Technical Market Scout.
+    Analyze the following intelligence signals for "{company_name}".
     
-    Format the output as a clean, professional markdown report.
-    Use headings, bullet points, and bold text for readability.
-    Crucially, link back to the source URL for each claim if possible (the source URL is provided in the content block).
+    PRIMARY GOAL:
+    Create a chronological (DATE-WISE) intelligence report of new technical features, product updates, or releases from the last 7 days.
     
-    Example format:
+    FORMATTING RULES:
+    1. Organize the report by DATE (Most recent first).
+    2. Use the format:
+       ## [Month Day, Year]
+       * **Update Title**: Precise technical description. [Source](Source URL)
+    3. Group multiple updates under the same date header.
+    4. Link every pulse signal back to its "Source URL" provided in the content nodes below.
+    5. STRICTLY FILTER: Only include technical changes (APIs, SDKs, Features). Skip marketing/hiring/PR fluff.
     
-    ## {company_name} Market Intelligence Report
-    
-    ### Key Technical Updates
-    * **Feature Name**: Brief description of what it does. [Source](url)
-    * **Release Version**: Details about the release. [Source](url)
-    
-    If no significant technical updates are found, state that clearly.
-    
-    Content to Analyze:
+    INTELLIGENCE CONTEXT:
     {context}
     """
     

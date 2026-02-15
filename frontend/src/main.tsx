@@ -11,10 +11,12 @@ import ReportsPage from '@/features/dashboard/ReportsPage';
 import AnalyticsPage from '@/features/dashboard/AnalyticsPage';
 import RiskPage from '@/features/dashboard/RiskPage';
 import SettingsPage from '@/features/dashboard/SettingsPage';
+import TargetUniversePage from '@/features/dashboard/TargetUniversePage';
 import AddCompetitorPage from '@/features/dashboard/AddCompetitorPage';
 import IntelligenceReportPage from '@/features/dashboard/IntelligenceReportPage';
 import PredictiveAnalyticsPage from '@/features/dashboard/PredictiveAnalyticsPage';
 import SentimentAnalysisPage from '@/features/dashboard/SentimentAnalysisPage';
+import AiSuggestionPage from '@/features/dashboard/AiSuggestionPage';
 import { AuthLayout } from '@/features/auth/AuthLayout';
 import { LoginForm } from '@/features/auth/LoginForm';
 import { RegisterForm } from '@/features/auth/RegisterForm';
@@ -88,6 +90,10 @@ const router = createBrowserRouter([
             element: <CompetitorsPage />,
           },
           {
+            path: "target-universe",
+            element: <TargetUniversePage />,
+          },
+          {
             path: "competitors/:id/report",
             element: <IntelligenceReportPage />,
           },
@@ -106,6 +112,10 @@ const router = createBrowserRouter([
           {
             path: "settings",
             element: <SettingsPage />,
+          },
+          {
+            path: "ai-suggestion",
+            element: <AiSuggestionPage />,
           },
         ],
       },

@@ -1,6 +1,7 @@
 
 import { create } from 'zustand';
 import { getCompetitors, createCompetitor } from '../services/api';
+import { useNotificationStore } from './notificationStore';
 
 interface Competitor {
     id?: string;
@@ -18,8 +19,7 @@ interface CompetitorState {
     addCompetitor: (name: string, url: string) => Promise<Competitor | null>;
 }
 
-// @ts-ignore
-export const useCompetitorStore = create<any>((set: any) => ({
+export const useCompetitorStore = create<CompetitorState>((set) => ({
     competitors: [],
     loading: false,
     error: null,
@@ -33,6 +33,7 @@ export const useCompetitorStore = create<any>((set: any) => ({
         }
     },
     addCompetitor: async (name: string, url: string) => {
+        const { addNotification } = useNotificationStore.getState();
         try {
             const newOne = await createCompetitor({
                 name,
@@ -40,10 +41,24 @@ export const useCompetitorStore = create<any>((set: any) => ({
                 monitoring_enabled: true,
                 scan_frequency: 'Daily',
             });
-            set((state: any) => ({ competitors: [...state.competitors, newOne] }));
+            set((state) => ({ competitors: [...state.competitors, newOne] }));
+
+            addNotification({
+                title: 'Target Acquired',
+                message: `${name} has been added to surveillance network. Initial scan scheduled.`,
+                type: 'success'
+            });
+
             return newOne;
         } catch (err) {
             console.error(err);
+
+            addNotification({
+                title: 'Deployment Failed',
+                message: `Could not initialize monitoring for ${name}.`,
+                type: 'error'
+            });
+
             return null;
         }
     },

@@ -16,8 +16,10 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-export const getCompetitors = async () => {
-    const response = await api.get('/competitors');
+export const getCompetitors = async (q?: string) => {
+    const response = await api.get('/competitors', {
+        params: q ? { q } : {}
+    });
     return response.data;
 };
 
