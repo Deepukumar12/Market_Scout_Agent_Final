@@ -17,6 +17,7 @@ interface CompetitorState {
     error: string | null;
     fetchCompetitors: () => Promise<void>;
     addCompetitor: (name: string, url: string) => Promise<Competitor | null>;
+    removeCompetitor: (id: string) => Promise<void>;
 }
 
 export const useCompetitorStore = create<CompetitorState>((set) => ({
@@ -60,6 +61,28 @@ export const useCompetitorStore = create<CompetitorState>((set) => ({
             });
 
             return null;
+        }
+    },
+    removeCompetitor: async (id: string) => {
+        const { addNotification } = useNotificationStore.getState();
+        const { deleteCompetitor } = await import('../services/api');
+        try {
+            await deleteCompetitor(id);
+            set((state) => ({
+                competitors: state.competitors.filter((c) => (c.id || c._id) !== id)
+            }));
+            addNotification({
+                title: 'Competitor Terminated',
+                message: 'Target has been removed from the surveillance network.',
+                type: 'info'
+            });
+        } catch (err) {
+            console.error(err);
+            addNotification({
+                title: 'Termination Failed',
+                message: 'Failed to remove competitor.',
+                type: 'error'
+            });
         }
     },
 }));

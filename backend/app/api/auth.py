@@ -70,22 +70,44 @@ async def register(user: UserCreate):
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     OAuth2 password flow-compatible login endpoint that returns a signed JWT.
+    Also logs basic timing so we can see where any slowdown is happening.
     """
+    import time
+
+    start = time.perf_counter()
     try:
         from app.core.database import get_database
+
+        db_start = time.perf_counter()
         database = await get_database()
+        db_end = time.perf_counter()
 
         collection = database["users"]
-        user = await collection.find_one({"email": form_data.username})
-        
-        print(f"DEBUG: Login attempt for {form_data.username}, found user: {user is not None}")
 
+        query_start = time.perf_counter()
+        user = await collection.find_one({"email": form_data.username})
+        query_end = time.perf_counter()
+
+        print(
+            f"DEBUG LOGIN: user={form_data.username}, "
+            f"db_connect_ms={(db_end - db_start)*1000:.1f}, "
+            f"query_ms={(query_end - query_start)*1000:.1f}, "
+            f"found={user is not None}"
+        )
+
+        verify_start = time.perf_counter()
         if not user or not verify_password(form_data.password, user["hashed_password"]):
+            verify_end = time.perf_counter()
+            print(
+                f"DEBUG LOGIN: password_check_ms={(verify_end - verify_start)*1000:.1f}, "
+                "result=invalid"
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        verify_end = time.perf_counter()
 
         access_token_expires = timedelta(
             minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -99,6 +121,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             },
             expires_delta=access_token_expires,
         )
+
+        total_ms = (time.perf_counter() - start) * 1000
+        print(
+            f"DEBUG LOGIN: password_check_ms={(verify_end - verify_start)*1000:.1f}, "
+            f"total_ms={total_ms:.1f}, result=success"
+        )
+
         return {"access_token": access_token, "token_type": "bearer"}
 
     except Exception as e:

@@ -1,49 +1,62 @@
-from groq import Groq
-from app.core.config import settings
+"""Query planning for technical intelligence. Uses Groq (Llama 3) when available, else Gemini."""
+from datetime import datetime
 
-# Initialize Groq client
-client = Groq(
-    api_key=settings.GROQ_API_KEY,
-)
+from app.core.config import settings
+from app.services.groq_sync import generate_text_groq
+from app.services.gemini_sync import generate_text as generate_text_gemini
+
 
 def generate_search_queries(company_name: str, days: int = 7) -> list[str]:
     """
     Generates targeted search queries for technical features/releases.
-    Uses Llama 3 on Groq.
+    Uses Groq (Llama 3) when available, else Gemini. Emphasizes recency within last 7 days.
     """
+    now = datetime.utcnow()
+    month_year = now.strftime("%B %Y")  # e.g. February 2026
     prompt = f"""
-    You are a query planner for technical intelligence.
-    Generate 4 specific Google search queries to find chronological technical updates for "{company_name}".
-    Focus on specific technical nodes like: "changelog", "release notes", "API documentation update", "vX.X release", "engineering blog".
-    Ensure the queries target technical signals from the last 7 days.
-    
-    Return ONLY a raw JSON list of 4 strings. No markdown, no text.
-    """
+You are a query planner for technical intelligence.
+Generate 4 specific Google search queries to find RECENT technical updates for "{company_name}".
+Requirements:
+- Each query MUST include recency: e.g. "last 7 days", "past week", "{month_year}", "recent", or "2026".
+- Focus on: changelog, release notes, API documentation update, API changelog, product updates.
+- Prefer queries that return official docs/changelog (e.g. "{company_name} API changelog 2026", "{company_name} release notes last week").
+- Do not use generic queries without a time constraint.
+Return ONLY a raw JSON list of exactly 4 query strings. No markdown, no other text.
+Example: ["query1", "query2", "query3", "query4"]
+"""
+    import json
+    import re
 
+    sys_text = "Output only valid JSON. Return a JSON array of 4 strings."
     try:
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "You are a helpful research assistant. Output only JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,
-            max_tokens=100
-        )
-        content = completion.choices[0].message.content.strip()
-        
-        # Basic cleanup if the model returns markdown code blocks
-        if content.startswith("```json"):
-            content = content.replace("```json", "").replace("```", "").strip()
-        elif content.startswith("```"):
-            content = content.replace("```", "").strip()
-            
-        import json
-        queries = json.loads(content)
-        if isinstance(queries, list):
-            return queries[:4]  # limit to 4 for better coverage
-        return [f"{company_name} new features last week", f"{company_name} release notes last week"]
-        
+        content = ""
+        if settings.GROQ_API_KEY:
+            content = generate_text_groq(prompt, system=sys_text, max_tokens=300)
+        if not content and settings.GEMINI_API_KEY:
+            content = generate_text_gemini(prompt, system=sys_text, max_tokens=300)
+        if not content:
+            return [f"{company_name} new features last week", f"{company_name} product updates last week"]
+        content = content.strip()
+        if content.startswith("```"):
+            content = re.sub(r"^```(?:json)?\s*", "", content).replace("```", "").strip()
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            arr = re.search(r"\[[\s\S]*?\]", content)
+            if arr:
+                try:
+                    parsed = json.loads(arr.group(0))
+                except json.JSONDecodeError:
+                    parsed = None
+            else:
+                parsed = None
+        if isinstance(parsed, list):
+            return [str(q).strip() for q in parsed if q][:4]
+        if isinstance(parsed, dict) and "queries" in parsed:
+            qs = parsed["queries"]
+            if isinstance(qs, list):
+                return [str(q).strip() for q in qs if q][:4]
+        return [f"{company_name} new features last week", f"{company_name} product updates last week"]
     except Exception as e:
         print(f"Error generating queries: {e}")
         return [f"{company_name} new features last week", f"{company_name} product updates last week"]

@@ -26,6 +26,17 @@ class ScanFeature(BaseModel):
     confidence_score: int = Field(ge=0, le=100)
 
 
+class GitHubRepoSummary(BaseModel):
+    """Summary of a repo from GitHub for company intelligence."""
+    full_name: str
+    html_url: str
+    description: str = ""
+    stargazers_count: int = 0
+    language: str | None = None
+    updated_at: str | None = None
+    topics: List[str] = Field(default_factory=list)
+
+
 class ScanResponse(BaseModel):
     """Strict response from the Market Scout Agent. No fallback text."""
     competitor: str
@@ -34,3 +45,5 @@ class ScanResponse(BaseModel):
     total_sources_scanned: int
     total_valid_updates: int
     features: List[ScanFeature] = Field(default_factory=list)
+    # Optional GitHub data when GITHUB_TOKEN is set; strengthens intelligence
+    github: dict | None = None

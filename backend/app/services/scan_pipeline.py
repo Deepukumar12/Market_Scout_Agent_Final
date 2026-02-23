@@ -16,6 +16,7 @@ from app.services.scraper_service import (
     filter_content_technical_only,
 )
 from app.services.gemini_client import GeminiClient, GeminiClientError
+from app.services.github_client import fetch_company_github_data, GitHubClientError
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ async def run_scan(request: ScanRequest) -> ScanResponse | None:
             total_sources_scanned=0,
             total_valid_updates=0,
             features=[],
+            github=None,
         )
 
     # -------------------------------------------------------------------------
@@ -125,6 +127,7 @@ async def run_scan(request: ScanRequest) -> ScanResponse | None:
             total_sources_scanned=total_sources_scanned,
             total_valid_updates=0,
             features=[],
+            github=None,
         )
 
     # -------------------------------------------------------------------------
@@ -191,6 +194,15 @@ async def run_scan(request: ScanRequest) -> ScanResponse | None:
 
         fixed_features.append(ScanFeature(**{**f.model_dump(), "publish_date": pub}))
         
+    # Optional: attach GitHub repo/org data when token is set (strengthens intelligence)
+    github_data = None
+    try:
+        github_data = await fetch_company_github_data(company, max_repos=15)
+        if github_data.get("error"):
+            github_data = None
+    except GitHubClientError as e:
+        logger.debug("GitHub data skipped for %s: %s", company, e)
+
     return ScanResponse(
         competitor=report.competitor,
         scan_date=report.scan_date,
@@ -198,4 +210,5 @@ async def run_scan(request: ScanRequest) -> ScanResponse | None:
         total_sources_scanned=total_sources_scanned,
         total_valid_updates=len(fixed_features),
         features=fixed_features,
+        github=github_data,
     )

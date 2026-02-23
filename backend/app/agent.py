@@ -1,43 +1,40 @@
+import asyncio
+
+from app.core.logger import agent_logger
 from app.planner import generate_search_queries
 from app.search_tool import search_web
-from app.scraper import scrape_urls
-from app.synthesizer import synthesize_report
-from app.core.logger import agent_logger
-import asyncio
+from app.services.hybrid_pipeline import run_hybrid_pipeline
+
 
 async def run_agent(company_name: str) -> str:
     """
-    Executes the MarketScout agent workflow asynchronously:
-    1. Plan search queries (Groq Llama 3)
-    2. Search web for URLs (Tavily)
-    3. Scrape content (BeautifulSoup)
-    4. Synthesize report (Groq Llama 3)
+    Token-safe hybrid pipeline:
+    1. Plan search queries (Gemini)
+    2. Search URLs (Tavily)
+    3. Per URL: Scrape -> Clean -> Structured Extract -> LSA Compress -> Per-Article Summary (Gemini)
+    4. Store summaries in MongoDB
+    5. Final structured report (single Gemini call on combined summaries)
+    Avoids 413 by keeping each request under TPM (e.g. 12k).
     """
     await agent_logger.log(f"Initializing autonomous scout for {company_name}...", "SYSTEM")
-    
+
     # 1. Plan
-    await agent_logger.log(f"Strategic Planning: Generating high-intent search queries via Groq Llama-3...", "AGENT")
+    await agent_logger.log("Strategic Planning: Generating high-intent search queries via Gemini 2.5 Flash...", "AGENT")
     queries = generate_search_queries(company_name, days=7)
     await agent_logger.log(f"Planning complete. Targeted queries: {queries}", "AGENT")
-    
+
     # 2. Search
-    await agent_logger.log(f"Execution: Orchestrating web search via Tavily API...", "AGENT")
+    await agent_logger.log("Execution: Orchestrating web search via Tavily API...", "AGENT")
     urls = search_web(queries)
     await agent_logger.log(f"Infrastructure: Discovered {len(urls)} relevant technical intelligence nodes.", "AGENT")
-    
+
     if not urls:
         await agent_logger.log("Search anomaly: No relevant documentation nodes found.", "RISK_ENGINE")
         return "No relevant URLs found to analyze."
-        
-    # 3. Scrape
-    await agent_logger.log(f"Data Gathering: Scraping text content from {len(urls)} sources using BeautifulSoup...", "AGENT")
-    # Wrap sync scraper in thread if slow, for now keep it simple
-    scraped_content = scrape_urls(urls)
-    await agent_logger.log(f"Processing: Extracted context from {len(scraped_content)} valid sources.", "AGENT")
-    
-    # 4. Synthesize
-    await agent_logger.log(f"Synthesis: Compiling structured intelligence report via Groq Llama-3...", "AGENT")
-    report = synthesize_report(company_name, scraped_content)
+
+    # 3–5. Hybrid pipeline: scrape -> clean -> extract -> LSA -> per-article summary -> store -> final report
+    await agent_logger.log("Data Gathering: Running token-safe pipeline (scrape, LSA, per-article summarization)...", "AGENT")
+    report = await run_hybrid_pipeline(company_name, urls)
     await agent_logger.log("Final Report Compiled. Ready for transmission.", "SYSTEM")
-    
+
     return report

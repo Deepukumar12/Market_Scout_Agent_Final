@@ -4,6 +4,7 @@ Strict input: company_name, website (optional), time_window_days.
 Strict output: ScanResponse or {"error": "Gemini API unavailable"}.
 No synthetic fallback.
 """
+import logging
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
@@ -14,6 +15,7 @@ from app.services.scan_pipeline import run_scan
 from app.services.search_service import SearchServiceError
 from app.services.gemini_client import GeminiClientError
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -27,6 +29,7 @@ async def post_scan(
     Query Planning (LLM) → Search (Serper) → Scrape + Date Filter → Content Filter → Gemini Analysis.
     Returns strict ScanResponse JSON, or {"error": "Gemini API unavailable"} if Gemini fails.
     """
+    logger.info("SCAN [%s] <- FRESH SCAN (ad-hoc POST /scan)", body.company_name)
     try:
         result = await run_scan(body)
     except SearchServiceError as e:

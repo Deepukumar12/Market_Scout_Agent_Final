@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScoutIQ Prototype Walkthrough</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --surface: #ffffff;
+            --background: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--background);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--surface);
+            padding: 60px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 20px;
+            display: inline-block;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+            font-weight: 300;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-top: 3rem;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h2::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 30px;
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            margin-top: 2rem;
+            color: #475569;
+        }
+
+        ul,
+        ol {
+            margin-bottom: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            color: #d946ef;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .alert {
+            background: #eff6ff;
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .step-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .step-number {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            width: 28px;
+            height: 28px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 10px;
+            line-height: 28px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+
+        blockquote {
+            font-style: italic;
+            border-left: 4px solid #cbd5e1;
+            margin: 0;
+            padding-left: 20px;
+            color: #64748b;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-blue {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>ScoutIQ Prototype Walkthrough</h1>
+        <p class="subtitle">A Comprehensive Guide to Demonstrating the Autonomous Market Intelligence Agent</p>
+
+        <div class="alert">
+            <strong>Purpose:</strong> This document serves as both a <em>Functional Prototype Specification</em> and a
+            <em>Demonstration Script</em> for presenting ScoutIQ to technical judges and stakeholders.
+        </div>
+
+        <h2>1. Prototype Scope (The MVP)</h2>
+        <p>The current prototype demonstrates the core <strong>"Intelligence Loop"</strong>:</p>
+        <ul>
+            <li><strong>Orchestration</strong>: Managing multiple asynchronous AI agents.</li>
+            <li><strong>Acquisition</strong>: Real-time web searching and scraping (no mocked data).</li>
+            <li><strong>Synthesis</strong>: Converting raw HTML into structured, strategic JSON reports.</li>
+            <li><strong>Presentation</strong>: A glassmorphic, responsive Command Center dashboard.</li>
+        </ul>
+
+        <div class="step-card">
+            <h3>Key Working Features</h3>
+            <ul>
+                <li>🔐 <strong>Authentication</strong>: Secure Login/Register (JWT + OAuth2).</li>
+                <li>📊 <strong>Command Center</strong>: Real-time dashboard with "Sector Radar" and "Live Signal Feed"
+                    (simulated).</li>
+                <li>🤖 <strong>The Agent</strong>: Deep-dive capability (Input Company -> Get Report).</li>
+                <li>📈 <strong>Visualizations</strong>: Three.js hero elements and Recharts data plotting.</li>
+            </ul>
+        </div>
+
+        <h2>2. Launch Instructions</h2>
+        <p>To show this prototype, you must run the local development environment.</p>
+
+        <div class="step-card">
+            <strong><span class="step-number">1</span> Prerequisites</strong>
+            <p>Ensure <code>.env</code> in <code>backend/</code> has valid <code>GEMINI_API_KEY</code> and
+                <code>SERPER_API_KEY</code>.</p>
+        </div>
+
+        <div class="step-card">
+            <strong><span class="step-number">2</span> Run Automation Script</strong>
+            <p>Open Terminal in project root and run:</p>
+            <pre><code>.\run.bat</code></pre>
+            <p><em>This will spawn two windows: one for the FastAPI Backend (Port 8000) and one for the Vite Frontend
+                    (Port 5173).</em></p>
+        </div>
+
+        <div class="step-card">
+            <strong><span class="step-number">3</span> Open Browser</strong>
+            <p>Go to <a href="http://localhost:5173" target="_blank">http://localhost:5173</a>.</p>
+        </div>
+
+        <h2>3. Demonstration Script (The "Happy Path")</h2>
+        <p>Follow this exact sequence to demonstrate the platform's capabilities effectively.</p>
+
+        <h3>Scene 1: The "Command Center"</h3>
+        <p><strong>Action:</strong> Log in and land on the Dashboard.</p>
+        <blockquote>
+            "This is the ScoutIQ Command Center. It gives us a macro-view of the competitive landscape. Notice the
+            Glassmorphic Design—we prioritize a premium, futuristic aesthetic to match the advanced AI under the hood."
+        </blockquote>
+        <ul>
+            <li>Point out <strong>KPI Cards</strong> (interactive time filters).</li>
+            <li>Point out <strong>3D Visualizer</strong> (representing the Intelligence Network).</li>
+        </ul>
+
+        <h3>Scene 2: Initiating a Scan</h3>
+        <p><strong>Action:</strong> Click <span class="badge badge-blue">Initialize New Competitor</span>.</p>
+        <blockquote>
+            "Let's see the agent in action. We want to track a new threat."
+        </blockquote>
+        <p><strong>Input:</strong> Enter "Stripe" (or "Vercel") and click <strong>Start Scan</strong>.</p>
+
+        <h3>Scene 3: The "Black Box" (Wait Time)</h3>
+        <p><em>While the loading spinner is active (approx. 15-30s)...</em></p>
+        <blockquote>
+            "Right now, the system is executing a 5-step autonomous pipeline: Planning queries, Federated Search, Deep
+            Scraping, Technical Filtering, and finally Synthesis."
+        </blockquote>
+
+        <h3>Scene 4: The Reveal</h3>
+        <p><strong>Action:</strong> View the generated report.</p>
+        <blockquote>
+            "Here is the autonomous report. No human touched this. It found the new Payment Intent API and plotted it on
+            our Sector Radar."
+        </blockquote>
+
+        <h2>4. Prototype Configuration Cheatsheet</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Simulation</th>
+                    <th>Value</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Demo Company</strong></td>
+                    <td><code>Stripe</code> or <code>Vercel</code></td>
+                    <td>High volume of technical blog posts guarantees rich results.</td>
+                </tr>
+                <tr>
+                    <td><strong>Time Window</strong></td>
+                    <td><code>30 Days</code></td>
+                    <td>Ensures enough data is found to populate the graph.</td>
+                </tr>
+                <tr>
+                    <td><strong>Browser</strong></td>
+                    <td>Chrome (Dark Mode)</td>
+                    <td>UI is optimized for system Dark Mode.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>5. Future Vision</h2>
+        <ul>
+            <li><strong>Multi-Agent Debate</strong>: Two agents arguing if a feature is a "Threat" or "Opportunity".
+            </li>
+            <li><strong>Slack Integration</strong>: Pushing alerts to engineering channels.</li>
+            <li><strong>Predictive Modeling</strong>: Using historical data to forecast next moves.</li>
+        </ul>
+
+    </div>
+
+</body>
+
+</html>
