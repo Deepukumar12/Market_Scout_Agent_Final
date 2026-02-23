@@ -2,9 +2,9 @@
 import { Button } from '@/components/ui/button';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useEffect } from 'react';
-import { 
+import {
   Plus, Rocket, AlertTriangle, TrendingUp, TrendingDown,
-  Zap, Shield, Clock, ArrowUpRight, CalendarRange, ChevronDown
+  Zap, Shield, Clock, ArrowUpRight, CalendarRange, ChevronDown, Trash2
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import ThreeHero from './ThreeHero';
 
-const CompetitorCard = ({ id, name, status, last_scan, idx, onNavigate }: any) => (
+const CompetitorCard = ({ id, name, status, last_scan, idx, onNavigate, onDelete }: any) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -22,7 +22,7 @@ const CompetitorCard = ({ id, name, status, last_scan, idx, onNavigate }: any) =
     onClick={() => onNavigate(id)}
   >
     <div className="relative p-6 flex flex-col h-full">
-      
+
 
 
       <div className="flex justify-between items-start mb-6">
@@ -39,8 +39,8 @@ const CompetitorCard = ({ id, name, status, last_scan, idx, onNavigate }: any) =
         <div className="flex flex-col items-end gap-1">
           <span className={cn(
             "text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-lg border",
-            status === 'Active' 
-              ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" 
+            status === 'Active'
+              ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
               : "text-amber-400 border-amber-500/20 bg-amber-500/5"
           )}>
             {status}
@@ -65,7 +65,7 @@ const CompetitorCard = ({ id, name, status, last_scan, idx, onNavigate }: any) =
           </div>
           <span className="text-sm font-bold text-white tracking-tight">85%</span>
         </div>
-        
+
         <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
@@ -76,9 +76,9 @@ const CompetitorCard = ({ id, name, status, last_scan, idx, onNavigate }: any) =
         </div>
       </div>
 
-      <div className="mt-6">
-        <Button 
-          variant="outline" 
+      <div className="mt-6 flex flex-col gap-3">
+        <Button
+          variant="outline"
           onClick={(e) => {
             e.stopPropagation();
             onNavigate(id);
@@ -88,6 +88,20 @@ const CompetitorCard = ({ id, name, status, last_scan, idx, onNavigate }: any) =
           View Analysis
           <ArrowUpRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
         </Button>
+
+        <Button
+          variant="outline"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+              onDelete(id);
+            }
+          }}
+          className="w-full bg-white/5 border-white/10 hover:bg-rose-600/20 hover:border-rose-500/50 text-rose-500/70 hover:text-rose-400 transition-all rounded-xl py-3 group/delete font-bold uppercase tracking-widest text-[9px]"
+        >
+          <Trash2 className="mr-2 w-3.5 h-3.5" />
+          Delete Competitor
+        </Button>
       </div>
     </div>
   </motion.div>
@@ -96,7 +110,7 @@ const CompetitorCard = ({ id, name, status, last_scan, idx, onNavigate }: any) =
 const StatCard = ({ title, value, change, trend = 'up', icon: Icon, colorClass, idx }: any) => {
   const isPositive = trend === 'up';
   const isNegative = trend === 'down';
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -105,9 +119,9 @@ const StatCard = ({ title, value, change, trend = 'up', icon: Icon, colorClass, 
       className="relative group p-6 rounded-2xl bg-[#0B0F19] border border-[#1E293B]"
     >
       <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity ${colorClass}`}>
-         <Icon className="w-20 h-20" />
+        <Icon className="w-20 h-20" />
       </div>
-      
+
       <div className="flex items-start justify-between mb-4">
         <div className={`p-2.5 rounded-lg bg-opacity-10 ${colorClass.replace('text-', 'bg-')}`}>
           <Icon className={`w-5 h-5 ${colorClass}`} />
@@ -115,16 +129,16 @@ const StatCard = ({ title, value, change, trend = 'up', icon: Icon, colorClass, 
         <div className={cn(
           "flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-mono",
           isPositive ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
-          isNegative ? "bg-rose-500/10 border-rose-500/20 text-rose-400" :
-          "bg-slate-500/10 border-slate-500/20 text-slate-400"
+            isNegative ? "bg-rose-500/10 border-rose-500/20 text-rose-400" :
+              "bg-slate-500/10 border-slate-500/20 text-slate-400"
         )}>
-          {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : 
-           isNegative ? <TrendingDown className="w-3.5 h-3.5" /> : 
-           <div className="w-3.5 h-0.5 bg-slate-400 rounded-full" />}
+          {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> :
+            isNegative ? <TrendingDown className="w-3.5 h-3.5" /> :
+              <div className="w-3.5 h-0.5 bg-slate-400 rounded-full" />}
           <span className="text-[11px] font-bold">{change}</span>
         </div>
       </div>
-  
+
       <div>
         <h4 className="text-3xl font-bold text-white tracking-tight mb-1">{value}</h4>
         <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{title}</p>
@@ -134,7 +148,7 @@ const StatCard = ({ title, value, change, trend = 'up', icon: Icon, colorClass, 
 };
 
 const DashboardPage = () => {
-  const { competitors, loading, fetchCompetitors } = useCompetitorStore();
+  const { competitors, loading, fetchCompetitors, removeCompetitor } = useCompetitorStore();
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState('30d');
 
@@ -145,7 +159,7 @@ const DashboardPage = () => {
   // Simulate historical comparison data based on time range
   const getStats = () => {
     const baseEntities = competitors.length || 0;
-    
+
     // Default (30d)
     let entitiesData = { value: baseEntities, change: "+12.5%", trend: "up" };
     let anomaliesData = { value: Math.floor(baseEntities * 0.4) + 3, change: "-5 vs last month", trend: "down" };
@@ -168,7 +182,7 @@ const DashboardPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-12 pb-20">
-      
+
       {/* Dynamic Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pt-4">
         <motion.div
@@ -177,39 +191,39 @@ const DashboardPage = () => {
           className="space-y-4"
         >
           <div className="flex items-center gap-4">
-             {/* Time Range Selector */}
-             <div className="flex items-center gap-1 bg-[#0B0F19] p-1 rounded-lg border border-[#1E293B]">
-               <div className="px-2 py-1.5 text-xs font-medium text-slate-500 border-r border-[#1E293B] mr-1 flex items-center gap-1.5">
-                  <CalendarRange className="w-3.5 h-3.5" />
-                  <span>Period</span>
-               </div>
-               {['7d', '30d', '90d'].map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setTimeRange(range)}
-                    className={cn(
-                      "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                      timeRange === range 
-                        ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" 
-                        : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-                    )}
-                  >
-                    {range === '7d' ? '7D' : range === '30d' ? '30D' : '3M'}
-                  </button>
-               ))}
-             </div>
+            {/* Time Range Selector */}
+            <div className="flex items-center gap-1 bg-[#0B0F19] p-1 rounded-lg border border-[#1E293B]">
+              <div className="px-2 py-1.5 text-xs font-medium text-slate-500 border-r border-[#1E293B] mr-1 flex items-center gap-1.5">
+                <CalendarRange className="w-3.5 h-3.5" />
+                <span>Period</span>
+              </div>
+              {['7d', '30d', '90d'].map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                    timeRange === range
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                  )}
+                >
+                  {range === '7d' ? '7D' : range === '30d' ? '30D' : '3M'}
+                </button>
+              ))}
+            </div>
 
-             <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] font-mono text-slate-500 hidden sm:block">
-                SID: {Math.random().toString(16).slice(2, 10).toUpperCase()}
-             </div>
+            <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] font-mono text-slate-500 hidden sm:block">
+              SID: {Math.random().toString(16).slice(2, 10).toUpperCase()}
+            </div>
           </div>
           <div>
             <h1 className="text-4xl lg:text-5xl font-bold text-white tracking-tight mb-2">
-               Dashboard <span className="text-blue-500">Overview</span>
+              Dashboard <span className="text-blue-500">Overview</span>
             </h1>
             <p className="text-lg text-slate-400 max-w-2xl font-medium leading-relaxed">
-               Real-time market insights and competitor analysis. 
-               Comparing data vs previous <span className="text-slate-200 font-semibold">{timeRange === '7d' ? '7 days' : timeRange === '30d' ? '30 days' : 'quarter'}</span>.
+              Real-time market insights and competitor analysis.
+              Comparing data vs previous <span className="text-slate-200 font-semibold">{timeRange === '7d' ? '7 days' : timeRange === '30d' ? '30 days' : 'quarter'}</span>.
             </p>
           </div>
         </motion.div>
@@ -229,11 +243,11 @@ const DashboardPage = () => {
           </Button>
         </motion.div>
       </div>
-      
+
       {/* 3D Visualizer Section */}
       <div className="relative group">
-         <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl opacity-10 group-hover:opacity-20 blur-2xl transition-all" />
-         <ThreeHero />
+        <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl opacity-10 group-hover:opacity-20 blur-2xl transition-all" />
+        <ThreeHero />
       </div>
 
       {/* Analytics Grid */}
@@ -270,34 +284,34 @@ const DashboardPage = () => {
       {/* Primary Content Area */}
       <div className="space-y-8">
         <div className="flex items-center justify-between border-b border-white/5 pb-6">
-           <div>
-              <h2 className="text-2xl font-black text-white tracking-tighter flex items-center gap-2 uppercase italic">
-                 Active Competitors
-                 <div className="flex gap-1 items-center px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[8px] font-bold text-emerald-500 uppercase">Active</span>
-                 </div>
-              </h2>
-              <p className="text-xs text-slate-500 font-mono mt-1">MONITORING {competitors.length} COMPETITORS...</p>
-           </div>
-           
-           <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/dashboard/competitors')}
-                className="text-slate-400 hover:text-white rounded-lg uppercase text-[10px] font-bold tracking-widest"
-              >
-                 View All Competitors
-              </Button>
-           </div>
+          <div>
+            <h2 className="text-2xl font-black text-white tracking-tighter flex items-center gap-2 uppercase italic">
+              Active Competitors
+              <div className="flex gap-1 items-center px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[8px] font-bold text-emerald-500 uppercase">Active</span>
+              </div>
+            </h2>
+            <p className="text-xs text-slate-500 font-mono mt-1">MONITORING {competitors.length} COMPETITORS...</p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/dashboard/competitors')}
+              className="text-slate-400 hover:text-white rounded-lg uppercase text-[10px] font-bold tracking-widest"
+            >
+              View All Competitors
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <AnimatePresence>
             {competitors.map((c: any, idx: number) => (
               <CompetitorCard
-                key={c._id || c.name || idx}
+                key={c._id || c.id}
                 id={c._id || c.id}
                 idx={idx}
                 name={c.name}
@@ -305,6 +319,7 @@ const DashboardPage = () => {
                 risk={c.priority || 'Medium'}
                 last_scan="12m ago"
                 onNavigate={(id: string) => navigate(`/dashboard/competitors/${id}/report`)}
+                onDelete={(id: string) => removeCompetitor(id)}
               />
             ))}
           </AnimatePresence>
@@ -316,17 +331,17 @@ const DashboardPage = () => {
               className="col-span-full py-20 px-10 rounded-3xl border-2 border-dashed border-white/5 bg-white/5 backdrop-blur-sm text-center"
             >
               <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-6">
-                 <Plus className="w-8 h-8 text-slate-600" />
+                <Plus className="w-8 h-8 text-slate-600" />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">No Competitors Tracked</h3>
               <p className="text-slate-500 max-w-xs mx-auto text-sm leading-relaxed">
-                 Add a competitor to start monitoring market signals.
+                Add a competitor to start monitoring market signals.
               </p>
-              <Button 
+              <Button
                 onClick={() => navigate('/dashboard/add-competitor')}
                 className="mt-8 bg-white/10 hover:bg-white/20 text-white rounded-xl px-10 border border-white/10"
               >
-                 Add Competitor
+                Add Competitor
               </Button>
             </motion.div>
           )}

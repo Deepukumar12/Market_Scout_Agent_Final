@@ -1,10 +1,11 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends
 
 from app.core.database import db
+from app.services.delta_engine import FREQUENCY_DEFAULT_HOURS
 from app.core.security import get_current_user
 from app.models.competitor import (
     Competitor,
@@ -69,8 +70,13 @@ async def create_competitor(
     
     # Associate with current user
     new_competitor["user_id"] = str(current_user.id)
-    new_competitor["created_at"] = datetime.utcnow()
+    new_competitor["created_at"] = datetime.now(timezone.utc)
     new_competitor["status"] = CompetitorStatus.ACTIVE
+    # Tracking + cache + adaptive fields
+    new_competitor["last_checked_at"] = None
+    new_competitor["next_scheduled_check"] = None
+    new_competitor["scan_frequency_hours"] = FREQUENCY_DEFAULT_HOURS
+    new_competitor["empty_scan_count"] = 0
 
     result = await collection.insert_one(new_competitor)
     created_competitor = await collection.find_one({"_id": result.inserted_id})
@@ -88,8 +94,11 @@ async def delete_competitor(
 ):
     """
     Delete a competitor entry. Verifies ownership before deletion.
+    Also cleans up associated article summaries and reports.
     """
     from bson import ObjectId
+    from fastapi import HTTPException
+    
     if not ObjectId.is_valid(competitor_id):
         raise HTTPException(status_code=400, detail="Invalid competitor ID")
         
@@ -104,8 +113,29 @@ async def delete_competitor(
     if not competitor:
         raise HTTPException(status_code=404, detail="Competitor not found or not owned by user")
         
+    # 1. Delete associated article summaries (query_tag matches company name)
+    try:
+        summaries_coll = db.db["article_summaries"]
+        await summaries_coll.delete_many({"query_tag": competitor["name"]})
+    except Exception as e:
+        print(f"Warning: Failed to delete summaries for {competitor['name']}: {e}")
+
+    # 2. Delete associated reports
+    try:
+        reports_coll = db.db["reports"]
+        await reports_coll.delete_many({"competitor_id": competitor_id})
+    except Exception as e:
+        print(f"Warning: Failed to delete reports for {competitor_id}: {e}")
+
+    # 3. Delete from intelligence cache
+    try:
+        cache_coll = db.db["cache"]
+        await cache_coll.delete_one({"competitor_id": competitor_id})
+    except Exception as e:
+        print(f"Warning: Failed to delete cache for {competitor_id}: {e}")
+
+    # 4. Delete the competitor itself
     await collection.delete_one({"_id": ObjectId(competitor_id)})
     
-    # TODO: Delete related reports
-    return {"status": "success", "message": "Competitor deleted successfully"}
+    return {"status": "success", "message": "Competitor and associated data deleted successfully"}
 

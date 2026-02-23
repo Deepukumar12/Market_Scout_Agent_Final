@@ -14,6 +14,7 @@ pydantic[email]
 pydantic-settings
 email-validator
 requests
+certifi
 aiohttp
 selenium
 webdriver-manager
@@ -26,3 +27,6 @@ groq
 tavily-python
 python-dotenv
 bcrypt
+sumy
+nltk
+apscheduler
