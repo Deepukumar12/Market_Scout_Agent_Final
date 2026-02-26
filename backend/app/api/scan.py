@@ -26,17 +26,11 @@ async def post_scan(
 ):
     """
     Run the 5-step Market Scout Agent pipeline:
-    Query Planning (LLM) → Search (Serper) → Scrape + Date Filter → Content Filter → Gemini Analysis.
+    Query Planning (LLM) → Search (Zenserp) → Scrape + Date Filter → Content Filter → Gemini Analysis.
     Returns strict ScanResponse JSON, or {"error": "Gemini API unavailable"} if Gemini fails.
     """
     logger.info("SCAN [%s] <- FRESH SCAN (ad-hoc POST /scan)", body.company_name)
-    try:
-        result = await run_scan(body)
-    except SearchServiceError as e:
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"error": "Search API unavailable", "detail": str(e)},
-        )
+    result = await run_scan(body)
 
     if result is None:
         return JSONResponse(

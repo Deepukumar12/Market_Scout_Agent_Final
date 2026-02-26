@@ -50,17 +50,17 @@ class Settings(BaseSettings):
     GEMINI_API_BASE: str = "https://generativelanguage.googleapis.com/v1beta"
     GEMINI_MAX_OUTPUT_TOKENS: int = 2048
 
-    # SEARCH (Serper.dev = Google search API)
-    SERPER_API_KEY: str = ""
+    # SEARCH (Zenserp.dev = Google search API)
+    ZENSERP_API_KEY: str = ""
+    ZENSERP_MOCK_MODE: bool = False
 
-    # SCRAPING (ZenRows = fetch HTML with anti-bot / JS support)
-    ZENROWS_API_KEY: str = ""
+    # SCRAPING (Firecrawl = fetch clean Markdown/HTML with JS support)
+    FIRECRAWL_API_KEY: str = ""
 
     # NEW API KEYS
     GROQ_API_KEY: str = ""
     # Groq model: Llama 3.3 70B - fast inference, strong for query planning & summarization
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
-    TAVILY_API_KEY: str = ""
 
     # GitHub (repo/org search for company intelligence; optional but recommended for higher rate limits)
     GITHUB_TOKEN: str = ""

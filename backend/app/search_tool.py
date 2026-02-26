@@ -1,47 +1,36 @@
-import requests
-from typing import List, Dict
-from app.core.config import settings
+"""
+Legacy Search Tool wrapper. Now routes to Zenserp-based SearchService.
+"""
+from typing import List
+from app.services.search_service import search_google
 
-# Tavily API Search Tool
-def search_web(queries: List[str]) -> List[str]:
+async def search_web(queries: List[str]) -> List[str]:
     """
-    Executes multiple search queries using Tavily API.
-    Returns a list of unique URLs found.
-    Optimization: Limit to top 3 results per query to stay within API limits.
+    Executes multiple search queries using Zenserp API.
+    Uses specialized engines for the latter half of the queries (Visual, Maps, Video, Shopping).
     """
+    from app.services.search_service import search_specialized
     
-    TAVILY_API_KEY = settings.TAVILY_API_KEY
-    ENDPOINT = "https://api.tavily.com/search"
-
     all_urls = set()
-
-    if not TAVILY_API_KEY:
-        print("TAVILY_API_KEY not found in environment variables.")
-        return []
-
-    for query in queries:
-        try:
-            payload = {
-                "api_key": TAVILY_API_KEY,
-                "query": query,
-                "search_depth": "basic",
-                "include_answer": False,
-                "include_images": False,
-                "max_results": 5,
-            }
-            response = requests.post(ENDPOINT, json=payload, timeout=10)
+    
+    # Process queries. Assuming the first 4 are general and the last 4 are specialized.
+    for i, query in enumerate(queries):
+        results = []
+        if i == 4: # Visual / UI
+            results = await search_specialized(query, "google_images")
+        elif i == 5: # Maps / Local
+            results = await search_specialized(query, "google_maps")
+        elif i == 6: # YouTube / Video
+            results = await search_specialized(query, "youtube")
+        elif i == 7: # Shopping / Pricing
+            results = await search_specialized(query, "google_shopping")
+        else:
+            # Standard organic search
+            results = await search_google(query, num_results=5)
             
-            if response.status_code == 200:
-                data = response.json()
-                results = data.get("results", [])
-                for result in results:
-                    url = result.get("url")
-                    if url:
-                        all_urls.add(url)
-            else:
-                print(f"Tavily search failed for query '{query}': {response.status_code}")
-                
-        except Exception as e:
-            print(f"Error searching Tavily for '{query}': {e}")
+        for r in results:
+            url = r.get("url") or r.get("link")
+            if url:
+                all_urls.add(url)
             
     return list(all_urls)

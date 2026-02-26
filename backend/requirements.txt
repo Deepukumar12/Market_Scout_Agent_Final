@@ -24,7 +24,6 @@ numpy
 transformers
 langchain-core
 groq
-tavily-python
 python-dotenv
 bcrypt
 sumy

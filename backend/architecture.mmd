@@ -66,7 +66,7 @@ graph TD
     %% -------------------------------------------------------------------------
     subgraph External ["☁️ External Services (AI & Data)"]
         Gemini["🤖 Google Gemini 1.5 Pro<br/>(Reasoning & Extraction)"]
-        Serper["🔍 Serper.dev / Tavily<br/>(Real-time Web Search)"]
+        Zenserp["🔍 Zenserp API<br/>(Real-time Web Search)"]
         ZenRows["🕷️ ZenRows / Scraper<br/>(Anti-Bot Bypass)"]
     end
     class External external
@@ -89,8 +89,8 @@ graph TD
     Step1 -.->|Prompt: Generate Queries| Gemini
     Gemini -.->|JSON: Search Terms| Step1
 
-    Step2 -.->|Execute Queries| Serper
-    Serper -.->|Raw Search Results| Step2
+    Step2 -.->|Execute Queries| Zenserp
+    Zenserp -.->|Raw Search Results| Step2
 
     Step3 -.->|Fetch HTML| ZenRows
     ZenRows -.->|Cleaned Text| Step3
