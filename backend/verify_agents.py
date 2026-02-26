@@ -17,8 +17,8 @@ from app.services import scraper_service
 # Mock data
 MOCK_QUERIES = {"queries": ["test query 1", "test query 2", "test query 3"]}
 MOCK_SEARCH_RESULTS = [
-    {"link": "https://example.com/update1", "title": "Update 1", "snippet": "New API features released today."},
-    {"link": "https://example.com/old-update", "title": "Old Update", "snippet": "Old features from last year."},
+    {"url": "https://example.com/update1", "title": "Update 1", "snippet": "New API features released today.", "source": "zenserp"},
+    {"url": "https://example.com/old-update", "title": "Old Update", "snippet": "Old features from last year.", "source": "zenserp"},
 ]
 
 # Generate a valid recent date (yesterday)
@@ -94,7 +94,7 @@ async def test_scan_pipeline():
     
     # Patch dependencies
     with patch("app.services.scan_pipeline.GeminiClient") as MockClientClass, \
-         patch("app.services.scan_pipeline.run_google_search", new_callable=AsyncMock) as mock_search, \
+         patch("app.services.scan_pipeline.search_google", new_callable=AsyncMock) as mock_search, \
          patch("app.services.scan_pipeline.scrape_url", new_callable=AsyncMock) as mock_scrape:
          
         # Setup Mock Gemini Client instance

@@ -12,7 +12,7 @@ ScoutIQ operates with two distinct intelligence pipelines tailored for different
 1.  **The Strict 5-Step Pipeline (Structured)**:
     -   **Step 1: Query Planning**: LLM-driven decomposition of research objectives into multi-layered search queries.
     -   **Step 2: Distributed Search**: High-speed data retrieval using Serper.dev, orchestrating multiple concurrent searches.
-    -   **Step 3: Intelligence Scraping**: Headless browsing via ZenRows with built-in anti-bot bypass and precision timestamp extraction.
+    -   **Step 3: Intelligence Scraping**: Headless browsing via Firecrawl with built-in clean markdown conversion and precision timestamp extraction.
     -   **Step 4: Technical Filtering**: Advanced discarding of irrelevant content (hiring, financing, marketing fluff) to focus solely on product and technology updates.
     -   **Step 5: Synthesized Analysis**: Google Gemini 1.5 Pro performs structured data extraction, ensuring every insight is tied to a verified source URL.
 
@@ -45,7 +45,7 @@ ScoutIQ operates with two distinct intelligence pipelines tailored for different
 | **Backend** | Python 3.10+, FastAPI, MongoDB (Motor), Redis, Celery |
 | **Frontend** | React 18, Vite, TypeScript, Tailwind CSS, Framer Motion |
 | **AI Models** | Google Gemini 1.5 Pro, Groq (Llama 3), LangChain |
-| **Infrastructure** | Serper.dev (Search), Tavily (Discovery), ZenRows (Anti-Bot Scraper) |
+| **Infrastructure** | Serper.dev (Search), Tavily (Discovery), Firecrawl (Clean Markdown Scraper) |
 | **Real-time** | Native WebSockets for live agent log streaming |
 
 ---
@@ -80,7 +80,7 @@ MarketScoutAgent/
 ### Prerequisites
 - Python 3.9+ & Node.js 18+
 - MongoDB instance (Local or Atlas)
-- Serper, ZenRows, and Gemini/Groq API Keys
+- Serper, Firecrawl, and Gemini/Groq API Keys
 
 ### 1. Repository Setup
 ```bash
@@ -123,7 +123,7 @@ SECRET_KEY=your_secure_random_string
 GEMINI_API_KEY=your_gemini_key
 GROQ_API_KEY=your_groq_key
 SERPER_API_KEY=your_serper_key
-ZENROWS_API_KEY=your_zenrows_key
+FIRECRAWL_API_KEY=your_firecrawl_key
 TAVILY_API_KEY=your_tavily_key
 ```
 

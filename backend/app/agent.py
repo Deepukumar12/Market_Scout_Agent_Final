@@ -10,7 +10,7 @@ async def run_agent(company_name: str) -> str:
     """
     Token-safe hybrid pipeline:
     1. Plan search queries (Gemini)
-    2. Search URLs (Tavily)
+    2. Search URLs (Zenserp)
     3. Per URL: Scrape -> Clean -> Structured Extract -> LSA Compress -> Per-Article Summary (Gemini)
     4. Store summaries in MongoDB
     5. Final structured report (single Gemini call on combined summaries)
@@ -24,8 +24,8 @@ async def run_agent(company_name: str) -> str:
     await agent_logger.log(f"Planning complete. Targeted queries: {queries}", "AGENT")
 
     # 2. Search
-    await agent_logger.log("Execution: Orchestrating web search via Tavily API...", "AGENT")
-    urls = search_web(queries)
+    await agent_logger.log("Execution: Orchestrating web search via Zenserp API...", "AGENT")
+    urls = await search_web(queries)
     await agent_logger.log(f"Infrastructure: Discovered {len(urls)} relevant technical intelligence nodes.", "AGENT")
 
     if not urls:

@@ -50,60 +50,87 @@ def generate_final_report(company_name: str, summaries_with_urls: list[tuple[str
     today = datetime.now(timezone.utc)
     # Build the exact 7 days in DD-MM-YYYY (newest first)
     date_list = [((today - timedelta(days=i)).strftime("%d-%m-%Y")) for i in range(7)]
-    date_line = ", ".join(date_list)
 
-    final_prompt = f"""You are a Senior Technical Market Scout. Output ONLY the report. No meta-commentary, no disclaimers.
-
+    final_prompt = f"""You are a Senior Technical Market Scout. Output ONLY the report. No meta-commentary.
 Generate an intelligence report for "{company_name}" based on these article summaries.
 
-REQUIRED STRUCTURE — DATE-WISE (past 7 days, every date listed):
-- List exactly these 7 dates in this order (newest first): {date_line}
-- For EACH date you MUST output a level-2 heading and then content. Format:
+GOAL
+- Show what happened for this competitor in the LAST 7 DAYS only.
+- Make it very easy for a human to scan by DAY and by TYPE of signal.
 
-## DD-MM-YYYY
-- **Update title**: Short description. End with a clickable link in markdown: [Source](exact_url_from_summaries)
-- If there are no updates for that date, write exactly: No technical or latest press releases or documentation updates in the past 7 days.
+DATE & DAY MAPPING (newest first):
+- Day 1 = {date_list[0]}
+- Day 2 = {date_list[1]}
+- Day 3 = {date_list[2]}
+- Day 4 = {date_list[3]}
+- Day 5 = {date_list[4]}
+- Day 6 = {date_list[5]}
+- Day 7 = {date_list[6]}
 
-CLICKABLE SOURCE LINKS (mandatory):
-- Every update that comes from a source MUST include a markdown link using the exact URL from the "Source: ..." line below.
-- Format: [Source](https://...) or [Read more](https://...) — the URL must be the full URL from the summaries.
-- Do not write raw URLs alone; always use markdown link syntax [text](url) so links are clickable.
+REQUIRED OUTPUT FORMAT (for EACH day, from Day 1 to Day 7, in order):
 
-Example for one date with an update:
-## 19-02-2026
-- **API Changelog Update**: New endpoints added for v2. [Source](https://example.com/changelog)
+### Day X : (DD-MM-YYYY)
 
-Example for a date with no updates:
-## 18-02-2026
-No technical or latest press releases or documentation updates in the past 7 days.
+**📸 1. Image Search**
+- Short bullet(s) for any image/search or visual UI changes (screenshots, UI pages, product images). End each bullet with [Source](url).
+  If nothing relevant, write: None found.
 
-You MUST output all 7 date sections in order. Under each date either list bullet points with [Source](url) links or the exact "No technical or latest..." line.
+**📍 2. Maps / Local Search**
+- Short bullet(s) for any location-specific or maps-style updates (regional releases, location pages). End each bullet with [Source](url).
+  If nothing relevant, write: None found.
 
-STRICT RULES:
-- Only include updates with an explicit date in these 7 days. Omit undated or older items.
-- Use ## for every date heading. Use markdown [link text](full_url) for every source.
-- Output only the report body. No disclaimers.
+**🎥 3. YouTube Search**
+- Short bullet(s) for any video / YouTube-style updates (launch videos, demos). End each bullet with [Source](url).
+  If nothing relevant, write: None found.
 
-Summaries (each block has Source: URL then Summary; use the Source URL in your links):
+**🛍️ 4. Shopping Data**
+- Short bullet(s) for any pricing / packaging / product updates (plans, offers). End each bullet with [Source](url).
+  If nothing relevant, write: None found.
+
+RULES
+- Use EXACTLY the emojis and headings shown above.
+- ALWAYS output ALL 7 days (Day 1 to Day 7) even if there are no updates (use "None found." lines for that day).
+- ONLY include information that clearly falls in the LAST 7 calendar days.
+- Every bullet that references a source must end with a clickable markdown link: [Source](full_url).
+- Do NOT add any text before or after the 7-day blocks.
+
+Summaries to analyze:
 {combined}
 """
 
     def _fallback_report() -> str:
-        """Build a date-wise report (past 7 days) with clickable links when Gemini fails."""
+        """Fallback with the same Day 1–Day 7 structure and clear 'None found.' markers."""
         lines = [f"# {company_name} - Technical Intelligence (Past 7 Days)", ""]
+        lines.append("⚙️ Key Features & Endpoints if available for the given competitor last 7 days")
+        lines.append("")
         for i in range(7):
-            d = (today - timedelta(days=i)).strftime("%d-%m-%Y")
-            lines.append(f"## {d}")
+            day_num = i + 1
+            date_str = date_list[i]
+            lines.append(f"### Day {day_num} : ({date_str})")
+            lines.append("")
+            lines.append("**📸 1. Image Search**")
+            lines.append("None found.")
+            lines.append("")
+            lines.append("**📍 2. Maps / Local Search**")
+            lines.append("None found.")
+            lines.append("")
+            lines.append("**🎥 3. YouTube Search**")
+            lines.append("None found.")
+            lines.append("")
+            lines.append("**🛍️ 4. Shopping Data**")
             if i == 0 and summaries_with_urls:
-                for summary, url in summaries_with_urls:
-                    snip = summary[:500] + ("..." if len(summary) > 500 else "")
+                # Put any summaries we have under Day 1 as a basic fallback.
+                for summary, url in summaries_with_urls[:3]:
+                    snip = summary[:200] + ("..." if len(summary) > 200 else "")
                     lines.append(f"- {snip} [Source]({url})")
             else:
-                lines.append("No technical or latest press releases or documentation updates in the past 7 days.")
+                lines.append("None found.")
+            lines.append("")
+            lines.append("---")
             lines.append("")
         return "\n".join(lines)
 
-    system = "You write reports strictly by date (DD-MM-YYYY). List all 7 days newest first. Under each date use bullet points with markdown links [Source](full_url) so links are clickable. No disclaimers."
+    system = "You must strictly follow the Day 1–Day 7 template with the four emoji sections per day, and use markdown [Source](url) links. No disclaimers."
     try:
         if not settings.GEMINI_API_KEY:
             return _fallback_report()

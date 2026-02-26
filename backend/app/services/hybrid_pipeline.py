@@ -19,7 +19,7 @@ from app.services.lsa_compressor import compress_with_lsa
 from app.services.article_summarizer import summarize_article, summarize_articles_batch, BATCH_SIZE
 from app.services.article_cache import store_article_summary
 from app.services.final_report_generator import generate_final_report
-from app.services.token_guard import estimate_tokens
+from app.services.token_guard import estimate_tokens, truncate_to_token_limit
 
 logger = logging.getLogger(__name__)
 
@@ -32,73 +32,33 @@ LSA_SENTENCES = 10
 def _empty_7day_report(company_name: str) -> str:
     """Always return a valid date-wise past-7-days report (clickable-link friendly markdown)."""
     today = datetime.now(timezone.utc)
+    date_list = [((today - timedelta(days=i)).strftime("%d-%m-%Y")) for i in range(7)]
+    
     lines: list[str] = [f"# {company_name} - Technical Intelligence (Past 7 Days)", ""]
+    lines.append("⚙️ Key Features & Endpoints if available for the given competitor last 7 days")
+    lines.append("")
+
     for i in range(7):
-        d = (today - timedelta(days=i)).strftime("%d-%m-%Y")
-        lines.append(f"## {d}")
-        lines.append("No technical or latest press releases or documentation updates in the past 7 days.")
+        day_num = i + 1
+        date_str = date_list[i]
+        lines.append(f"### Day {day_num} : ({date_str})")
+        lines.append("")
+        lines.append("**📸 1. Image Search**")
+        lines.append("None found.")
+        lines.append("")
+        lines.append("**📍 2. Maps / Local Search**")
+        lines.append("None found.")
+        lines.append("")
+        lines.append("**🎥 3. YouTube Search**")
+        lines.append("None found.")
+        lines.append("")
+        lines.append("**🛍️ 4. Shopping Data**")
+        lines.append("None found.")
+        lines.append("")
+        lines.append("---")
         lines.append("")
     return "\n".join(lines)
 
-
-def _fetch_html(url: str) -> str:
-    """Sync fetch raw HTML. Uses certifi for SSL on Windows if available."""
-    try:
-        try:
-            import certifi
-            verify = certifi.where()
-        except ImportError:
-            verify = True
-
-        # Lightweight retries: some vendors (e.g., Lenovo) are slow / rate-limit.
-        for attempt in range(2):
-            try:
-                timeout = REQUEST_TIMEOUT + (10 * attempt)
-                r = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=timeout, verify=verify)
-                if r.status_code == 200 and r.text:
-                    return r.text
-            except Exception as e:
-                if attempt == 0:
-                    time.sleep(0.6)
-                else:
-                    raise e
-    except Exception as e:
-        logger.warning("Fetch failed %s: %s", url[:50], e)
-    return ""
-
-
-def _process_one_url(url: str) -> Tuple[str, str]:
-    """
-    For one URL: fetch -> clean -> extract -> LSA -> combine.
-    Returns (final_article_input, "") for summarizer; or ("", "") on failure.
-    """
-    html = _fetch_html(url)
-    if not html or len(html) < 200:
-        return "", ""
-    soup = BeautifulSoup(html, "html.parser")
-    clean_soup(soup)
-    title, headings, first_5_paragraphs = extract_structured(soup)
-    remaining = get_remaining_body_after_paragraphs(soup, first_5_paragraphs, max_chars=25000)
-    compressed = compress_with_lsa(remaining, num_sentences=LSA_SENTENCES)
-    parts = [f"Title: {title}"] if title else []
-    if headings:
-        parts.append("Headings: " + " | ".join(headings[:10]))
-    if first_5_paragraphs:
-        parts.append("Opening:\n" + "\n\n".join(first_5_paragraphs))
-    parts.append("Summary of rest:\n" + compressed)
-    final_input = "\n\n".join(parts)
-    if estimate_tokens(final_input) > 1200:
-        final_input = final_input[:4500].rsplit(maxsplit=1)[0] if len(final_input) > 4500 else final_input[:4500]
-    return final_input, url
-
-
-def _summarize_one(args: Tuple[str, str]) -> Tuple[str, str]:
-    """Sync: (article_input, url) -> (summary, url)."""
-    article_input, url = args
-    if not article_input:
-        return "", url
-    summary = summarize_article(url, article_input)
-    return summary, url
 
 
 async def run_hybrid_pipeline(company_name: str, urls: List[str]) -> str:
@@ -110,21 +70,46 @@ async def run_hybrid_pipeline(company_name: str, urls: List[str]) -> str:
     if not urls:
         return f"No URLs provided for {company_name}."
 
-    loop = asyncio.get_event_loop()
-
-    # 1) Data gathering + clean + extract + LSA (sync in executor)
+    # 1) Data gathering + clean + extract + LSA
+    from app.services.scraper_service import scrape_url
+    
     article_inputs: List[Tuple[str, str]] = []
     for url in urls:
-        inp, u = await loop.run_in_executor(None, _process_one_url, url)
-        if inp:
-            article_inputs.append((inp, u))
-        time.sleep(0.3)
+        try:
+            # Use the robust scraper_service which handles Firecrawl and better headers
+            scraped = await scrape_url(url)
+            if not scraped or len(scraped.get("content", "")) < 200:
+                continue
+            
+            # Re-use extraction logic for LSA compression if we have HTML
+            content = scraped.get("content", "")
+            title = scraped.get("title") or ""
+            
+            # If we have HTML from the scraper, use it for better structured extraction
+            # Some scrapers return markdown, but extract_structured likes soup.
+            # We'll build a simple soup from the content if it looks like HTML, 
+            # or just use the content directly.
+            
+            parts = [f"Title: {title}"]
+            # For simplicity and robustness, we'll use the content directly as it's already cleaned by scraper_service/Firecrawl
+            parts.append(content[:25000]) # Cap it before LSA
+            
+            final_input = "\n\n".join(parts)
+            if estimate_tokens(final_input) > 2000:
+                # Basic truncation if too long
+                final_input = truncate_to_token_limit(final_input, 1500)
+                
+            article_inputs.append((final_input, url))
+            await asyncio.sleep(0.3)
+        except Exception as e:
+            logger.warning(f"Failed to process {url}: {e}")
 
     if not article_inputs:
         # Don't fail hard — still return a well-formed past-7-days report.
         return _empty_7day_report(company_name)
 
     # 2) Batch LLM summarization (grouped + parallel for speed)
+    loop = asyncio.get_event_loop()
     database = await get_database()
     summaries_with_urls: List[Tuple[str, str]] = []
     

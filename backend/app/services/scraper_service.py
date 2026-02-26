@@ -40,7 +40,8 @@ NON_TECHNICAL_BLOCK = re.compile(
     re.I,
 )
 # Threshold: if block pattern matches more than this many times, treat as non-technical
-NON_TECHNICAL_MAX_MATCHES = 2
+# increased to 10 to allow common footer links like "careers", "webinar", etc.
+NON_TECHNICAL_MAX_MATCHES = 10
 
 
 def _parse_iso_date(s: str) -> datetime | None:
@@ -166,11 +167,11 @@ def _extract_text(soup: BeautifulSoup, max_chars: int = 8000) -> str:
 
 async def scrape_url(url: str) -> dict[str, Any] | None:
     """
-    Fetch URL via ZenRows API and extract publish_date (ISO string or None) and content (text).
-    Returns None if request fails or page is empty. Uses ZENROWS_API_KEY when set.
+    Fetch URL via Firecrawl API and extract publish_date and content.
+    Returns None if request fails or page is empty. Uses FIRECRAWL_API_KEY when set.
     """
-    if not settings.ZENROWS_API_KEY:
-        # Fallback: direct fetch when ZenRows not configured (e.g. tests)
+    if not settings.FIRECRAWL_API_KEY:
+        # Fallback: direct fetch when Firecrawl not configured (e.g. tests)
         try:
             async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
                 resp = await client.get(url)
@@ -179,44 +180,76 @@ async def scrape_url(url: str) -> dict[str, Any] | None:
                 text = resp.text
         except Exception:
             return None
+        
+        soup = BeautifulSoup(text, "html.parser")
+        pub_dt = _extract_date_from_soup(soup, url)
+        publish_date_iso = pub_dt.isoformat() if pub_dt else None
+        content = _extract_text(soup)
+        title = (soup.title.string or "").strip() if soup.title else ""
     else:
         try:
-            zenrows_url = (
-                "https://api.zenrows.com/v1/"
-                f"?apikey={quote_plus(settings.ZENROWS_API_KEY)}"
-                f"&url={quote_plus(url)}"
-                "&js_render=true"
-            )
             import asyncio
-            for attempt in range(3):
-                async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-                    resp = await client.get(zenrows_url)
+            for attempt in range(2):
+                async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+                    resp = await client.post(
+                        "https://api.firecrawl.dev/v1/scrape",
+                        headers={
+                            "Authorization": f"Bearer {settings.FIRECRAWL_API_KEY}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "url": url,
+                            "formats": ["html", "markdown"]
+                        }
+                    )
                     if resp.status_code == 429:
-                        wait = (attempt + 1) * 2
-                        logger.warning(f"ZenRows 429 for {url}. Retrying in {wait}s...")
+                        wait = (attempt + 1) * 5
+                        logger.warning(f"Firecrawl 429 for {url}. Retrying in {wait}s...")
                         await asyncio.sleep(wait)
                         continue
+                    
                     if resp.status_code >= 400:
+                        logger.error(f"Firecrawl error {resp.status_code} for {url}: {resp.text}")
                         return None
-                    text = resp.text
-                    break
-            else:
-                return None
+                    
+                    data = resp.json()
+                    if not data.get("success") or "data" not in data:
+                        return None
+                    
+                    scrape_data = data["data"]
+                    html = scrape_data.get("html", "")
+                    markdown = scrape_data.get("markdown", "")
+                    metadata = scrape_data.get("metadata", {})
+                    
+                    # Use Firecrawl's metadata where possible
+                    title = metadata.get("title") or ""
+                    
+                    # Still use existing BeautifulSoup logic for date extraction if we have HTML
+                    soup = BeautifulSoup(html, "html.parser") if html else None
+                    pub_dt = _extract_date_from_soup(soup, url) if soup else None
+                    publish_date_iso = pub_dt.isoformat() if pub_dt else None
+                    
+                    # Content: use markdown (cleaner) or fallback to extracted text
+                    content = markdown if markdown else (_extract_text(soup) if soup else "")
+                    
+                    return {
+                        "url": url,
+                        "domain": urlparse(url).netloc or "",
+                        "publish_date": publish_date_iso,
+                        "content": content,
+                        "title": title.strip(),
+                    }
+            return None
         except Exception as e:
             logger.error(f"Scrape error for {url}: {e}")
             return None
-
-    soup = BeautifulSoup(text, "html.parser")
-    pub_dt = _extract_date_from_soup(soup, url)
-    publish_date_iso = pub_dt.isoformat() if pub_dt else None
-    content = _extract_text(soup)
 
     return {
         "url": url,
         "domain": urlparse(url).netloc or "",
         "publish_date": publish_date_iso,
         "content": content,
-        "title": (soup.title.string or "").strip() if soup.title else "",
+        "title": title,
     }
 
 
@@ -225,8 +258,8 @@ def filter_by_time_and_technical(
     time_window_days: int,
 ) -> list[dict[str, Any]]:
     """
-    Step 3 – Date filtering only. Discard if publish_date missing or older than time_window_days.
-    Strict: keep only when (today - publish_date) <= time_window_days.
+    Step 3 – Date filtering. Discard if publish_date is EXPLICITLY older than time_window_days.
+    If publish_date is missing, we keep it (lenient) because Zenserp already filters by qdr:w.
     """
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=time_window_days)
@@ -235,14 +268,24 @@ def filter_by_time_and_technical(
     for item in items:
         pub_iso = item.get("publish_date")
         if not pub_iso:
+            # Lenient: if we can't find a date, trust the search engine's "last 7 days" filter.
+            valid.append(item)
             continue
+            
         dt = _parse_iso_date(pub_iso)
         if not dt:
+            # If date is unparseable, we still keep it (lenient)
+            valid.append(item)
             continue
+            
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
+        
+        # Only discard if it's EXPLICITLY too old
         if dt < cutoff:
+            logger.info(f"Discarding old content: {item.get('url')} (published {pub_iso})")
             continue
+            
         valid.append(item)
 
     return valid

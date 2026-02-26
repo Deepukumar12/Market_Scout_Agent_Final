@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     await db.connect()
     from app.core.config import settings
     from app.services.scheduler_service import start_scheduler
-    logger.info(f"SERPER_API_KEY configured: {bool(settings.SERPER_API_KEY)}")
+    logger.info(f"ZENSERP_API_KEY configured: {bool(settings.ZENSERP_API_KEY)}")
     logger.info(f"GEMINI_API_KEY configured: {bool(settings.GEMINI_API_KEY)}")
     logger.info(f"GROQ_API_KEY configured: {bool(settings.GROQ_API_KEY)} (Llama 3)")
     logger.info(f"GROQ_API_KEY configured: {bool(settings.GROQ_API_KEY)} (Llama 3 for query planning & summarization)")
