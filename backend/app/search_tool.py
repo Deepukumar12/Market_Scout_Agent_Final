@@ -2,7 +2,7 @@
 Legacy Search Tool wrapper. Now routes to Zenserp-based SearchService.
 """
 from typing import List
-from app.services.search_service import search_google
+from app.services.search_service import search_web_multi
 
 async def search_web(queries: List[str]) -> List[str]:
     """
@@ -26,7 +26,7 @@ async def search_web(queries: List[str]) -> List[str]:
             results = await search_specialized(query, "google_shopping")
         else:
             # Standard organic search
-            results = await search_google(query, num_results=5)
+            results = await search_web_multi(query, num_results=5)
             
         for r in results:
             url = r.get("url") or r.get("link")

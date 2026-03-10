@@ -50,9 +50,9 @@ class Settings(BaseSettings):
     GEMINI_API_BASE: str = "https://generativelanguage.googleapis.com/v1beta"
     GEMINI_MAX_OUTPUT_TOKENS: int = 2048
 
-    # SEARCH (Zenserp.dev = Google search API)
-    ZENSERP_API_KEY: str = ""
-    ZENSERP_MOCK_MODE: bool = False
+    # SEARCH
+    # We now default to Tavily, Brave, and other search providers
+    # or fallback to Mock Mode.
 
     # SCRAPING (Firecrawl = fetch clean Markdown/HTML with JS support)
     FIRECRAWL_API_KEY: str = ""
@@ -61,6 +61,17 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     # Groq model: Llama 3.3 70B - fast inference, strong for query planning & summarization
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
+    # OLLAMA / LOCAL LLM
+    OLLAMA_HOST: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "tinyllama"
+
+    # CHROMA DB
+    CHROMA_PERSIST_DIR: str = "./chroma_db"
+
+    # EXTRA SEARCH APIs
+    TAVILY_API_KEY: str = ""
+    BRAVE_SEARCH_API_KEY: str = ""
 
     # GitHub (repo/org search for company intelligence; optional but recommended for higher rate limits)
     GITHUB_TOKEN: str = ""

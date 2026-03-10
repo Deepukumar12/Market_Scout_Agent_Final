@@ -9,6 +9,8 @@ from datetime import datetime, timezone, timedelta
 
 from app.core.config import settings
 from app.services.gemini_sync import _gemini_generate_text
+from app.services.ollama_sync import generate_text_ollama
+from app.services.groq_sync import generate_text_groq
 from app.services.token_guard import estimate_tokens, truncate_to_token_limit
 
 logger = logging.getLogger(__name__)
@@ -132,9 +134,14 @@ Summaries to analyze:
 
     system = "You must strictly follow the Day 1–Day 7 template with the four emoji sections per day, and use markdown [Source](url) links. No disclaimers."
     try:
-        if not settings.GEMINI_API_KEY:
-            return _fallback_report()
-        raw = _gemini_generate_text(final_prompt, system_instruction=system, max_tokens=2048, temperature=0.2)
+        raw = generate_text_ollama(final_prompt, system=system, max_tokens=2048)
+        
+        if not raw and settings.GROQ_API_KEY:
+             raw = generate_text_groq(final_prompt, system=system, max_tokens=2048)
+             
+        if not raw and settings.GEMINI_API_KEY:
+             raw = _gemini_generate_text(final_prompt, system_instruction=system, max_tokens=2048, temperature=0.2)
+             
         return _strip_disclaimers(raw) if raw else _fallback_report()
     except Exception as e:
         logger.warning("Final report generation failed: %s. Returning fallback.", str(e)[:80])

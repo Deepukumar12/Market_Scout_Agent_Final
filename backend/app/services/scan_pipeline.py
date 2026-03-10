@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.models.scan import ScanRequest, ScanResponse, ScanFeature
-from app.services.search_service import search_google
+from app.services.search_service import search_web_multi
 from app.services.scraper_service import (
     scrape_url,
     filter_by_time_and_technical,
@@ -59,8 +59,8 @@ async def run_scan(request: ScanRequest) -> ScanResponse | None:
     all_results: list[dict[str, Any]] = []
     
     for q in queries:
-        # search_google handles its own errors and returns empty list on fail
-        results = await search_google(q, num_results=3)
+        # search_web_multi handles its own errors and returns empty list on fail
+        results = await search_web_multi(q, num_results=3)
         for r in results:
             url = r.get("url")
             if url and url not in seen_urls:

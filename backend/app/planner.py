@@ -1,9 +1,13 @@
 """Query planning for technical intelligence. Uses Groq (Llama 3) when available, else Gemini."""
 from datetime import datetime
 
+import logging
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 from app.services.groq_sync import generate_text_groq
 from app.services.gemini_sync import generate_text as generate_text_gemini
+from app.services.ollama_sync import generate_text_ollama
 
 
 def generate_search_queries(company_name: str, days: int = 7) -> list[str]:
@@ -36,10 +40,16 @@ Example format: ["query1", "query2", ..., "query8"]
     sys_text = "Output only valid JSON. Return a JSON array of 8 strings."
     try:
         content = ""
-        if settings.GROQ_API_KEY:
-            # Increase tokens slightly for more queries
+        # Primary: Ollama
+        content = generate_text_ollama(prompt, system=sys_text, max_tokens=600)
+        
+        # Fallback: Groq
+        if not content and settings.GROQ_API_KEY:
+            logger.info("Ollama failed, falling back to Groq for planning.")
             content = generate_text_groq(prompt, system=sys_text, max_tokens=600)
+            
         if not content and settings.GEMINI_API_KEY:
+            logger.info("Groq failed, falling back to Gemini for planning.")
             content = generate_text_gemini(prompt, system=sys_text, max_tokens=600)
         
         if not content:

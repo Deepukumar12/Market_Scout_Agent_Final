@@ -10,6 +10,7 @@ from typing import List, Tuple
 from app.core.config import settings
 from app.services.groq_sync import generate_text_groq
 from app.services.gemini_sync import generate_text as generate_text_gemini
+from app.services.ollama_sync import generate_text_ollama
 from app.services.token_guard import estimate_tokens, truncate_to_token_limit
 
 logger = logging.getLogger(__name__)
@@ -24,8 +25,6 @@ def summarize_article(url: str, article_input: str) -> str:
     Summarize one article in 200–250 words. Returns summary text or empty on failure.
     """
     if not article_input or not article_input.strip():
-        return ""
-    if not settings.GEMINI_API_KEY and not settings.GROQ_API_KEY:
         return ""
     article_input = truncate_to_token_limit(article_input, MAX_INPUT_TOKENS_PER_ARTICLE)
     if estimate_tokens(article_input) > MAX_INPUT_TOKENS_PER_ARTICLE:
@@ -43,6 +42,9 @@ Article:
 """
     sys_text = "You summarize articles concisely. Output only the summary text."
     try:
+        out = generate_text_ollama(prompt, system=sys_text, max_tokens=350)
+        if out:
+            return out
         if settings.GROQ_API_KEY:
             out = generate_text_groq(prompt, system=sys_text, max_tokens=350)
             if out:
@@ -67,9 +69,6 @@ def summarize_articles_batch(articles_with_urls: List[Tuple[str, str]]) -> List[
         List of (summary, url) tuples (same order as input)
     """
     if not articles_with_urls:
-        return []
-    
-    if not settings.GEMINI_API_KEY and not settings.GROQ_API_KEY:
         return []
     
     # Build batch prompt with all articles
@@ -103,8 +102,8 @@ ARTICLES TO SUMMARIZE:
     sys_text = "You summarize articles concisely. Return a JSON array with one summary object per article."
     
     try:
-        raw_output = ""
-        if settings.GROQ_API_KEY:
+        raw_output = generate_text_ollama(prompt, system=sys_text, max_tokens=len(articles_with_urls) * 350)
+        if not raw_output and settings.GROQ_API_KEY:
             raw_output = generate_text_groq(prompt, system=sys_text, max_tokens=len(articles_with_urls) * 350)
         if not raw_output and settings.GEMINI_API_KEY:
             raw_output = generate_text_gemini(prompt, system=sys_text, max_tokens=len(articles_with_urls) * 350)

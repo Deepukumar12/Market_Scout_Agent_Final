@@ -29,3 +29,7 @@ bcrypt
 sumy
 nltk
 apscheduler
+ollama
+chromadb
+trafilatura
+dateparser
