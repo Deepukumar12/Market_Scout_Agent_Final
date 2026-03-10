@@ -3,6 +3,7 @@ import re
 from datetime import datetime, timezone, timedelta
 
 from app.services.gemini_sync import generate_text
+from app.services.ollama_sync import generate_text_ollama
 
 DISCLAIMER_PATTERNS = [
     r"\s*Please note[^.]*\.(\s|$)",
@@ -82,5 +83,15 @@ INTELLIGENCE CONTEXT:
 {context}
 """
     system = "You output a date-wise report (DD-MM-YYYY) for the past 7 days. Use markdown [Source](url) for clickable links. No disclaimers."
-    raw = generate_text(prompt, system=system, max_tokens=2048)
+    
+    # Primary: Ollama
+    raw = generate_text_ollama(prompt, system=system, max_tokens=2048)
+    
+    if not raw:
+        from app.services.groq_sync import generate_text_groq
+        raw = generate_text_groq(prompt, system=system, max_tokens=2048)
+        
+    if not raw:
+        raw = generate_text(prompt, system=system, max_tokens=2048)
+        
     return _strip_disclaimers(raw) if raw else f"Error synthesizing report for {company_name}."

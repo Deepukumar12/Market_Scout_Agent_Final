@@ -7,7 +7,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone, timedelta
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import requests
 from bs4 import BeautifulSoup
@@ -61,7 +61,7 @@ def _empty_7day_report(company_name: str) -> str:
 
 
 
-async def run_hybrid_pipeline(company_name: str, urls: List[str]) -> str:
+async def run_hybrid_pipeline(company_name: str, urls: List[str], cached_articles: List[Dict]=None) -> str:
     """
     Full pipeline: for each URL scrape+clean+extract+LSA -> per-article summary -> store -> final report.
     Returns markdown report string.
@@ -70,39 +70,56 @@ async def run_hybrid_pipeline(company_name: str, urls: List[str]) -> str:
     if not urls:
         return f"No URLs provided for {company_name}."
 
-    # 1) Data gathering + clean + extract + LSA
-    from app.services.scraper_service import scrape_url
+    # 1) Data gathering: Cache check -> Scrape -> Storing
+    from app.services.multi_scraper import scrape_url_multi
+    from app.services.vector_cache import check_url_cached, store_article
     
     article_inputs: List[Tuple[str, str]] = []
-    for url in urls:
-        try:
-            # Use the robust scraper_service which handles Firecrawl and better headers
-            scraped = await scrape_url(url)
-            if not scraped or len(scraped.get("content", "")) < 200:
-                continue
-            
-            # Re-use extraction logic for LSA compression if we have HTML
-            content = scraped.get("content", "")
-            title = scraped.get("title") or ""
-            
-            # If we have HTML from the scraper, use it for better structured extraction
-            # Some scrapers return markdown, but extract_structured likes soup.
-            # We'll build a simple soup from the content if it looks like HTML, 
-            # or just use the content directly.
-            
-            parts = [f"Title: {title}"]
-            # For simplicity and robustness, we'll use the content directly as it's already cleaned by scraper_service/Firecrawl
-            parts.append(content[:25000]) # Cap it before LSA
-            
-            final_input = "\n\n".join(parts)
-            if estimate_tokens(final_input) > 2000:
-                # Basic truncation if too long
-                final_input = truncate_to_token_limit(final_input, 1500)
+    
+    # Process offline cached articles if search failed
+    if cached_articles:
+        for article in cached_articles:
+            content = article.get("content", "")
+            title = article.get("title", "")
+            url = article.get("url", "")
+            if content and url:
+                parts = [f"Title: {title}", content[:25000]]
+                final_input = "\n\n".join(parts)
+                if estimate_tokens(final_input) > 2000:
+                    final_input = truncate_to_token_limit(final_input, 1500)
+                article_inputs.append((final_input, url))
+    else:
+        # Process online URLs
+        for url in urls:
+            try:
+                # Cache Check First
+                cached = await check_url_cached(url)
+                if cached:
+                    logger.info(f"Using cached content for {url}")
+                    content = cached.get("content", "")
+                    title = cached.get("title", "")
+                else:
+                    scraped = await scrape_url_multi(url)
+                    if not scraped or len(scraped.get("content", "")) < 200:
+                        continue
+                    
+                    content = scraped.get("content", "")
+                    title = scraped.get("title") or ""
+                    publish_date = scraped.get("publish_date", "")
+                    
+                    # Store in Vector DB
+                    await store_article(url, content, title, company_name, publish_date)
                 
-            article_inputs.append((final_input, url))
-            await asyncio.sleep(0.3)
-        except Exception as e:
-            logger.warning(f"Failed to process {url}: {e}")
+                parts = [f"Title: {title}", content[:25000]]
+                final_input = "\n\n".join(parts)
+                
+                if estimate_tokens(final_input) > 2000:
+                    final_input = truncate_to_token_limit(final_input, 1500)
+                    
+                article_inputs.append((final_input, url))
+                await asyncio.sleep(0.3)
+            except Exception as e:
+                logger.warning(f"Failed to process {url}: {e}")
 
     if not article_inputs:
         # Don't fail hard — still return a well-formed past-7-days report.

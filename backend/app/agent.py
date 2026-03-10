@@ -20,21 +20,31 @@ async def run_agent(company_name: str) -> str:
 
     # 1. Plan
     await agent_logger.log("Strategic Planning: Generating high-intent search queries via Gemini 2.5 Flash...", "AGENT")
-    queries = generate_search_queries(company_name, days=7)
+    loop = asyncio.get_event_loop()
+    queries = await loop.run_in_executor(None, generate_search_queries, company_name, 7)
     await agent_logger.log(f"Planning complete. Targeted queries: {queries}", "AGENT")
 
     # 2. Search
-    await agent_logger.log("Execution: Orchestrating web search via Zenserp API...", "AGENT")
+    await agent_logger.log("Execution: Orchestrating web search via Search APIs...", "AGENT")
     urls = await search_web(queries)
-    await agent_logger.log(f"Infrastructure: Discovered {len(urls)} relevant technical intelligence nodes.", "AGENT")
-
+    
+    cached_articles = []
     if not urls:
-        await agent_logger.log("Search anomaly: No relevant documentation nodes found.", "RISK_ENGINE")
-        return "No relevant URLs found to analyze."
+        await agent_logger.log("Search failed or offline. Querying vector cache...", "RISK_ENGINE")
+        from app.services.vector_cache import search_cached_articles
+        for q in queries[:3]: # Search cache for top 3 queries
+            cached = await search_cached_articles(q, n_results=4)
+            cached_articles.extend(cached)
+            
+        if not cached_articles:
+            await agent_logger.log("Search anomaly: No relevant documentation nodes found online or in cache.", "RISK_ENGINE")
+            return "No relevant URLs found to analyze."
+    else:
+        await agent_logger.log(f"Infrastructure: Discovered {len(urls)} relevant technical intelligence nodes.", "AGENT")
 
     # 3–5. Hybrid pipeline: scrape -> clean -> extract -> LSA -> per-article summary -> store -> final report
-    await agent_logger.log("Data Gathering: Running token-safe pipeline (scrape, LSA, per-article summarization)...", "AGENT")
-    report = await run_hybrid_pipeline(company_name, urls)
+    await agent_logger.log("Data Gathering: Running token-safe pipeline (scrape, cache, summarize)...", "AGENT")
+    report = await run_hybrid_pipeline(company_name, urls, cached_articles=cached_articles)
     await agent_logger.log("Final Report Compiled. Ready for transmission.", "SYSTEM")
 
     return report
