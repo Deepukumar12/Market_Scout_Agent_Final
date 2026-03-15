@@ -64,7 +64,7 @@ class Settings(BaseSettings):
 
     # OLLAMA / LOCAL LLM
     OLLAMA_HOST: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "tinyllama"
+    OLLAMA_MODEL: str = "llama3"
 
     # CHROMA DB
     CHROMA_PERSIST_DIR: str = "./chroma_db"
