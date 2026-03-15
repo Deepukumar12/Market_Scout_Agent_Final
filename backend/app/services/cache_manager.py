@@ -5,6 +5,7 @@ Otherwise trigger fresh scan.
 """
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ async def store_report_cache(database, competitor_id: str, company_name: str, sc
         logger.warning("Failed to store report cache: %s", e)
 
 
-async def get_report_cache(database, competitor_id: str) -> dict | None:
+async def get_report_cache(database, competitor_id: str) -> Optional[dict]:
     """Retrieve full cached ScanResponse for a competitor."""
     try:
         coll = database["cache"]

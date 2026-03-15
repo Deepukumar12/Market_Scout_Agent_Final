@@ -4,6 +4,7 @@ Uses next_scheduled_check and scan_frequency_hours (adaptive).
 """
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -14,10 +15,10 @@ from app.services.intel_pipeline import run_competitor_scan
 
 logger = logging.getLogger(__name__)
 
-_scheduler: AsyncIOScheduler | None = None
+_scheduler: Optional[AsyncIOScheduler] = None
 
 
-def get_scheduler() -> AsyncIOScheduler | None:
+def get_scheduler() -> Optional[AsyncIOScheduler]:
     return _scheduler
 
 

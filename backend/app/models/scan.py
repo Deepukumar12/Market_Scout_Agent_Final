@@ -3,7 +3,7 @@ Strict request/response models for the Market Scout Agent scan API.
 No synthetic fallback; real fetched data only.
 """
 from datetime import datetime
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 class ScanRequest(BaseModel):
     """Payload for POST /api/v1/scan."""
     company_name: str = Field(..., min_length=1, description="Company to scan (required)")
-    website: str | None = Field(default=None, description="Optional; used to prioritize domain during search")
+    website: Optional[str] = Field(default=None, description="Optional; used to prioritize domain during search")
     time_window_days: int = Field(default=7, ge=1, le=30, description="Only include updates within this many days")
 
 
@@ -32,8 +32,8 @@ class GitHubRepoSummary(BaseModel):
     html_url: str
     description: str = ""
     stargazers_count: int = 0
-    language: str | None = None
-    updated_at: str | None = None
+    language: Optional[str] = None
+    updated_at: Optional[str] = None
     topics: List[str] = Field(default_factory=list)
 
 
@@ -46,4 +46,4 @@ class ScanResponse(BaseModel):
     total_valid_updates: int
     features: List[ScanFeature] = Field(default_factory=list)
     # Optional GitHub data when GITHUB_TOKEN is set; strengthens intelligence
-    github: dict | None = None
+    github: Optional[dict] = None

@@ -2,11 +2,17 @@ import os
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-# Backend root and .env path (absolute, so it works from any cwd / uvicorn --reload)
+
+# -------------------------------------------------------
+# Resolve backend root and .env path
+# -------------------------------------------------------
 _env_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 env_path = os.path.abspath(os.path.join(_env_dir, ".env"))
 
-# Force GITHUB_TOKEN into os.environ before Pydantic or load_dotenv run (fixes 413/reload missing it)
+
+# -------------------------------------------------------
+# Ensure GITHUB_TOKEN loads early (fix for reload issues)
+# -------------------------------------------------------
 if os.path.isfile(env_path):
     try:
         with open(env_path, "r", encoding="utf-8") as f:
@@ -20,62 +26,107 @@ if os.path.isfile(env_path):
     except Exception:
         pass
 
+
+# Load .env
 load_dotenv(dotenv_path=env_path, override=True)
 
 
+# -------------------------------------------------------
+# Settings Class
+# -------------------------------------------------------
 class Settings(BaseSettings):
+
+    # PROJECT
     PROJECT_NAME: str = "SCOUTIQ"
     API_V1_STR: str = "/api/v1"
 
+
+    # ---------------------------------------------------
     # DATABASE
+    # ---------------------------------------------------
     MONGODB_URL: str = "mongodb://localhost:27017"
     DATABASE_NAME: str = "scoutiq_db"
 
+
+    # ---------------------------------------------------
     # REDIS
+    # ---------------------------------------------------
     REDIS_URL: str = "redis://localhost:6379/0"
 
+
+    # ---------------------------------------------------
     # SECURITY
-    # NOTE: Always override this in production via the SECRET_KEY environment variable.
-    # This default is only suitable for local development.
-    SECRET_KEY: str = "dev-only-secret-key-change-me-please-9f6c4a1b3e2d"
+    # ---------------------------------------------------
+    SECRET_KEY: str = "dev-only-secret-key-change-me-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
-    # AI / GEMINI
-    # Gemini API key from Google AI Studio or Vertex (API key auth).
-    GEMINI_API_KEY: str = ""
-    # Default to Gemini 2.5 Flash; override in .env if needed.
-    GEMINI_MODEL: str = "gemini-2.5-flash"
-    # Official Google Generative Language HTTP endpoint.
-    GEMINI_API_BASE: str = "https://generativelanguage.googleapis.com/v1beta"
-    GEMINI_MAX_OUTPUT_TOKENS: int = 2048
 
-    # SEARCH
-    # We now default to Tavily, Brave, and other search providers
-    # or fallback to Mock Mode.
+    # ---------------------------------------------------
+    # LLM PRIORITY CONTROL
+    # ---------------------------------------------------
+    # Options: ollama | groq | gemini
+    LLM_PROVIDER: str = "ollama"
 
-    # SCRAPING (Firecrawl = fetch clean Markdown/HTML with JS support)
-    FIRECRAWL_API_KEY: str = ""
 
-    # NEW API KEYS
-    GROQ_API_KEY: str = ""
-    # Groq model: Llama 3.3 70B - fast inference, strong for query planning & summarization
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
-
-    # OLLAMA / LOCAL LLM
+    # ---------------------------------------------------
+    # OLLAMA (LOCAL LLM)
+    # ---------------------------------------------------
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3"
 
-    # CHROMA DB
+
+    # ---------------------------------------------------
+    # GEMINI
+    # ---------------------------------------------------
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_API_BASE: str = "https://generativelanguage.googleapis.com/v1beta"
+    GEMINI_MAX_OUTPUT_TOKENS: int = 2048
+
+
+    # ---------------------------------------------------
+    # GROQ
+    # ---------------------------------------------------
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
+
+    # ---------------------------------------------------
+    # SEARCH APIs
+    # ---------------------------------------------------
+    TAVILY_API_KEY: str = ""
+
+
+    # ---------------------------------------------------
+    # SCRAPING
+    # ---------------------------------------------------
+    FIRECRAWL_API_KEY: str = ""
+
+
+    # ---------------------------------------------------
+    # VECTOR DB
+    # ---------------------------------------------------
     CHROMA_PERSIST_DIR: str = "./chroma_db"
 
-    # EXTRA SEARCH APIs
-    TAVILY_API_KEY: str = ""
-    BRAVE_SEARCH_API_KEY: str = ""
 
-    # GitHub (repo/org search for company intelligence; optional but recommended for higher rate limits)
+    # ---------------------------------------------------
+    # GITHUB (optional intelligence source)
+    # ---------------------------------------------------
     GITHUB_TOKEN: str = ""
 
+
+    # ---------------------------------------------------
+    # MOCK MODE (IMPORTANT)
+    # ---------------------------------------------------
+    # If True → fake search results
+    # If False → real web search + scraping
+    MOCK_MODE: bool = False
+
+
+    # ---------------------------------------------------
+    # Pydantic Config
+    # ---------------------------------------------------
     model_config = {
         "env_file": env_path,
         "env_file_encoding": "utf-8",
@@ -84,10 +135,12 @@ class Settings(BaseSettings):
     }
 
 
+# -------------------------------------------------------
+# Create Settings Instance
+# -------------------------------------------------------
 settings = Settings()
 
-# One more time from env (Pydantic reads env; we already set os.environ above)
+
+# Ensure GitHub token persists after reload
 if not (settings.GITHUB_TOKEN or "").strip():
     settings.GITHUB_TOKEN = (os.environ.get("GITHUB_TOKEN") or "").strip()
-
-

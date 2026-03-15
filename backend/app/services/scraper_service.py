@@ -5,7 +5,7 @@ Step 4: Content filtering (technical only; exclude hiring/funding/marketing).
 import logging
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Dict, List, Optional, Union
 from urllib.parse import quote_plus, urlparse
 
 import httpx
@@ -44,7 +44,7 @@ NON_TECHNICAL_BLOCK = re.compile(
 NON_TECHNICAL_MAX_MATCHES = 10
 
 
-def _parse_iso_date(s: str) -> datetime | None:
+def _parse_iso_date(s: str) -> Optional[datetime]:
     """Parse ISO-like date string; return None if invalid."""
     if not s or not s.strip():
         return None
@@ -86,7 +86,7 @@ def _parse_iso_date(s: str) -> datetime | None:
 
 import json
 
-def _extract_date_from_json_ld(soup: BeautifulSoup) -> datetime | None:
+def _extract_date_from_json_ld(soup: BeautifulSoup) -> Optional[datetime]:
     """Try to find datePublished or dateModified in JSON-LD scripts."""
     scripts = soup.find_all('script', type='application/ld+json')
     for script in scripts:
@@ -110,7 +110,7 @@ def _extract_date_from_json_ld(soup: BeautifulSoup) -> datetime | None:
             continue
     return None
 
-def _extract_date_from_url(url: str) -> datetime | None:
+def _extract_date_from_url(url: str) -> Optional[datetime]:
     """Try to extract YYYY/MM/DD from URL path."""
     # Simple regex for /2024/01/01/ or /2024-01-01-
     import re
@@ -123,7 +123,7 @@ def _extract_date_from_url(url: str) -> datetime | None:
             pass
     return None
 
-def _extract_date_from_soup(soup: BeautifulSoup, url: str = "") -> datetime | None:
+def _extract_date_from_soup(soup: BeautifulSoup, url: str = "") -> Optional[datetime]:
     """Try to find a publish date from JSON-LD, meta tags, time elements, or URL."""
     # 1. JSON-LD (often most reliable)
     dt = _extract_date_from_json_ld(soup)
@@ -165,7 +165,7 @@ def _extract_text(soup: BeautifulSoup, max_chars: int = 8000) -> str:
     return text[:max_chars] if text else ""
 
 
-async def scrape_url(url: str) -> dict[str, Any] | None:
+async def scrape_url(url: str) -> Optional[Dict[str, Any]]:
     """
     Fetch URL via Firecrawl API and extract publish_date and content.
     Returns None if request fails or page is empty. Uses FIRECRAWL_API_KEY when set.

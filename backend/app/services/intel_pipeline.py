@@ -6,6 +6,7 @@ Intel pipeline: runs Market Scout scan for a competitor with:
 """
 import logging
 from datetime import datetime, timezone
+from typing import Optional, Union
 
 from app.core.database import db
 from app.models.competitor import Competitor
@@ -32,8 +33,8 @@ def _is_first_scan(competitor_doc: dict) -> bool:
 
 async def run_competitor_scan(
     competitor: Competitor,
-    competitor_doc: dict | None = None,
-) -> ScanResponse | None:
+    competitor_doc: Optional[dict] = None,
+) -> Optional[ScanResponse]:
     """
     Run Market Scout Agent scan for this competitor.
     Uses two-phase window (14 days first, 7 days delta).

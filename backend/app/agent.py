@@ -1,6 +1,7 @@
 import asyncio
 
 from app.core.logger import agent_logger
+from app.core.config import settings
 from app.planner import generate_search_queries
 from app.search_tool import search_web
 from app.services.hybrid_pipeline import run_hybrid_pipeline
@@ -19,7 +20,7 @@ async def run_agent(company_name: str) -> str:
     await agent_logger.log(f"Initializing autonomous scout for {company_name}...", "SYSTEM")
 
     # 1. Plan
-    await agent_logger.log("Strategic Planning: Generating high-intent search queries via Gemini 2.5 Flash...", "AGENT")
+    await agent_logger.log(f"Strategic Planning: Generating high-intent search queries via {settings.LLM_PROVIDER.upper()}...", "AGENT")
     loop = asyncio.get_event_loop()
     queries = await loop.run_in_executor(None, generate_search_queries, company_name, 7)
     await agent_logger.log(f"Planning complete. Targeted queries: {queries}", "AGENT")

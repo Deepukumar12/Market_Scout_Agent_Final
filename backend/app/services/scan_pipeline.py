@@ -5,7 +5,7 @@ Simplified and updated for Zenserp search layer.
 import logging
 import asyncio
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional, Union, List, Dict
 
 from app.models.scan import ScanRequest, ScanResponse, ScanFeature
 from app.services.search_service import search_web_multi
@@ -20,7 +20,7 @@ from app.services.github_client import fetch_company_github_data, GitHubClientEr
 logger = logging.getLogger(__name__)
 
 
-async def run_scan(request: ScanRequest) -> ScanResponse | None:
+async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     """
     Execute the 5-step pipeline. Returns ScanResponse on success.
     Returns None when Gemini fails.

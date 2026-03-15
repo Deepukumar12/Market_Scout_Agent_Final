@@ -5,6 +5,7 @@ Sole search provider for ScoutIQ.
 import logging
 from typing import Any, List, Dict
 import httpx
+from bs4 import BeautifulSoup
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -42,8 +43,9 @@ async def search_web_multi(query: str, num_results: int = 5) -> List[Dict[str, A
 
 
 
-    # 2. Tavily (Search API specifically for AI)
+    # 1. Tavily (Search API specifically for AI)
     if settings.TAVILY_API_KEY and len(results) < num_results:
+        logger.info(f"Running Tavily search for: {query}")
         url = "https://api.tavily.com/search"
         payload = {
             "api_key": settings.TAVILY_API_KEY,
@@ -55,39 +57,48 @@ async def search_web_multi(query: str, num_results: int = 5) -> List[Dict[str, A
             "days_back": 7
         }
         try:
-            async with httpx.AsyncClient(timeout=5) as client:
+            async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.post(url, json=payload)
                 if resp.status_code == 200:
                     data = resp.json().get("results", [])
                     for r in data:
                         add_result(r.get("url"), r.get("title"), r.get("content"), "tavily")
+                else:
+                    logger.warning(f"Tavily API returned status {resp.status_code}")
         except Exception as e:
             logger.error(f"Tavily API error: {e}")
 
-    # 3. Brave Search
-    if settings.BRAVE_SEARCH_API_KEY and len(results) < num_results:
-        url = "https://api.search.brave.com/res/v1/web/search"
-        headers = {
-            "Accept": "application/json",
-            "X-Subscription-Token": settings.BRAVE_SEARCH_API_KEY
-        }
-        params = {
-            "q": query,
-            "count": num_results,
-            "freshness": "pw" # past week
-        }
+    # 2. DuckDuckGo Fallback (using httpx if Tavily failed or returned no results)
+    if len(results) < num_results and not settings.MOCK_MODE:
+        logger.info(f"Running DuckDuckGo fallback search for: {query}")
+        # Note: This is a simple HTML-based scraper for DDG as a last-resort fallback.
+        # In a production environment, one might use 'duckduckgo-search' library.
+        ddg_url = f"https://html.duckduckgo.com/html/?q={query}"
         try:
-            async with httpx.AsyncClient(timeout=5) as client:
-                resp = await client.get(url, headers=headers, params=params)
+            headers = {"User-Agent": "Mozilla/5.0"}
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(ddg_url, headers=headers)
                 if resp.status_code == 200:
-                    data = resp.json().get("web", {}).get("results", [])
-                    for r in data:
-                        add_result(r.get("url"), r.get("title"), r.get("description"), "brave")
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    # DDG HTML results are usually in 'links_main' class
+                    links = soup.find_all("a", class_="result__a")
+                    snippets = soup.find_all("a", class_="result__snippet")
+                    for i, link in enumerate(links[:num_results]):
+                        href = link.get("href")
+                        # DDG often redirects, simple extraction
+                        if href and "duckduckgo.com/l/?" in href:
+                            import urllib.parse
+                            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                            href = parsed.get("uddg", [None])[0]
+                        
+                        snippet_text = snippets[i].get_text() if i < len(snippets) else ""
+                        if href:
+                            add_result(href, link.get_text(), snippet_text, "duckduckgo")
         except Exception as e:
-            logger.error(f"Brave Search error: {e}")
+            logger.error(f"DuckDuckGo fallback error: {e}")
 
-    # Fallback to Mock if no APIs are configured or all failed
-    if not results:
+    # 3. Mock results ONLY if MOCK_MODE is True or everything failed and MOCK_MODE is True
+    if not results and settings.MOCK_MODE:
         logger.info(f"MOCK_MODE: Returning synthetic results for query '{query}'")
         for i in range(num_results):
             add_result(f"https://example.com/mock-news-{i}", f"Mock: {query}", "Synthetic result", "mock")
