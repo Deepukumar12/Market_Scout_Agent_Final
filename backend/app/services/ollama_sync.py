@@ -4,11 +4,11 @@ from app.core.config import settings
 
 def generate_text_ollama(prompt: str, system: str = "", max_tokens: int = 2048) -> str:
     """
-    Generate text using local Ollama model (tinyllama by default).
+    Generate text using local Ollama model (llama3 by default).
     Returns empty string if it fails.
     """
     host = getattr(settings, "OLLAMA_HOST", "http://localhost:11434")
-    model = getattr(settings, "OLLAMA_MODEL", "tinyllama")
+    model = getattr(settings, "OLLAMA_MODEL", "llama3")
     
     url = f"{host.rstrip('/')}/api/generate"
     
