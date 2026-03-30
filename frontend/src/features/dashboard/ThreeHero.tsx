@@ -21,22 +21,29 @@ interface VisualCompetitor {
 const generateVisualData = (competitors: any[]): VisualCompetitor[] => {
   return competitors.map((comp, index) => {
     const hash = comp.name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-    // Adjusted lat/lng generation for more spread
+    // Lat/Lng are still deterministic as we don't have HQ data, but spread them better
     const lat = ((hash * 137) % 160) - 80; 
     const lng = ((hash * 263) % 360) - 180;
     
-    // Simulate data
-    const riskScore = (hash % 100);
-    const sentiment = riskScore > 75 ? 'negative' : riskScore < 35 ? 'positive' : 'neutral';
+    // Real data mapping
+    const riskScore = (comp.risk_score !== undefined) ? comp.risk_score * 100 : (hash % 100);
+    const confidence = (comp.confidence_score !== undefined) ? comp.confidence_score : 0.7;
+    
+    // Map confidence to sentiment
+    const sentiment = confidence > 0.8 ? 'positive' : confidence < 0.4 ? 'negative' : 'neutral';
+    
+    // Use total_updates_cumulative or count for market share visualization
+    const updates = comp.total_updates_cumulative || comp.count || 0;
+    const marketShare = Math.min(95, 10 + (updates * 2) + (hash % 10));
     
     return {
       id: comp._id || comp.id || `comp-${index}`,
       name: comp.name,
       lat,
       lng,
-      marketShare: (hash % 40) + 10,
+      marketShare,
       sentiment,
-      riskScore
+      riskScore: Math.round(riskScore)
     };
   });
 };

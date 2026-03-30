@@ -9,25 +9,34 @@ interface Competitor {
     name: string;
     url: string;
     count?: number;
+    total_sources_scanned_cumulative?: number;
+    total_updates_cumulative?: number;
+    confidence_score?: number;
+    risk_score?: number;
 }
 
 interface CompetitorState {
     competitors: Competitor[];
+    selectedCompetitorId: string | null;
     loading: boolean;
     error: string | null;
-    fetchCompetitors: () => Promise<void>;
+    fetchCompetitors: (query?: string) => Promise<void>;
+    setSelectedCompetitorId: (id: string | null) => void;
     addCompetitor: (name: string, url: string) => Promise<Competitor | null>;
     removeCompetitor: (id: string) => Promise<void>;
 }
 
-export const useCompetitorStore = create<CompetitorState>((set) => ({
+export const useCompetitorStore = create<CompetitorState>((set, get) => ({
     competitors: [],
+    selectedCompetitorId: null,
     loading: false,
     error: null,
-    fetchCompetitors: async () => {
-        set({ loading: true });
+    setSelectedCompetitorId: (id) => set({ selectedCompetitorId: id }),
+    fetchCompetitors: async (query?: string) => {
+        if (get().loading) return; // Prevent duplicate parallel requests that cause Axios to abort
+        set({ loading: true, error: null });
         try {
-            const data = await getCompetitors();
+            const data = await getCompetitors(query);
             set({ competitors: data || [], loading: false });
         } catch (err) {
             set({ error: 'Failed to fetch competitors', loading: false });

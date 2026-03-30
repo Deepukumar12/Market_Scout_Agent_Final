@@ -48,7 +48,7 @@ const NotificationItem = ({ notification }: { notification: Notification }) => {
             </h4>
             <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-mono">
               <Clock className="w-3 h-3" />
-              {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(notification.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed pr-4">

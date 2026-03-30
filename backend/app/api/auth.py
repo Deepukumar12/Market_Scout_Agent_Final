@@ -6,7 +6,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.core import config
 from app.core.database import db
 from app.core.security import create_access_token, get_current_user, get_password_hash, verify_password
-from app.models.user import User, UserCreate
+from app.models.user import User, UserCreate, UserUpdate, PasswordChange
+from bson import ObjectId
 
 router = APIRouter()
 
@@ -145,3 +146,59 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     Get current logged in user details.
     """
     return current_user
+
+
+@router.put("/profile", response_model=User)
+async def update_profile(
+    user_update: UserUpdate, 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Update basic user profile info.
+    """
+    from app.core.database import get_database
+    database = await get_database()
+    collection = database["users"]
+
+    update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
+    
+    if "email" in update_data and update_data["email"] != current_user.email:
+        existing = await collection.find_one({"email": update_data["email"]})
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already taken")
+
+    await collection.update_one(
+        {"_id": ObjectId(current_user.id)},
+        {"$set": update_data}
+    )
+    
+    updated_user = await collection.find_one({"_id": ObjectId(current_user.id)})
+    updated_user["id"] = str(updated_user.pop("_id"))
+    return User(**updated_user)
+
+
+@router.put("/password")
+async def change_password(
+    pwd_data: PasswordChange,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Secure password rotation.
+    """
+    from app.core.database import get_database
+    database = await get_database()
+    collection = database["users"]
+
+    # Current user in DB (including hash)
+    user_in_db = await collection.find_one({"_id": ObjectId(current_user.id)})
+    
+    if not verify_password(pwd_data.current_password, user_in_db["hashed_password"]):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+
+    new_hashed = get_password_hash(pwd_data.new_password)
+    await collection.update_one(
+        {"_id": ObjectId(current_user.id)},
+        {"$set": {"hashed_password": new_hashed}}
+    )
+    
+    return {"message": "Password updated successfully"}

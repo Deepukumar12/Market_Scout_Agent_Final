@@ -1,6 +1,5 @@
-
 import { create } from 'zustand';
-import { runCompetitorScan, runScan as runScanApi, analyzeCompany as analyzeCompanyApi } from '@/services/api';
+import { runCompetitorScan, runScan as runScanApi, analyzeCompany as analyzeCompanyApi, deleteReport as deleteReportApi, getCompetitors } from '@/services/api';
 import { useNotificationStore } from '@/store/notificationStore';
 
 function getScanErrorMessage(res: any): string {
@@ -11,32 +10,6 @@ function getScanErrorMessage(res: any): string {
   return err || 'Scan failed.';
 }
 
-/** Legacy competitor-based scan (POST /competitors/:id/scan) */
-interface CIReportFeature {
-  title: string;
-  technical_summary: string;
-  publish_date: string;
-  source_urls: string[];
-  category: 'API' | 'UI' | 'Infrastructure' | 'Security' | 'AI' | 'SDK' | 'Platform';
-  confidence_score: number;
-  confidence_reasoning: string;
-  risk_level: 'Low' | 'Medium' | 'High';
-  risk_reasoning: string;
-  suggested_action: string;
-}
-
-export interface CIReport {
-  _id?: string;
-  competitor: string;
-  scan_date: string;
-  features: CIReportFeature[];
-  executive_summary: string;
-  innovation_velocity_score: number;
-  velocity_reasoning: string;
-  competitor_id?: string;
-}
-
-/** Market Scout Agent scan response – real data only, no synthetic fallback */
 export interface ScanFeature {
   feature_title: string;
   technical_summary: string;
@@ -45,6 +18,60 @@ export interface ScanFeature {
   source_domain: string;
   category: 'API' | 'UI' | 'Infrastructure' | 'Security' | 'Platform' | 'AI' | 'SDK';
   confidence_score: number;
+}
+
+export interface GlobalMetrics {
+  total_competitors: number;
+  total_reports: number;
+  features_found: number;
+  articles_processed: number;
+  system_latency: number;
+  last_update: string;
+}
+
+export interface MarketComparisonMetric {
+  competitor: string;
+  sector: string;
+  features_count: number;
+  innovation_score: number;
+  risk_level: string;
+  sentiment: string;
+  velocity: string;
+}
+
+export interface MonthlyRelease {
+  company_name: string;
+  feature_name: string;
+  category: string;
+  release_date: string;
+  source_url?: string;
+  hash_id: string;
+}
+
+export interface MissionBriefingData {
+  executive_summary: string;
+  technical_risks: string[];
+  market_opportunities: string[];
+  sentiment_pulse: string;
+  last_updated: string;
+}
+
+export interface StrategicPlan {
+  id: string;
+  title: string;
+  summary: string;
+  impact: string;
+  confidence: number;
+  timeToMarket: string;
+  estimatedROI: string;
+  marketTrigger: string;
+  marketGap: string;
+  targetAudience: string;
+  coreCapabilities: string[];
+  implementation: { step: string; detail: string }[];
+  risks: string[];
+  tags: string[];
+  financialProjections: { month: string; value: number; cost: number }[];
 }
 
 export interface ScanReport {
@@ -57,18 +84,39 @@ export interface ScanReport {
 }
 
 interface IntelState {
-  /** Legacy report (competitor-based scan) */
-  report: CIReport | null;
-  /** Legacy/Structured scan result */
+  report: any | null;
   scanReport: ScanReport | null;
-  /** New Market Scout Agent scan response – Markdown string */
   agentReport: string | null;
+  history: any[];
+  signals: any[];
+  recommendations: any[];
+  activities: any[];
+  innovationTrends: any | null;
+  globalMetrics: GlobalMetrics | null;
+  comparisonMatrix: MarketComparisonMetric[];
+  monthlyReleases: MonthlyRelease[];
+  lastSevenDays: MonthlyRelease[];
+  missionBriefing: MissionBriefingData | null;
+  strategicPlan: StrategicPlan | null;
+  competitors: any[];
   loading: boolean;
   error: string | null;
   runScan: (competitorId: string) => Promise<void>;
-  /** Run Market Scout Agent scan with company name + optional website */
+  fetchHistory: (query?: string) => Promise<void>;
+  fetchSignals: () => Promise<void>;
+  fetchRecommendations: () => Promise<void>;
+  fetchActivityTimeline: (query?: string) => Promise<void>;
+  fetchInnovationTrends: () => Promise<void>;
+  fetchGlobalMetrics: () => Promise<void>;
+  fetchMarketComparison: () => Promise<void>;
+  fetchMonthlyReleases: () => Promise<void>;
+  fetchLastSevenDays: (query?: string) => Promise<void>;
+  fetchMissionBriefing: () => Promise<void>;
+  fetchCompetitors: () => Promise<void>;
+  fetchStrategicPlan: (competitorId: string, focusArea: string, riskLevel: string) => Promise<void>;
   runMarketScan: (payload: { company_name: string; website?: string | null; time_window_days?: number }) => Promise<void>;
   analyzeCompany: (company: string) => Promise<void>;
+  deleteReport: (reportId: string) => Promise<void>;
   clear: () => void;
 }
 
@@ -76,6 +124,18 @@ export const useIntelStore = create<IntelState>((set) => ({
   report: null,
   scanReport: null,
   agentReport: null,
+  history: [],
+  signals: [],
+  recommendations: [],
+  activities: [],
+  innovationTrends: null,
+  globalMetrics: null,
+  comparisonMatrix: [],
+  monthlyReleases: [],
+  lastSevenDays: [],
+  missionBriefing: null,
+  strategicPlan: null,
+  competitors: [],
   loading: false,
   error: null,
 
@@ -90,7 +150,7 @@ export const useIntelStore = create<IntelState>((set) => ({
       if (data.total_valid_updates > 0) {
         addNotification({
           title: `Intelligence Found: ${data.competitor}`,
-          message: `Detected ${data.total_valid_updates} new technical signals from the last 7 days.`,
+          message: `Detected ${data.total_valid_updates} new technical signals.`,
           type: 'success',
           competitorId
         });
@@ -106,6 +166,62 @@ export const useIntelStore = create<IntelState>((set) => ({
         message: `Failed to complete scan: ${message}`,
         type: 'error'
       });
+    }
+  },
+
+  fetchHistory: async (query?: string) => {
+    set({ loading: true });
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        let url = `${apiUrl}/api/v1/reports/history?limit=12`;
+        if (query) url += `&competitor=${encodeURIComponent(query)}`;
+        
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ history: data.reports || [], loading: false });
+        } else {
+            set({ loading: false });
+        }
+    } catch(e) {
+        console.error("Failed to fetch history", e);
+        set({ loading: false });
+    }
+  },
+
+  fetchSignals: async () => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/intelligence/stream?limit=50`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ signals: data.signals || [] });
+        }
+    } catch(error) {
+        console.error("Failed to fetch intelligence data:", error);
+    }
+  },
+
+  fetchRecommendations: async () => {
+    set({ loading: true });
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/intelligence/recommendations`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ recommendations: data, loading: false });
+        } else {
+            set({ loading: false });
+        }
+    } catch(e) {
+        console.error("Failed to fetch recommendations", e);
+        set({ loading: false });
     }
   },
 
@@ -165,5 +281,192 @@ export const useIntelStore = create<IntelState>((set) => ({
     }
   },
 
-  clear: () => set({ report: null, scanReport: null, agentReport: null, error: null }),
+  deleteReport: async (reportId: string) => {
+    const { addNotification } = useNotificationStore.getState();
+    try {
+      await deleteReportApi(reportId);
+      addNotification({
+        title: 'Report Purged',
+        message: 'Intelligence brief successfully removed from archives.',
+        type: 'info'
+      });
+    } catch (err: any) {
+      console.error('Delete report error:', err);
+      addNotification({
+        title: 'Cleanup Failed',
+        message: 'Could not remove report from the system.',
+        type: 'error'
+      });
+    }
+  },
+
+  fetchActivityTimeline: async (query?: string) => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        let url = `${apiUrl}/api/v1/intelligence/activity-timeline`;
+        if (query) url += `?competitor=${encodeURIComponent(query)}`;
+        
+        const res = await fetch(url, {
+            headers: { 
+              Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ activities: data.days || [] });
+        }
+    } catch(err) {
+        console.error("Failed to fetch activity timeline:", err);
+    }
+  },
+
+  fetchInnovationTrends: async () => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/intelligence/innovation-trends`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ innovationTrends: data });
+        }
+    } catch(err) {
+        console.error("Failed to fetch innovation trends:", err);
+    }
+  },
+
+  fetchGlobalMetrics: async () => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/intelligence/global-metrics`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ globalMetrics: data });
+        }
+    } catch(err) {
+        console.error("Failed to fetch global metrics:", err);
+    }
+  },
+
+  fetchMarketComparison: async () => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/intelligence/market-comparison`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ comparisonMatrix: data });
+        }
+    } catch(err) {
+        console.error("Failed to fetch market comparison:", err);
+    }
+  },
+
+  fetchMonthlyReleases: async () => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/intelligence/monthly-releases`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ monthlyReleases: data });
+        }
+    } catch(err) {
+        console.error("Failed to fetch monthly releases:", err);
+    }
+  },
+
+  fetchLastSevenDays: async (query?: string) => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        let url = `${apiUrl}/api/v1/intelligence/last-seven-days`;
+        if (query) url += `?competitor=${encodeURIComponent(query)}`;
+
+        const res = await fetch(url, {
+            headers: { 
+              Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ lastSevenDays: data });
+        }
+    } catch(err) {
+        console.error("Failed to fetch last 7 days releases:", err);
+    }
+  },
+  fetchMissionBriefing: async () => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/intelligence/mission-briefing`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ missionBriefing: data });
+        }
+    } catch(err) {
+        console.error("Failed to fetch mission briefing:", err);
+    }
+  },
+
+  fetchStrategicPlan: async (competitorId, focusArea, riskLevel) => {
+    set({ loading: true, error: null, strategicPlan: null });
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/intelligence/strategic-plan`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` 
+            },
+            body: JSON.stringify({ competitor_id: competitorId, focus_area: focusArea, risk_level: riskLevel })
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ strategicPlan: data, loading: false });
+        } else {
+            set({ loading: false, error: 'Strategic Engine Busy' });
+        }
+    } catch(err) {
+        console.error("Failed to fetch strategic plan:", err);
+        set({ loading: false, error: 'Strategic Network Link Failure' });
+    }
+  },
+
+  fetchCompetitors: async () => {
+    try {
+        const data = await getCompetitors();
+        set({ competitors: data });
+    } catch(err) {
+        console.error("Failed to fetch competitors:", err);
+    }
+  },
+
+  clear: () => set({ 
+    report: null, 
+    scanReport: null, 
+    agentReport: null, 
+    error: null, 
+    history: [], 
+    signals: [], 
+    recommendations: [], 
+    activities: [], 
+    innovationTrends: null, 
+    globalMetrics: null, 
+    strategicPlan: null, 
+    competitors: [],
+    monthlyReleases: [],
+    lastSevenDays: []
+  }),
 }));

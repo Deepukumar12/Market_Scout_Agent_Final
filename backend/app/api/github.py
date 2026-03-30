@@ -36,7 +36,7 @@ async def get_company_github(
 @router.get("/search/repos")
 async def search_repos(
     q: str = Query(..., min_length=1),
-    sort: str = Query("stars", regex="^(stars|updated|forks)$"),
+    sort: str = Query("stars", pattern="^(stars|updated|forks)$"),
     per_page: int = Query(10, ge=1, le=30),
     page: int = Query(1, ge=1),
     current_user: User = Depends(get_current_user),
@@ -54,7 +54,7 @@ async def list_org_repos(
     org: str,
     per_page: int = Query(20, ge=1, le=100),
     page: int = Query(1, ge=1),
-    sort: str = Query("updated", regex="^(created|updated|pushed|full_name|stars)$"),
+    sort: str = Query("updated", pattern="^(created|updated|pushed|full_name|stars)$"),
     current_user: User = Depends(get_current_user),
 ):
     """List public repositories for a GitHub organization."""

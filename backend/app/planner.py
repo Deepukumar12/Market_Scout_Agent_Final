@@ -1,8 +1,9 @@
-"""Query planning for technical intelligence. Uses Groq (Llama 3) when available, else Gemini."""
-from datetime import datetime
-
 import logging
+import json
+import re
+from datetime import datetime, timedelta
 from app.core.config import settings
+from app.core.datetime_utils import get_now_ist
 
 logger = logging.getLogger(__name__)
 from app.services.groq_sync import generate_text_groq

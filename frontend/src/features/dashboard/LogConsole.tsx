@@ -6,9 +6,9 @@ import { useAuthStore } from '@/store/authStore';
 
 // WebSocket must connect to the backend. In dev, Vite proxies /ws to backend; fallback to direct backend URL.
 const getWsBase = () => {
-  const env = import.meta.env.VITE_WS_URL;
+  const env = (import.meta as any).env.VITE_WS_URL;
   if (env) return env.replace(/^http/, 'ws');
-  if (import.meta.env.DEV) return 'ws://localhost:8000';
+  if ((import.meta as any).env.DEV) return 'ws://localhost:8000';
   const { protocol, host } = window.location;
   return protocol === 'https:' ? `wss://${host}` : `ws://${host}`;
 };
@@ -100,7 +100,7 @@ export default function LogConsole() {
             log.includes("AGENT") ? "border-green-500 text-green-400" :
             "border-gray-700 text-gray-500"
           )}>
-            <span className="opacity-50 mr-2">[{new Date().toLocaleTimeString()}]</span>
+            <span className="opacity-50 mr-2">[{new Date().toLocaleTimeString('en-IN')}]</span>
             {log}
           </div>
         ))}

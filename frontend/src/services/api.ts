@@ -53,7 +53,11 @@ export const runCompetitorScan = async (competitorId: string) => {
     return response.data;
 };
 
-/** Market Scout Agent: real search + scrape + structured output. No synthetic fallback. */
+export const deleteReport = async (reportId: string) => {
+    const response = await api.delete(`/reports/${reportId}`);
+    return response.data;
+};
+
 export const runScan = async (payload: {
     company_name: string;
     website?: string | null;
@@ -91,6 +95,16 @@ export const getCurrentUser = async () => {
     return response.data;
 }
 
+export const updateProfile = async (userData: any) => {
+    const response = await api.put('/auth/profile', userData);
+    return response.data;
+}
+
+export const changePassword = async (passwordData: any) => {
+    const response = await api.put('/auth/password', passwordData);
+    return response.data;
+}
+
 // GitHub intelligence (requires GITHUB_TOKEN in backend .env for best rate limits)
 export const getCompanyGitHub = async (companyName: string, maxRepos = 15) => {
     const response = await api.get(`/github/company/${encodeURIComponent(companyName)}`, {
@@ -110,6 +124,75 @@ export const getOrgRepos = async (org: string, perPage = 20, page = 1, sort = 'u
     const response = await api.get(`/github/orgs/${encodeURIComponent(org)}/repos`, {
         params: { per_page: perPage, page, sort },
     });
+    return response.data;
+};
+
+// Intelligence Endpoints
+export const getGlobalMetrics = async () => {
+    const response = await api.get('/intelligence/global-metrics');
+    return response.data;
+};
+
+export const getIntelligenceStream = async (limit = 20) => {
+    const response = await api.get('/intelligence/stream', { params: { limit } });
+    return response.data;
+};
+
+export const getRecommendations = async () => {
+    const response = await api.get('/intelligence/recommendations');
+    return response.data;
+};
+
+export const getInnovationTrends = async () => {
+    const response = await api.get('/intelligence/innovation-trends');
+    return response.data;
+};
+
+export const getPredictivePipeline = async () => {
+    const response = await api.get('/intelligence/predictive-pipeline');
+    return response.data;
+};
+
+export const getSentimentMatrix = async () => {
+    const response = await api.get('/intelligence/sentiment-matrix');
+    return response.data;
+};
+
+export const getSignalAnalytics = async (competitorId?: string) => {
+    const response = await api.get('/intelligence/analytics', {
+        params: { competitor_id: competitorId || null }
+    });
+    return response.data;
+};
+
+export const getRiskMatrix = async () => {
+    const response = await api.get('/intelligence/risk-matrix');
+    return response.data;
+};
+
+export const getActivityTimeline = async () => {
+    const response = await api.get('/intelligence/activity-timeline');
+    return response.data;
+};
+
+// Notification Endpoints
+export const getNotifications = async (limit = 50) => {
+    const response = await api.get('/notifications', { params: { limit } });
+    return response.data;
+};
+
+export const markNotificationRead = async (id: string) => {
+    const response = await api.patch(`/notifications/${id}/read`);
+    return response.data;
+};
+
+export const markAllNotificationsRead = async () => {
+    const response = await api.patch('/notifications/read-all');
+    return response.data;
+};
+
+export const clearNotifications = async () => {
+    const response = await api.delete('/notifications/clear');
     return response.data;
 };
 

@@ -1,10 +1,11 @@
-
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
     Activity, Globe, Zap, Search,
-    ArrowUpRight, Plus, Terminal, RefreshCw, Layers
+    ArrowUpRight, Plus, Terminal, RefreshCw, Layers, Download
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -35,20 +36,22 @@ const TargetUniversePage = () => {
     const [signals, setSignals] = useState<IntelSignal[]>([]);
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('All');
+    const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const { token } = useAuthStore();
     const navigate = useNavigate();
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const resSignals = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/intelligence/stream?limit=50`, {
+            // @ts-ignore
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const resSignals = await fetch(`${apiUrl}/api/v1/intelligence/stream?limit=50`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const dataSignals = await resSignals.json();
             setSignals(dataSignals.signals || []);
 
-            const resRecs = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/intelligence/recommendations`, {
+            const resRecs = await fetch(`${apiUrl}/api/v1/intelligence/recommendations`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const dataRecs = await resRecs.json();
@@ -65,6 +68,54 @@ const TargetUniversePage = () => {
         const interval = setInterval(fetchData, 30000); // Auto-refresh every 30s
         return () => clearInterval(interval);
     }, [token]);
+
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+        const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        
+        // Header
+        doc.setFillColor(29, 29, 31);
+        doc.rect(0, 0, 210, 40, 'F');
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.text("TARGET UNIVERSE INTEL", 20, 25);
+        doc.setFontSize(10);
+        doc.setTextColor(0, 113, 227); // blue
+        doc.text("LIVE SIGNAL INTERCEPT REPORT", 20, 32);
+
+        let y = 55;
+        
+        // Summary Stats
+        doc.setFontSize(12);
+        doc.setTextColor(29, 29, 31);
+        doc.text(`Active Signals Tracked: ${signals.length}`, 20, y);
+        y += 15;
+
+        // Signals List
+        doc.setFontSize(14);
+        doc.setTextColor(0, 113, 227);
+        doc.text("SITUATIONAL INTERCEPTS", 20, y);
+        y += 10;
+
+        signals.slice(0, 20).forEach(s => {
+            if (y > 270) { doc.addPage(); y = 30; }
+            doc.setFontSize(10);
+            doc.setTextColor(29, 29, 31);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${s.company_name} [${s.sentiment}]`, 20, y);
+            y += 5;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            const splitSummary = doc.splitTextToSize(s.summary, 170);
+            doc.text(splitSummary, 20, y);
+            y += (splitSummary.length * 4) + 6;
+        });
+
+        doc.save(`SCOUTIQ_SIGNAL_INTERCEPT_${dateStr.replace(/\s+/g, '_')}.pdf`);
+        setIsPdfModalOpen(false);
+    };
 
     const getSentimentColor = (sentiment: string) => {
         switch(sentiment) {
@@ -85,15 +136,7 @@ const TargetUniversePage = () => {
         return acc;
     }, {});
     
-    // Default mock sectors if empty to show the cool chart
-    if (Object.keys(sectorCounts).length === 0) {
-        sectorCounts['SaaS'] = 45;
-        sectorCounts['Fintech'] = 28;
-        sectorCounts['Health'] = 19;
-        sectorCounts['EdTech'] = 32;
-        sectorCounts['Cyber'] = 15;
-        sectorCounts['CleanTech'] = 22;
-    }
+    // Mock fallbacks removed to ensure 100% project accuracy
 
     const chartData = Object.keys(sectorCounts).map(key => ({ 
         subject: key, 
@@ -105,60 +148,74 @@ const TargetUniversePage = () => {
         <div className="space-y-6 min-h-screen">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-black text-white uppercase tracking-tighter italic flex items-center gap-3">
-                        <Globe className="w-6 h-6 text-blue-500" />
-                        Target Universe <span className="text-slate-600 text-lg not-italic font-mono ml-2">v4.2</span>
+                    <h1 className="text-5xl font-black text-[#1D1D1F] uppercase tracking-tighter italic flex items-center gap-3">
+                        Target <span className="text-[#0071E3]">Universe</span>
                     </h1>
-                    <p className="text-slate-500 text-xs font-mono uppercase tracking-widest mt-1">
-                        Global Intelligence Collection Stream
+                    <p className="text-[#6E6E73] dark:text-[#86868B] text-lg font-medium italic mt-2">
+                        Global intelligence collection stream and autonomous signal intercepts.
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline" onClick={fetchData} className="border-white/10 hover:bg-white/5 text-slate-400">
+                    <Button variant="outline" onClick={fetchData} className="border-[#E5E5EA] hover:bg-white/50 text-[#6E6E73] dark:text-[#86868B]">
                         <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                         SYNC STREAM
                     </Button>
+                    <Button 
+                        variant="outline"
+                        onClick={() => setIsPdfModalOpen(true)}
+                        className="rounded-xl px-6 border-[#E5E5EA] dark:border-white/10 bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl text-[#1D1D1F] dark:text-white font-black text-[10px] uppercase tracking-widest h-10 hover:shadow-apple transition-all gap-2"
+                    >
+                        <Download size={16} strokeWidth={3} />
+                        Export Intel
+                    </Button>
+
+                    <PdfDownloadModal 
+                        isOpen={isPdfModalOpen}
+                        onClose={() => setIsPdfModalOpen(false)}
+                        onDownload={handleExportPDF}
+                        title="Signal Discovery"
+                    />
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 {/* Main Feed */}
-                <div className="lg:col-span-2 space-y-4">
-                    <div className="bg-[#020617]/50 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl">
-                        <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-                            <h2 className="text-xs font-black text-blue-400 uppercase tracking-widest flex items-center gap-2">
-                                <Activity className="w-4 h-4" />
-                                Live Signal Intercepts
-                            </h2>
-                            <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-1 rounded border border-blue-500/20 font-mono">
-                                {signals.length} SIGNALS ACTIVE
-                            </span>
-                        </div>
+                <div className="lg:col-span-2 space-y-10">
+                <div className="bg-white/70 border border-[#E5E5EA] rounded-[40px] overflow-hidden backdrop-blur-xl shadow-apple shadow-sm">
+                    <div className="px-6 py-4 border-b border-[#E5E5EA] flex items-center justify-between bg-white/40">
+                        <h2 className="text-xs font-black text-[#0071E3] uppercase tracking-widest flex items-center gap-2">
+                            <Activity className="w-4 h-4" />
+                            Live Signal Intercepts
+                        </h2>
+                        <span className="text-[10px] bg-[#0071E3]/10 text-[#0071E3] px-2 py-1 rounded border border-[#0071E3]/20 font-mono">
+                            {signals.length} SIGNALS ACTIVE
+                        </span>
+                    </div>
                         
-                        <div className="divide-y divide-white/5 max-h-[700px] overflow-y-auto custom-scrollbar">
-                            {signals.map((signal, idx) => (
-                                <motion.div 
-                                    key={signal.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.05 }}
-                                    className="p-5 hover:bg-white/[0.02] transition-colors group cursor-pointer"
+                    <div className="divide-y divide-[#E5E5EA] max-h-[700px] overflow-y-auto custom-scrollbar">
+                        {signals.map((signal, idx) => (
+                            <motion.div 
+                                key={signal.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className="p-5 hover:bg-white/50 transition-colors group cursor-pointer"
                                     onClick={() => navigate('/dashboard/add-competitor', { state: { initialName: signal.company_name } })}
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex items-center gap-3">
-                                            <span className="w-8 h-8 rounded bg-slate-800 flex items-center justify-center font-black text-xs text-slate-400 border border-white/5">
+                                            <span className="w-8 h-8 rounded bg-[#F5F5F7] flex items-center justify-center font-black text-xs text-[#86868B] dark:text-[#A1A1A6] border border-[#E5E5EA]">
                                                 {signal.company_name[0]}
                                             </span>
                                             <div>
-                                                <h3 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">
+                                                <h3 className="text-sm font-bold text-[#1D1D1F] group-hover:text-[#0071E3] transition-colors">
                                                     {signal.company_name}
                                                 </h3>
-                                                <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono uppercase">
+                                                <div className="flex items-center gap-2 text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase">
                                                     {getSectorIcon(signal.sector)}
                                                     <span>{signal.sector}</span>
-                                                    <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                                                    <span>{new Date(signal.timestamp).toLocaleTimeString()}</span>
+                                                    <span className="w-1 h-1 bg-[#E5E5EA] rounded-full" />
+                                                    <span>{new Date(signal.timestamp).toLocaleTimeString('en-IN')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -167,17 +224,17 @@ const TargetUniversePage = () => {
                                         </div>
                                     </div>
                                     
-                                    <p className="text-slate-400 text-xs leading-relaxed mb-3 pl-11">
+                                    <p className="text-[#6E6E73] dark:text-[#86868B] text-xs leading-relaxed mb-3 pl-11 font-medium italic">
                                         {signal.summary}
                                     </p>
                                     
                                     <div className="pl-11 flex items-center justify-between">
                                         <div className="flex items-center gap-4">
-                                            <span className="text-[10px] text-slate-600 font-mono flex items-center gap-1">
-                                                SOURCE: <span className="text-slate-400">{signal.source}</span>
+                                            <span className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono flex items-center gap-1">
+                                                SOURCE: <span className="text-[#6E6E73] dark:text-[#86868B]">{signal.source}</span>
                                             </span>
-                                            <span className="text-[10px] text-slate-600 font-mono flex items-center gap-1">
-                                                TYPE: <span className="text-slate-400">{signal.signal_type}</span>
+                                            <span className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono flex items-center gap-1">
+                                                TYPE: <span className="text-[#6E6E73] dark:text-[#86868B]">{signal.signal_type}</span>
                                             </span>
                                         </div>
                                         <Button size="sm" variant="ghost" className="h-6 text-[9px] hover:text-blue-400 hover:bg-blue-500/10 uppercase tracking-wider">
@@ -191,29 +248,29 @@ const TargetUniversePage = () => {
                 </div>
 
                 {/* Recommendations Sidebar */}
-                <div className="space-y-6">
+                <div className="space-y-10">
                     {/* Radar Chart Widget */}
-                    <div className="bg-[#020617]/50 border border-white/10 rounded-2xl p-6 backdrop-blur-xl relative overflow-hidden">
-                        <h3 className="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                             <Layers className="w-4 h-4 text-purple-400" /> Sector Composition
+                    <div className="glass-panel border-[#E5E5EA] p-10 rounded-[40px] relative overflow-hidden shadow-apple shadow-sm">
+                        <h3 className="text-xs font-black text-[#1D1D1F] uppercase tracking-widest mb-4 flex items-center gap-2">
+                             <Layers className="w-4 h-4 text-[#AF52DE]" /> Sector Composition
                         </h3>
                         <div className="h-[250px] w-full relative z-10">
                             <ResponsiveContainer width="100%" height="100%">
                                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
-                                    <PolarGrid stroke="#1e293b" />
-                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
+                                    <PolarGrid stroke="#E5E5EA" />
+                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#86868B', fontSize: 10, fontWeight: 700 }} />
                                     <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
-                                    <Radar name="Signals" dataKey="A" stroke="#8b5cf6" strokeWidth={2} fill="#8b5cf6" fillOpacity={0.2} />
+                                    <Radar name="Signals" dataKey="A" stroke="#AF52DE" strokeWidth={2} fill="#AF52DE" fillOpacity={0.1} />
                                 </RadarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    <div className="bg-gradient-to-b from-blue-900/20 to-purple-900/20 border border-white/10 rounded-2xl p-6 backdrop-blur-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 blur-[50px] rounded-full pointer-events-none" />
+                    <div className="bg-gradient-to-b from-[#0071E3]/5 to-[#AF52DE]/5 border border-[#E5E5EA] rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden shadow-apple shadow-sm">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#0071E3]/10 blur-[50px] rounded-full pointer-events-none" />
                         
-                        <h2 className="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
-                            <Zap className="w-4 h-4 text-yellow-500" />
+                        <h2 className="text-xs font-black text-[#1D1D1F] uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
+                            <Zap className="w-4 h-4 text-amber-500" />
                             AI Target Recommendations
                         </h2>
                         
@@ -222,21 +279,21 @@ const TargetUniversePage = () => {
                                 <motion.div 
                                     key={rec.id}
                                     whileHover={{ scale: 1.02 }}
-                                    className="bg-black/40 border border-white/10 rounded-xl p-4 hover:border-blue-500/30 transition-all group"
+                                    className="bg-white/60 border border-[#E5E5EA] rounded-xl p-4 hover:border-[#0071E3]/30 transition-all group"
                                 >
                                     <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-bold text-sm text-white group-hover:text-blue-400 transition-colors">
+                                        <h3 className="font-bold text-sm text-[#1D1D1F] group-hover:text-[#0071E3] transition-colors">
                                             {rec.company_name}
                                         </h3>
-                                        <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
                                             {rec.match_score}% MATCH
                                         </span>
                                     </div>
-                                    <p className="text-[10px] text-slate-400 mb-3 leading-relaxed">
+                                    <p className="text-[10px] text-[#6E6E73] mb-3 leading-relaxed font-medium italic">
                                         {rec.reason}
                                     </p>
                                     <Button 
-                                        className="w-full h-8 text-[10px] font-black uppercase tracking-widest bg-blue-600 hover:bg-blue-500 text-white"
+                                        className="w-full h-8 text-[10px] font-black uppercase tracking-widest bg-[#0071E3] hover:bg-[#0077ED] text-white rounded-lg"
                                         onClick={() => navigate('/dashboard/add-competitor', { state: { initialName: rec.company_name } })}
                                     >
                                         <Plus className="w-3 h-3 mr-2" />
@@ -247,17 +304,17 @@ const TargetUniversePage = () => {
                         </div>
                     </div>
 
-                    <div className="bg-[#020617]/50 border border-white/10 rounded-2xl p-6 backdrop-blur-xl text-center">
-                        <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
-                             <Search className="w-5 h-5 text-slate-400" />
+                    <div className="bg-white/70 border border-[#E5E5EA] rounded-[40px] p-10 backdrop-blur-xl text-center shadow-apple shadow-sm">
+                        <div className="w-12 h-12 bg-[#F5F5F7] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#E5E5EA]">
+                             <Search className="w-5 h-5 text-[#86868B]" />
                         </div>
-                        <h3 className="text-xs font-black text-white uppercase tracking-widest mb-1">
+                        <h3 className="text-xs font-black text-[#1D1D1F] uppercase tracking-widest mb-1">
                             Manual Probe
                         </h3>
-                        <p className="text-[10px] text-slate-500 mb-4">
+                        <p className="text-[10px] text-[#6E6E73] mb-4 font-medium italic text-center">
                             Deploy a custom scout to analyze specific targets not listed in the stream.
                         </p>
-                        <Button variant="outline" size="sm" className="w-full text-xs border-white/10 hover:bg-white/5" onClick={() => navigate('/dashboard/add-competitor')}>
+                        <Button variant="outline" size="sm" className="w-full text-xs border-[#E5E5EA] hover:bg-white/50" onClick={() => navigate('/dashboard/add-competitor')}>
                             Initialize Scan
                         </Button>
                     </div>

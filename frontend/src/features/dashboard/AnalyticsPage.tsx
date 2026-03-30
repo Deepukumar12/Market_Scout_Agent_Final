@@ -1,12 +1,22 @@
-
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, BarChart3, Cpu, Globe, LineChart, Shield, Zap, RefreshCw, Terminal, Layers, Radio, MapPin, Hash, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { 
+  Activity, 
+  BarChart3, 
+  Cpu, 
+  Globe, 
+  RefreshCw, 
+  Layers, 
+  Radio, 
+  ArrowUpRight,
+  TrendingUp,
+  Zap
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';
-import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 // --- Types ---
 interface IntensityPoint { time: string; value: number; }
@@ -25,11 +35,10 @@ interface SignalAnalytics {
   top_sources: SourceMetric[];
   trending_topics: TopicMetric[];
   geo_activity: GeoMetric[];
-  recent_signals: string[];
 }
 
 const AnalyticsPage = () => {
-  const { competitors, fetchCompetitors } = useCompetitorStore();
+  const { competitors, selectedCompetitorId, setSelectedCompetitorId, fetchCompetitors } = useCompetitorStore();
   const { token } = useAuthStore();
   const [data, setData] = useState<SignalAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +49,11 @@ const AnalyticsPage = () => {
   }, [fetchCompetitors]);
 
   const fetchData = async () => {
+      if (!selectedCompetitorId || selectedCompetitorId === 'null') return;
       setLoading(true);
       try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/intelligence/signal-analytics`, {
+        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/intelligence/analytics?competitor_id=${selectedCompetitorId}`, {
               headers: { Authorization: `Bearer ${token}` }
           });
           if(res.ok) {
@@ -56,285 +67,249 @@ const AnalyticsPage = () => {
       }
   };
 
-  const [logs, setLogs] = useState<string[]>([]);
-
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 8000); // 8s refresh
+    const interval = setInterval(fetchData, 30000); // 30s refresh for cleaner UI
     return () => clearInterval(interval);
-  }, [refreshKey]);
-
-  // Accumulate logs when data updates
-  useEffect(() => {
-    if (data?.recent_signals) {
-        setLogs(prev => {
-            const newLogs = [...data.recent_signals, ...prev];
-            return newLogs.slice(0, 50); // Keep last 50
-        });
-    }
-  }, [data]);
+  }, [refreshKey, selectedCompetitorId]);
 
   return (
-    <div className="relative max-w-[1600px] mx-auto space-y-8 pb-20 px-4">
-      
-      {/* Background Ambience */}
-      <div className="pointer-events-none absolute -top-40 left-10 w-[600px] h-[600px] bg-blue-500/10 blur-[120px] rounded-full animate-pulse-slow" />
-
+    <div className="space-y-10 pb-20">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10 border-b border-white/5 pb-8">
-        <div className="space-y-4">
-           <div className="flex items-center gap-3">
-             <div className="px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-                    Telemetry Stream Active
-                </span>
-             </div>
-             <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] font-mono text-slate-500 uppercase flex items-center gap-2">
-                <Radio className="w-3 h-3 text-blue-400 animate-pulse" />
-                LATENCY: {data?.processing_latency_ms || '--'}ms
-             </div>
-          </div>
-          <div>
-            <h1 className="text-4xl font-black text-white tracking-tighter mb-1 uppercase italic">
-               Signal <span className="text-blue-500">Analytics</span>
-            </h1>
-            <p className="text-sm text-slate-400 font-medium leading-relaxed italic">
-               Global Intelligence Command Center
-            </p>
-          </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Signal <span className="text-[#AF52DE]">Intelligence</span></h1>
+          <p className="text-[#6E6E73] dark:text-[#A1A1A6] mt-2 font-medium italic">Global telemetry and real-time competitor movement tracking.</p>
         </div>
         
-        <div className="flex items-center gap-3">
-           <div className="hidden lg:flex items-center gap-6 mr-6">
-                <div className="text-right">
-                    <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">24h Volume</p>
-                    <p className="text-xl font-mono font-bold text-white">{data?.total_signals_24h.toLocaleString()}</p>
-                </div>
-                <div className="w-px h-8 bg-white/10" />
-                <div className="text-right">
-                    <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Active Sources</p>
-                    <p className="text-xl font-mono font-bold text-blue-400">{data?.active_sources_count}</p>
-                </div>
+        <div className="flex items-center gap-4">
+           <select 
+            value={selectedCompetitorId || ''} 
+            onChange={(e) => setSelectedCompetitorId(e.target.value)}
+            className="h-10 px-4 rounded-full border border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#2C2C2E] text-sm font-bold text-[#1D1D1F] dark:text-white focus:outline-none shadow-apple-sm"
+          >
+            <option value="" disabled>Select a competitor</option>
+            {competitors.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+
+           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm">
+              <div className="w-2 h-2 rounded-full bg-[#34C759] animate-pulse" />
+              <span className="text-xs font-bold text-[#1D1D1F] dark:text-white uppercase tracking-wider">Stream Active</span>
            </div>
            
            <Button 
             variant="outline" 
             onClick={() => setRefreshKey(prev => prev + 1)}
             disabled={loading}
-            className="h-12 w-12 p-0 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white"
+            className="h-10 px-4 rounded-full border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#3A3A3C]"
           >
-             <RefreshCw className={cn("w-4 h-4 text-blue-400", loading && "animate-spin")} />
+             <RefreshCw className={cn("w-4 h-4 mr-2 text-[#0071E3]", loading && "animate-spin")} />
+             Sync
           </Button>
         </div>
       </div>
 
-      {/* Main Command Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 relative z-10">
+      {/* Hero Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm group hover:shadow-apple transition-all">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-[#0071E3]/20 flex items-center justify-center text-[#0071E3]">
+              <Zap size={20} />
+            </div>
+            <span className={cn(
+              "text-[10px] font-black uppercase tracking-widest",
+              (data?.total_signals_24h || 0) > 10 ? "text-[#34C759]" : "text-[#86868B] dark:text-[#A1A1A6]"
+            )}>
+              {(data?.total_signals_24h || 0) > 0 ? `+${Math.floor((data?.total_signals_24h || 0) / 10)}%` : 'stable'}
+            </span>
+          </div>
+          <div className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">24h Signal Volume</div>
+          <div className="text-3xl font-black text-[#1D1D1F] tracking-tighter uppercase italic">{data?.total_signals_24h.toLocaleString() || '---'}</div>
+        </div>
+
+        <div className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm group hover:shadow-apple transition-all">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-[#AF52DE]/20 flex items-center justify-center text-[#AF52DE]">
+              <Globe size={20} />
+            </div>
+          </div>
+          <div className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">Active Sources</div>
+          <div className="text-3xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic">{data?.active_sources_count || '---'}</div>
+        </div>
+
+        <div className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm group hover:shadow-apple transition-all">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-[#FF9500]/20 flex items-center justify-center text-[#FF9500]">
+              <Activity size={20} />
+            </div>
+          </div>
+          <div className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">Network Latency</div>
+          <div className="text-3xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic">{data?.processing_latency_ms || '--'}ms</div>
+        </div>
+
+        <div className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm group hover:shadow-apple transition-all">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-[#34C759]/20 flex items-center justify-center text-[#34C759]">
+              <Cpu size={20} />
+            </div>
+          </div>
+          <div className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">System Load</div>
+          <div className="text-3xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic">{data?.system_load_percent || 0}%</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
         
-        {/* LEFT COLUMN: System & Categories */}
-        <div className="xl:col-span-1 space-y-6">
-             {/* System Load Radial */}
-            <motion.div
-                layout
-                className="p-6 rounded-3xl border border-white/5 bg-[#020617]/40 backdrop-blur-xl relative overflow-hidden group"
-            >
-                <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex items-center justify-between mb-6 relative z-10">
-                    <span className="text-[10px] text-purple-400 uppercase font-black tracking-widest">Engine Load</span>
-                    <Cpu className="w-4 h-4 text-purple-400" />
-                </div>
-                <div className="relative py-2 flex justify-center z-10">
-                     <div className="relative w-40 h-40 mx-auto">
-                        <div className="absolute inset-0 rounded-full border-[8px] border-white/5" />
-                        <motion.div 
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: Math.max(2, (100 - (data?.system_load_percent || 50)) / 5), repeat: Infinity, ease: 'linear' }}
-                        className="absolute inset-0 rounded-full border-[8px] border-purple-500 border-t-transparent border-l-transparent opacity-60 blur-[1px]" 
-                        />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-3xl font-black text-white tracking-tighter">{data?.system_load_percent || 0}%</span>
-                            <span className="text-[9px] text-slate-500 uppercase tracking-widest">Utilized</span>
-                        </div>
+        {/* Left: Signal History */}
+        <div className="xl:col-span-2 space-y-10">
+           <div className="p-10 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple flex flex-col h-[400px]">
+                <div className="flex justify-between items-start mb-8">
+                    <div>
+                        <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Intensity <span className="text-[#0071E3]">Waves</span></h3>
+                        <p className="text-sm text-[#86868B] dark:text-[#A1A1A6] mt-1 font-medium italic">Real-time spectral analysis of global signals</p>
                     </div>
+                    <BarChart3 className="w-5 h-5 text-[#0071E3]" />
                 </div>
-            </motion.div>
+                <div className="flex-1 w-full min-h-0">
+                  {data ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={data.intensity_history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                              <defs>
+                                  <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="5%" stopColor="#0071E3" stopOpacity={0.4}/>
+                                      <stop offset="95%" stopColor="#0071E3" stopOpacity={0}/>
+                                  </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="4 4" stroke="#E5E5EA" vertical={false} />
+                              <XAxis 
+                                  dataKey="time" 
+                                  axisLine={false} 
+                                  tickLine={false} 
+                                  tick={{ fill: '#86868B', fontSize: 10, fontWeight: 'bold' }} 
+                                  dy={10} 
+                              />
+                              <YAxis 
+                                  axisLine={false} 
+                                  tickLine={false} 
+                                  tick={{ fill: '#86868B', fontSize: 10, fontWeight: 'bold' }} 
+                                  dx={-10}
+                              />
+                              <Tooltip 
+                                  contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid #E5E5EA', borderRadius: '12px', fontWeight: 'bold', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}
+                                  itemStyle={{ color: '#0071E3', fontWeight: '900' }}
+                                  formatter={(value: any) => [`${value.toLocaleString()}`, 'Signal Volume']}
+                                  labelStyle={{ color: '#86868B', textTransform: 'uppercase', fontSize: '10px' }}
+                              />
+                              <Area 
+                                  type="monotone" 
+                                  dataKey="value" 
+                                  stroke="#0071E3" 
+                                  strokeWidth={4} 
+                                  fillOpacity={1} 
+                                  fill="url(#colorVal)" 
+                                  activeDot={{ r: 6, stroke: '#0071E3', strokeWidth: 3, fill: '#ffffff' }}
+                              />
+                          </AreaChart>
+                      </ResponsiveContainer>
+                  ) : (
+                      <div className="h-full flex items-center justify-center text-[#86868B] dark:text-[#A1A1A6] animate-pulse font-medium">Initializing Visualization...</div>
+                  )}
+                </div>
+           </div>
 
-            {/* Category Breakdown */}
-            <motion.div className="p-6 rounded-3xl border border-white/5 bg-[#020617]/40 backdrop-blur-xl">
-                 <div className="flex items-center gap-2 mb-6">
-                    <Layers className="w-4 h-4 text-emerald-400" />
-                    <span className="text-[10px] text-emerald-400 uppercase font-black tracking-widest">Category Dist.</span>
-                 </div>
-                 <div className="space-y-4">
-                    {data?.category_distribution.map((cat, i) => (
-                        <div key={cat.category} className="group/row">
-                            <div className="flex justify-between items-end mb-1">
-                                <span className="text-[10px] font-bold text-slate-300 group-hover/row:text-white transition-colors">{cat.category}</span>
-                                <span className="text-[9px] font-mono text-emerald-400">{cat.percentage}%</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                <motion.div 
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${cat.percentage}%` }}
-                                    transition={{ duration: 1, delay: i * 0.1 }}
-                                    className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full"
-                                />
-                            </div>
-                        </div>
-                    ))}
-                 </div>
-            </motion.div>
-        </div>
-
-        {/* CENTER COLUMN: Main Viz & Topics */}
-        <div className="xl:col-span-2 space-y-6">
-             {/* Signal Intensity Chart */}
-             <motion.div className="p-8 rounded-3xl border border-white/5 bg-[#020617]/60 backdrop-blur-xl h-[340px] flex flex-col">
-                  <div className="flex justify-between items-start mb-6">
-                      <div>
-                          <p className="text-[10px] text-blue-400 uppercase font-black tracking-widest mb-1">Global Signal Volume</p>
-                          <h3 className="text-lg font-bold text-white uppercase italic tracking-tighter">Intensity Waves (12h)</h3>
-                      </div>
-                      <BarChart3 className="w-5 h-5 text-blue-500" />
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              {/* Category Breakdown */}
+              <div className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm">
+                  <div className="flex items-center gap-2 mb-8">
+                      <Layers className="w-5 h-5 text-[#AF52DE]" />
+                      <h3 className="text-lg font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Category <span className="text-[#AF52DE]">Distribution</span></h3>
                   </div>
-                  <div className="flex-1 w-full min-h-0">
-                    {data ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data.intensity_history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
-                                <XAxis dataKey="time" stroke="#475569" tick={{fontSize: 9}} axisLine={false} tickLine={false} />
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', fontSize: '12px' }}
-                                    itemStyle={{ color: '#e2e8f0' }}
-                                />
-                                <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorVal)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="h-full flex items-center justify-center text-slate-500 animate-pulse">Initializing Visualization...</div>
-                    )}
-                  </div>
-             </motion.div>
-
-             {/* Trending Topics Cloud */}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <motion.div className="p-6 rounded-3xl border border-white/5 bg-[#020617]/40 backdrop-blur-xl">
-                      <div className="flex items-center gap-2 mb-4">
-                          <Hash className="w-4 h-4 text-amber-400" />
-                          <span className="text-[10px] text-amber-400 uppercase font-black tracking-widest">Topic Resonance</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                          {data?.trending_topics.map((t, i) => (
-                              <motion.span 
-                                key={t.topic}
-                                initial={{ opacity:0, scale: 0.8 }}
-                                animate={{ opacity:1, scale:1 }}
-                                transition={{ delay: i * 0.05 }}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wide cursor-default hover:scale-105 transition-transform",
-                                    t.sentiment > 0.5 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
-                                    t.sentiment < -0.5 ? "bg-rose-500/10 border-rose-500/20 text-rose-400" :
-                                    "bg-blue-500/10 border-blue-500/20 text-slate-300"
-                                )}
-                              >
-                                  {t.topic}
-                              </motion.span>
-                          ))}
-                      </div>
-                 </motion.div>
-
-                 {/* Top Sources */}
-                 <motion.div className="p-6 rounded-3xl border border-white/5 bg-[#020617]/40 backdrop-blur-xl">
-                      <div className="flex items-center gap-2 mb-4">
-                          <Globe className="w-4 h-4 text-cyan-400" />
-                          <span className="text-[10px] text-cyan-400 uppercase font-black tracking-widest">Active Nodes</span>
-                      </div>
-                      <div className="space-y-3">
-                          {data?.geo_activity.map((geo, i) => (
-                              <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
-                                  <div className="flex items-center gap-3">
-                                      <div className="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)] animate-pulse" />
-                                      <span className="text-slate-300 font-mono group-hover:text-white">{geo.active_node}</span>
-                                  </div>
-                                  <span className="font-bold text-slate-500">{geo.count} Hits</span>
+                  <div className="space-y-6">
+                      {data?.category_distribution.map((cat, i) => (
+                          <div key={cat.category} className="group">
+                              <div className="flex justify-between items-end mb-2">
+                                  <span className="text-xs font-bold text-[#1D1D1F] dark:text-white">{cat.category}</span>
+                                  <span className="text-xs font-bold text-[#86868B] dark:text-[#A1A1A6]">{cat.percentage}%</span>
                               </div>
-                          ))}
+                              <div className="h-2 w-full bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-full overflow-hidden">
+                                  <motion.div 
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${cat.percentage}%` }}
+                                      transition={{ duration: 1, delay: i * 0.1 }}
+                                      className="h-full bg-[#AF52DE] rounded-full"
+                                  />
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+
+              {/* Geo Activity */}
+              <div className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm">
+                  <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-2">
+                          <Radio className="w-5 h-5 text-[#0071E3]" />
+                          <h3 className="text-lg font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Active <span className="text-[#0071E3]">Regions</span></h3>
                       </div>
-                 </motion.div>
-             </div>
+                  </div>
+                  <div className="space-y-4">
+                      {data?.geo_activity.map((geo, i) => (
+                          <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-[#F5F5F7]/50 dark:bg-[#3A3A3C]/50 hover:bg-[#F5F5F7] dark:hover:bg-[#3A3A3C] transition-all cursor-default group">
+                              <div className="flex items-center gap-3">
+                                  <div className="w-2 h-2 rounded-full bg-[#34C759] shadow-sm" />
+                                  <span className="text-sm font-bold text-[#1D1D1F] dark:text-white">{geo.active_node}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[11px] font-bold text-[#86868B] dark:text-[#A1A1A6]">
+                                  {geo.count} <ArrowUpRight size={12} />
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+           </div>
         </div>
 
-        {/* RIGHT COLUMN: Live Wire */}
-        <div className="xl:col-span-1 h-full">
-            <motion.div className="h-full min-h-[500px] bg-[#050b1a] rounded-3xl border border-white/5 relative flex flex-col font-mono shadow-2xl overflow-hidden">
-                <div className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Terminal className="w-4 h-4 text-emerald-500" />
-                        <span className="text-[10px] text-emerald-500 uppercase font-black tracking-widest animate-pulse">Live Wire</span>
-                    </div>
-                    <div className="flex gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-rose-500/20" />
-                        <div className="w-2 h-2 rounded-full bg-amber-500/20" />
-                        <div className="w-2 h-2 rounded-full bg-emerald-500/20" />
-                    </div>
+        {/* Right: Topic Resonance */}
+         <div className="xl:col-span-1">
+            <div className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple sticky top-24">
+                <div className="flex items-center gap-2 mb-8">
+                    <TrendingUp className="w-5 h-5 text-[#34C759]" />
+                    <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Topic <span className="text-[#34C759]">Resonance</span></h3>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                    {data?.trending_topics.map((t, i) => (
+                        <motion.span 
+                          key={t.topic}
+                          initial={{ opacity:0, scale: 0.9 }}
+                          animate={{ opacity:1, scale:1 }}
+                          transition={{ delay: i * 0.05 }}
+                          className={cn(
+                              "px-5 py-2.5 rounded-full border text-xs font-bold transition-all cursor-default",
+                              t.sentiment > 0.5 ? "bg-[#EBFBF0] border-[#34C759]/20 text-[#34C759]" :
+                              t.sentiment < -0.5 ? "bg-[#FFF2F2] border-[#FF3B30]/20 text-[#FF3B30]" :
+                              "bg-[#F5F5F7] border-[#E5E5EA] text-[#6E6E73] dark:text-[#86868B]"
+                          )}
+                        >
+                            {t.topic}
+                        </motion.span>
+                    ))}
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4 space-y-1 relative custom-scrollbar bg-black/40 flex flex-col-reverse">
-                    <AnimatePresence initial={false}>
-                        {logs.map((sig, i) => {
-                            const parts = sig.match(/\[(.*?)\] \[(.*?)\] (.*)/);
-                            const latency = parts?.[1] || "0ms";
-                            const level = parts?.[2] || "INFO";
-                            const msg = parts?.[3] || sig;
-                            
-                            let color = "text-blue-400";
-                            let Icon = Info;
-                            if (level === 'CRITICAL') { color = "text-rose-500"; Icon = AlertTriangle; }
-                            if (level === 'WARN') { color = "text-amber-400"; Icon = AlertTriangle; }
-                            if (level === 'SUCCESS') { color = "text-emerald-400"; Icon = CheckCircle2; }
-
-                            return (
-                                <motion.div 
-                                    key={`${i}-${sig.substring(0, 10)}`}
-                                    layout
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0 }}
-                                    className="text-[10px] border-l border-white/5 pl-3 py-1.5 hover:bg-white/5 transition-colors group cursor-default shrink-0"
-                                >
-                                    <div className="flex items-center justify-between mb-0.5 opacity-50 text-[9px]">
-                                        <div className="flex gap-2">
-                                            <span>{new Date().toLocaleTimeString()}</span>
-                                            <span>•</span>
-                                            <span>{latency}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <Icon className={cn("w-3 h-3 mt-0.5", color)} />
-                                        <div className="flex flex-col">
-                                            <span className={cn("font-bold uppercase tracking-wider text-[9px]", color)}>{level}</span>
-                                            <span className="text-slate-300 leading-relaxed group-hover:text-white">{msg}</span>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </AnimatePresence>
-                    {!data && logs.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2">
-                             <RefreshCw className="w-6 h-6 animate-spin" />
-                             <span className="text-xs uppercase tracking-widest">Establishing Uplink...</span>
-                        </div>
-                    )}
+                <div className="mt-12 p-8 rounded-3xl bg-[#0071E3] text-white">
+                    <h4 className="text-lg font-bold mb-2 italic">Neural Insights</h4>
+                    <p className="text-white/80 text-sm leading-relaxed font-medium italic">
+                        {data && data.trending_topics.length > 0 
+                            ? `Real-time clustering suggests a breakout in ${data.trending_topics[0].topic} across the active intelligence network.`
+                            : "Awaiting sufficient signal density to generate cross-competitor neural insights."
+                        }
+                    </p>
+                    <button className="mt-6 text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:translate-x-1 transition-transform">
+                        Explore Cluster <ArrowUpRight size={14} />
+                    </button>
                 </div>
-            </motion.div>
+            </div>
         </div>
 
       </div>

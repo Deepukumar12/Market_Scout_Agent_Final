@@ -3,17 +3,20 @@ Step 2: Google Search Execution via Zenserp API.
 Sole search provider for ScoutIQ.
 """
 import logging
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
 import httpx
+from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from app.core.config import settings
+from app.services.github_client import fetch_company_github_data
+from datetime import timezone
 
 logger = logging.getLogger(__name__)
 
 class SearchServiceError(Exception):
     """Search API unavailable or misconfigured."""
 
-async def search_web_multi(query: str, num_results: int = 5) -> List[Dict[str, Any]]:
+async def search_web_multi(query: str, company_name: Optional[str] = None, num_results: int = 10) -> List[Dict[str, Any]]:
     """
     Run a search using available search providers (Zenserp, Tavily, Brave) and pool results.
     Each result: {"url": str, "title": str, "snippet": str, "source": str}
@@ -24,7 +27,7 @@ async def search_web_multi(query: str, num_results: int = 5) -> List[Dict[str, A
         logger.warning(f"Guardrail triggered: Out-of-scope request for query '{query}'")
         return []
 
-    results = []
+    results: List[Dict[str, Any]] = []
     seen_urls = set()
 
     # Time restriction logic (Last 7 days)
@@ -73,7 +76,7 @@ async def search_web_multi(query: str, num_results: int = 5) -> List[Dict[str, A
         logger.info(f"Running DuckDuckGo fallback search for: {query}")
         # Note: This is a simple HTML-based scraper for DDG as a last-resort fallback.
         # In a production environment, one might use 'duckduckgo-search' library.
-        ddg_url = f"https://html.duckduckgo.com/html/?q={query}"
+        ddg_url = f"https://html.duckduckgo.com/html/?q={query}+after%3A{(datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')}"
         try:
             headers = {"User-Agent": "Mozilla/5.0"}
             async with httpx.AsyncClient(timeout=10) as client:
@@ -103,7 +106,43 @@ async def search_web_multi(query: str, num_results: int = 5) -> List[Dict[str, A
         for i in range(num_results):
             add_result(f"https://example.com/mock-news-{i}", f"Mock: {query}", "Synthetic result", "mock")
 
-    return results[:num_results]
+    tavily_results = results[:num_results]
+
+    github_results = []
+    if company_name:
+        try:
+            github_data = await fetch_company_github_data(company_name)
+            repos = github_data.get("repos", [])
+            print(f"🐙 GitHub repos fetched: {len(repos)}")
+            
+            seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+            
+            for repo in repos:
+                updated_at_str = repo.get("updated_at")
+                if updated_at_str:
+                    try:
+                        updated_at = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00"))
+                        if updated_at < seven_days_ago:
+                            continue
+                    except ValueError:
+                        pass
+                
+                href = repo.get("html_url")
+                if href and href not in seen_urls:
+                    seen_urls.add(href)
+                    github_results.append({
+                        "url": href,
+                        "title": repo.get("full_name") or "",
+                        "snippet": repo.get("description") or "",
+                        "source": "github"
+                    })
+        except Exception as e:
+            logger.error(f"GitHub fallback error: {e}")
+
+    combined_results = tavily_results + github_results
+    print(f"🌐 Tavily: {len(tavily_results)}, GitHub: {len(github_results)}")
+    
+    return combined_results
 
 
 async def search_specialized(query: str, engine: str, num_results: int = 3) -> List[Dict[str, Any]]:

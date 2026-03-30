@@ -159,5 +159,47 @@ async def get_brief(
             for f in result.features
         ],
     }
+@router.delete("/reports/{report_id}")
+async def delete_report(
+    report_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a specific report after verifying ownership."""
+    # Ownership verification and deletion
 
-
+    if not ObjectId.is_valid(report_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid report ID format"
+        )
+    
+    if db.db is None:
+        await db.connect()
+        
+    collection = db.db["reports"]
+    report = await collection.find_one({"_id": ObjectId(report_id)})
+    
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Report not found"
+        )
+        
+    is_owner = False
+    if report.get("user_id") == str(current_user.id):
+        is_owner = True
+    elif report.get("competitor_id"):
+        comp_coll = db.db["competitors"]
+        comp = await comp_coll.find_one({
+            "_id": ObjectId(report["competitor_id"]),
+            "user_id": str(current_user.id)
+        })
+        if comp:
+            is_owner = True
+            
+    if not is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="You do not have permission to delete this report"
+        )
+        
+    await collection.delete_one({"_id": ObjectId(report_id)})
+    return {"status": "success", "message": "Report deleted successfully"}

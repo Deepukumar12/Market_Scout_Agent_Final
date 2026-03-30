@@ -36,7 +36,12 @@ const ProtectedDashboard = () => {
   const { token, loading } = useAuthStore();
   
   if (loading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-[#030711] text-white">Loading...</div>;
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#F5F5F7] text-[#1D1D1F]">
+        <div className="w-12 h-12 border-4 border-[#0071E3]/20 border-t-[#0071E3] rounded-full animate-spin mb-4" />
+        <p className="text-[10px] font-black uppercase tracking-widest italic opacity-50">Calibrating Console...</p>
+      </div>
+    );
   }
 
   if (!token) {
@@ -123,8 +128,12 @@ const router = createBrowserRouter([
   },
 ]);
 
+import { ThemeProvider } from '@/context/ThemeContext';
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
   </React.StrictMode>,
 );

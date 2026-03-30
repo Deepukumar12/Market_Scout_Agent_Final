@@ -12,6 +12,8 @@ interface AuthState {
     logout: () => void;
     initialize: () => void;
     fetchUser: () => Promise<void>;
+    updateProfile: (data: any) => Promise<void>;
+    changePassword: (data: any) => Promise<void>;
 }
 
 // Simple JWT decoder for client-side use
@@ -156,6 +158,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.removeItem('scoutiq_token');
         delete api.defaults.headers.common['Authorization'];
         set({ user: null, token: null });
+    },
+
+    updateProfile: async (data) => {
+        set({ loading: true, error: null });
+        try {
+            const updatedUser = await api.put('/auth/profile', data);
+            set({ user: updatedUser.data, loading: false });
+        } catch (err: any) {
+            set({ error: err.response?.data?.detail || 'Update failed', loading: false });
+            throw err;
+        }
+    },
+
+    changePassword: async (data) => {
+        set({ loading: true, error: null });
+        try {
+            await api.put('/auth/password', data);
+            set({ loading: false });
+        } catch (err: any) {
+            set({ error: err.response?.data?.detail || 'Password change failed', loading: false });
+            throw err;
+        }
     }
 }));
 

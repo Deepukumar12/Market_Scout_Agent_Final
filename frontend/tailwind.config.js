@@ -24,6 +24,15 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        apple: {
+          bg: "#F5F5F7",
+          card: "#FFFFFF",
+          primary: "#0071E3",
+          success: "#34C759",
+          text: "#1D1D1F",
+          secondary: "#6E6E73",
+          divider: "#E5E5EA",
+        },
         brand: {
           500: "#00f0ff", // Neon Cyan
           600: "#0066ff", // Electric Blue
@@ -59,6 +68,9 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+      },
+      boxShadow: {
+        'apple': '0 8px 30px rgba(0,0,0,0.06)',
       },
       borderRadius: {
         lg: "var(--radius)",

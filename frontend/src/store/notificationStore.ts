@@ -1,5 +1,5 @@
-
 import { create } from 'zustand';
+import * as api from '@/services/api';
 
 export interface Notification {
     id: string;
@@ -14,47 +14,42 @@ export interface Notification {
 interface NotificationState {
     notifications: Notification[];
     unreadCount: number;
-    addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
-    markAsRead: (id: string) => void;
-    markAllAsRead: () => void;
-    clearAll: () => void;
+    loading: boolean;
+    fetchNotifications: () => Promise<void>;
+    addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => Promise<void>;
+    markAsRead: (id: string) => Promise<void>;
+    markAllAsRead: () => Promise<void>;
+    clearAll: () => Promise<void>;
 }
 
-export const useNotificationStore = create<NotificationState>((set) => ({
-    notifications: [
-        {
-            id: '1',
-            title: 'Agent Intelligence Live',
-            message: 'Global surveillance network is now active and monitoring targets.',
-            type: 'success',
-            timestamp: new Date().toISOString(),
-            read: false,
-        },
-        {
-            id: '2',
-            title: 'Target Initialized',
-            message: 'Autonomous agents have been deployed to monitor competitor signals.',
-            type: 'info',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-            read: false,
-        }
-    ],
-    unreadCount: 2,
+export const useNotificationStore = create<NotificationState>((set, get) => ({
+    notifications: [],
+    unreadCount: 0,
+    loading: false,
 
-    addNotification: (noti) => {
-        const newNoti: Notification = {
-            ...noti,
-            id: Math.random().toString(36).substring(7),
-            timestamp: new Date().toISOString(),
-            read: false,
-        };
-        set((state) => ({
-            notifications: [newNoti, ...state.notifications],
-            unreadCount: state.unreadCount + 1,
-        }));
+    fetchNotifications: async () => {
+        set({ loading: true });
+        try {
+            const data = await api.getNotifications();
+            set({ 
+                notifications: data, 
+                unreadCount: data.filter((n: any) => !n.read).length,
+                loading: false 
+            });
+        } catch (error) {
+            console.error('Failed to fetch notifications:', error);
+            set({ loading: false });
+        }
     },
 
-    markAsRead: (id) => {
+    addNotification: async () => {
+        // This is usually triggered by backend, but kept for UI feedback if needed
+        // In this architecture, we'll refetch instead to ensure sync
+        await get().fetchNotifications();
+    },
+
+    markAsRead: async (id) => {
+        // Optimistic update
         set((state) => {
             const notifications = state.notifications.map((n) =>
                 n.id === id ? { ...n, read: true } : n
@@ -64,16 +59,34 @@ export const useNotificationStore = create<NotificationState>((set) => ({
                 unreadCount: notifications.filter((n) => !n.read).length,
             };
         });
+        
+        try {
+            await api.markNotificationRead(id);
+        } catch (error) {
+            console.error('Failed to mark notification as read:', error);
+            // Revert on error? Or just skip for now.
+        }
     },
 
-    markAllAsRead: () => {
+    markAllAsRead: async () => {
         set((state) => ({
             notifications: state.notifications.map((n) => ({ ...n, read: true })),
             unreadCount: 0,
         }));
+        
+        try {
+            await api.markAllNotificationsRead();
+        } catch (error) {
+            console.error('Failed to mark all as read:', error);
+        }
     },
 
-    clearAll: () => {
+    clearAll: async () => {
         set({ notifications: [], unreadCount: 0 });
+        try {
+            await api.clearNotifications();
+        } catch (error) {
+            console.error('Failed to clear notifications archive:', error);
+        }
     },
 }));

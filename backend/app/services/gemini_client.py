@@ -1,5 +1,9 @@
 import json
 from typing import Any, Dict, List, Optional
+try:
+    from json_repair import repair_json
+except ImportError:
+    repair_json = None
 
 import httpx
 from fastapi.encoders import jsonable_encoder
@@ -254,8 +258,8 @@ You are the Market Scout Agent analysis step. You MUST return ONLY valid JSON ma
 
 CRITICAL – NO HALLUCINATION:
 - features: Extract ONLY from the articles in scraped_sources. Each feature MUST correspond to a specific technical update clearly stated in one of the provided articles.
-- Do NOT invent, assume, or create any feature not explicitly supported by the article content.
-- If an article does not clearly describe a technical feature/update, do NOT add it to features.
+- ANCHORING: You must ensure features are distributed across the provide time_window_days (7 days) if the sources allow. Do not ignore older valid updates in favor of only the most recent ones.
+- If an article does not clearly describe a technical feature/update within the last 7 days, do NOT add it to features.
 - If no valid technical updates can be extracted, return features: [] and total_valid_updates: 0.
 
 FIELD RULES:
@@ -398,7 +402,18 @@ Return only the JSON object. No additional text or explanation.
             if "\n" in text:
                 text = text.split("\n", 1)[1]
 
-        return json.loads(text)
+        try:
+            # 1. Try standard JSON
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # 2. Try json-repair
+            if repair_json:
+                try:
+                    repaired = repair_json(text)
+                    return json.loads(repaired)
+                except:
+                    pass
+            raise
 
 
 

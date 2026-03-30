@@ -47,7 +47,7 @@ export const generateCompanyReport = (companyName: string, reportContent: string
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
     doc.setTextColor(80);
-    const dateStr = new Date().toLocaleDateString('en-US', {
+    const dateStr = new Date().toLocaleDateString('en-IN', {
         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
     doc.text(`Generated on: ${dateStr}`, margin, yPos);
@@ -113,7 +113,7 @@ export const generateCompanyReport = (companyName: string, reportContent: string
     });
 
     // --- FOOTER ---
-    const pageCount = doc.internal.getNumberOfPages();
+    const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFontSize(9);

@@ -5,7 +5,7 @@ Uses hash_id = hash(company + feature_name + release_date) to deduplicate.
 import hashlib
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 from app.core.database import db
 from app.models.scan import ScanFeature
@@ -80,11 +80,19 @@ async def store_new_features(company: str, features: list[ScanFeature]) -> int:
     return len(result.inserted_ids)
 
 
-async def get_cached_features(company: str, limit: int = 50) -> list[dict[str, Any]]:
-    """Return stored feature_updates for company, newest first."""
+async def get_cached_features(company: str, limit: int = 50, days: Optional[int] = None) -> list[dict[str, Any]]:
+    """Return stored feature_updates for company, newest first. Optional day filter."""
     coll = db.db[COLLECTION]
+    query = {"company_name": {"$regex": f"^{company}$", "$options": "i"}}
+    
+    if days:
+        # Filter by created_at in the last X days
+        from datetime import timedelta
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        query["created_at"] = {"$gte": cutoff}
+
     cursor = (
-        coll.find({"company_name": {"$regex": f"^{company}$", "$options": "i"}})
+        coll.find(query)
         .sort("created_at", -1)
         .limit(limit)
     )
