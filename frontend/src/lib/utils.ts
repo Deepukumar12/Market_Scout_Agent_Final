@@ -6,6 +6,9 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
 }
 
+const colorRegistry = new Map<string, string>();
+let colorIdx = 0;
+
 export function getCompetitorColor(name: string): string {
   if (!name) return '#86868B';
   const colors = [
@@ -19,13 +22,15 @@ export function getCompetitorColor(name: string): string {
     '#FF2D55', // Apple Pink
   ];
   
-  // Simple deterministic hash
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const normalized = name.trim().toLowerCase();
+  if (colorRegistry.has(normalized)) {
+    return colorRegistry.get(normalized)!;
   }
   
-  return colors[Math.abs(hash) % colors.length];
+  const color = colors[colorIdx % colors.length];
+  colorRegistry.set(normalized, color);
+  colorIdx++;
+  return color;
 }
 
 export function getCompetitorColorId(name: string): string {

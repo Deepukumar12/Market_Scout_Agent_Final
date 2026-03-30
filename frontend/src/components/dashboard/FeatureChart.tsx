@@ -6,7 +6,8 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  Legend
 } from 'recharts';
 
 import { getCompetitorColor, getCompetitorColorId } from '@/lib/utils';
@@ -67,6 +68,12 @@ const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
               }}
               itemStyle={{ fontWeight: 'bold' }}
               labelStyle={{ color: '#86868B', marginBottom: '4px', textTransform: 'uppercase', fontSize: '10px' }}
+            />
+            <Legend 
+              verticalAlign="top" 
+              height={36} 
+              iconType="circle"
+              wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', paddingBottom: '20px' }} 
             />
             {competitors?.map((comp) => (
               <Area 

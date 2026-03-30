@@ -1,21 +1,26 @@
 """
 Step 1: Query Planning.
-Generate 3–4 search queries for the company.
+Generate diverse search queries for the company covering all intelligence categories.
 """
 from typing import List
 
 
 def plan_queries(company_name: str, time_window_days: int = 7) -> List[str]:
     """
-    Generate 3–4 distinct search queries to find recent technical updates.
+    Generate 8 distinct search queries to find recent news, blogs, product launches,
+    press releases, API updates, partnerships, and future roadmap items.
     """
     company = company_name.strip()
     if not company:
         return []
 
     return [
-        f'"{company}" press release last {time_window_days} days',
-        f'"{company}" release notes',
-        f'"{company}" new technical features',
-        f'"{company}" documentation update',
+        f'"{company}" news last {time_window_days} days',
+        f'"{company}" product launch announcement',
+        f'"{company}" blog post update',
+        f'"{company}" press release',
+        f'"{company}" new features software release',
+        f'"{company}" API changelog documentation update',
+        f'"{company}" partnership acquisition expansion',
+        f'"{company}" roadmap future plans',
     ]

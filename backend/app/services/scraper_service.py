@@ -28,23 +28,31 @@ DATE_PATTERNS = [
     ('time', {'datetime': True}),  # <time datetime="...">
 ]
 
-# Step 4 – Required: article must contain at least one of these (technical signals)
+# Step 4 – Keep: article must contain at least ONE signal that makes it
+# relevant to competitive intelligence: product, feature, API, release,
+# news about the company, blog, etc.  We are intentionally broad here
+# so that news articles, press releases, product announcements, and blog
+# posts all pass through.
 REQUIRED_TECHNICAL_KEYWORDS = re.compile(
-    r'\b(api|feature|release|update|documentation|platform\s*change|platform|sdk|'
-    r'infrastructure|changelog|integration|endpoint|version)\b',
+    r'\b(api|feature|release|update|documentation|platform|sdk|'
+    r'infrastructure|changelog|integration|endpoint|version|'
+    r'launch|product|announce|blog|news|press\s*release|report|'
+    r'partnership|acquisition|expansion|growth|strategy|roadmap|'
+    r'future|upcoming|milestone|capability|improvement|enhancement|'
+    r'tool|service|software|app|application|solution|innovat)\b',
     re.I,
 )
 
-# Step 4 – Exclude: if content is dominated by non-technical topics, discard
+# Step 4 – Exclude ONLY pages that are purely about jobs/spam/marketing opt-ins
+# (require MANY matches so that normal pages with a footer job link still pass)
 NON_TECHNICAL_BLOCK = re.compile(
-    r'\b(hiring|careers|job\s*opening|we\'?re\s*hiring|funding|series\s*[a-d]|raised\s*\d|'
-    r'event|webinar|conference|marketing|newsletter\s*signup|subscribe|'
-    r'blog\s*post|opinion|guest\s*post)\b',
+    r'\b(apply\s*now|job\s*opening|we\'?re\s*hiring|send\s*your\s*resume|'
+    r'careers\s*page|newsletter\s*signup|unsubscribe|submit\s*your\s*cv|'
+    r'cookie\s*policy|privacy\s*policy)\b',
     re.I,
 )
-# Threshold: if block pattern matches more than this many times, treat as non-technical
-# increased to 10 to allow common footer links like "careers", "webinar", etc.
-NON_TECHNICAL_MAX_MATCHES = 10
+# Only block a page if it has a VERY high concentration of these signals
+NON_TECHNICAL_MAX_MATCHES = 5
 
 
 def _parse_iso_date(s: str) -> Optional[datetime]:
@@ -354,44 +362,37 @@ def filter_by_time_and_technical(
 ) -> list[dict[str, Any]]:
     """
     Step 3 – Date filtering. Discard if publish_date is EXPLICITLY older than time_window_days.
-    If publish_date is missing, we keep it (lenient) because Zenserp already filters by qdr:w.
+    If publish_date is missing, we keep it (lenient) because Tavily already filters by 'days: 7'.
+    Today's content is INCLUDED — news published today is valid intelligence.
     """
     now = datetime.now(timezone.utc)
-    upper_limit = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    # Relaxed filter: Allow up to 365 days of historical depth for the "Last 7 Release" requirement
-    cutoff = upper_limit - timedelta(days=max(time_window_days, 365))
+    cutoff = now - timedelta(days=time_window_days)
     valid = []
 
     for item in items:
         pub_iso = item.get("publish_date")
         if not pub_iso:
-            # Lenient: if we can't find a date, trust the search engine's "last 7 days" filter.
-            # However, if we want to STRICTLY exclude today's data, we might have a problem here.
-            # But usually items without dates from Zenserp are treated as "recent".
-            # For now, we'll keep the lenient approach but filter if date exists.
+            # Lenient: if we can't find a date, trust the search engine's time filter.
             valid.append(item)
             continue
-            
+
         dt = _parse_iso_date(pub_iso)
         if not dt:
             valid.append(item)
             continue
-            
+
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
-        
-        # Discard if it's too old OR if it's from today (to maintain 7-day historical pulse)
+
+        # Only discard if the article is clearly older than the time window
         if dt < cutoff:
             logger.info(f"Discarding old content: {item.get('url')} (published {pub_iso})")
             continue
-        
-        if dt >= upper_limit:
-            logger.info(f"Discarding present date content for historical pulse: {item.get('url')} (published {pub_iso})")
-            continue
-            
+
         valid.append(item)
 
     return valid
+
 
 
 def filter_content_technical_only(

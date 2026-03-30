@@ -22,10 +22,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# Schema for Step 1: LLM-generated search queries only
+# Schema for Step 1: LLM-generated search queries
 QUERIES_SCHEMA = {
     "type": "object",
-    "properties": {"queries": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 4}},
+    "properties": {"queries": {"type": "array", "items": {"type": "string"}, "minItems": 6, "maxItems": 8}},
     "required": ["queries"],
 }
 
@@ -66,13 +66,15 @@ class GeminiClient:
         """
         instructions = (
             "You are a query planner for a competitive intelligence agent. "
-            "Given a company name and time window, output exactly 3–4 search queries to find "
-            "recent technical updates (press releases, release notes, API features, documentation). "
-            "Return ONLY valid JSON: {\"queries\": [\"query1\", \"query2\", \"query3\", \"query4\"]}. "
-            "Each query must be a string. No other text. Example: "
-            "\"{\\\"queries\\\": [\\\"Acme Corp press release last 7 days\\\", "
-            "\\\"Acme Corp release notes\\\", \\\"Acme Corp new API features\\\", "
-            "\\\"Acme Corp documentation update\\\"]}\""
+            "Given a company name and time window, output 6-8 diverse search queries "
+            "to find EVERYTHING newsworthy about that company in the past 7 days: "
+            "news articles, blog posts, press releases, product launches, software/API releases, "
+            "feature announcements, partnership news, acquisitions, earnings reports, "
+            "and future roadmap or product updates. "
+            "Spread the queries across these topic areas: (1) general news, (2) product launches, "
+            "(3) blog and technical articles, (4) press releases, (5) API/software updates, "
+            "(6) future product roadmap, (7) company announcements, (8) industry analysis. "
+            "Return ONLY valid JSON: {\"queries\": [\"query1\", \"query2\", ...]}.  No other text."
         )
         payload_input = {"company_name": company_name, "time_window_days": time_window_days}
         text = (
@@ -102,7 +104,7 @@ class GeminiClient:
                 queries = parsed.get("queries") or []
                 if not isinstance(queries, list):
                     raise GeminiClientError("Gemini returned invalid queries format")
-                queries = [str(q).strip() for q in queries if q][:4]
+                queries = [str(q).strip() for q in queries if q][:8]  # allow up to 8 diverse queries
                 if len(queries) < 3:
                     raise GeminiClientError("Gemini must return at least 3 queries")
                 return queries
@@ -257,10 +259,11 @@ IMPORTANT:
 You are the Market Scout Agent analysis step. You MUST return ONLY valid JSON matching the given schema.
 
 CRITICAL – NO HALLUCINATION:
-- features: Extract ONLY from the articles in scraped_sources. Each feature MUST correspond to a specific technical update clearly stated in one of the provided articles.
-- ANCHORING: You must ensure features are distributed across the provide time_window_days (7 days) if the sources allow. Do not ignore older valid updates in favor of only the most recent ones.
-- If an article does not clearly describe a technical feature/update within the last 7 days, do NOT add it to features.
-- If no valid technical updates can be extracted, return features: [] and total_valid_updates: 0.
+- features: Extract intelligence items from the articles in scraped_sources. Each item MUST come from one of the provided articles.
+- BROAD COVERAGE: Include ALL types of competitive intelligence: news articles, blog posts, press releases, product launches, software/API releases, feature announcements, partnerships, acquisitions, earnings reports, future roadmap items, and strategic moves.
+- Do NOT restrict yourself to only "technical" updates. A news article, blog post, or press release about the company IS valid intelligence.
+- ANCHORING: Distribute features across the time_window_days if sources allow. Do not ignore older valid items in favor of only the most recent.
+- If no valid intelligence items can be extracted, return features: [] and total_valid_updates: 0.
 
 FIELD RULES:
 - competitor: use the exact company name provided.
@@ -268,7 +271,7 @@ FIELD RULES:
 - time_window_days: use the integer provided.
 - total_sources_scanned: set to the number of items in scraped_sources.
 - total_valid_updates: set to the length of the features array you output.
-- Each feature: feature_title (from article), technical_summary (from article), publish_date (ISO from that article), source_url, source_domain, category (API|UI|Infrastructure|Security|Platform|AI|SDK), confidence_score (0-100 based on clarity and source).
+- Each feature: feature_title (from article), technical_summary (2-4 sentence summary from article), publish_date (ISO from that article), source_url, source_domain, category (API|UI|Infrastructure|Security|Platform|AI|SDK|News|Blog|Press Release|Partnership|Product), confidence_score (0-100 based on source clarity).
 
 Return only the JSON object. No additional text or explanation.
 """

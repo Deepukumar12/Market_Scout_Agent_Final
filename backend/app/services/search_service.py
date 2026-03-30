@@ -1,6 +1,6 @@
 """
-Step 2: Google Search Execution via Zenserp API.
-Sole search provider for ScoutIQ.
+Step 2: Search Execution using Tavily + DuckDuckGo fallback.
+Broadened to capture news, blogs, press releases, product pages, and more.
 """
 import logging
 from typing import Any, List, Dict, Optional
@@ -8,8 +8,6 @@ import httpx
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from app.core.config import settings
-from app.services.github_client import fetch_company_github_data
-from datetime import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -46,28 +44,29 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
 
 
 
-    # 1. Tavily (Search API specifically for AI)
+    # 1. Tavily — broad web search covering news, blogs, press releases, product pages, etc.
     if settings.TAVILY_API_KEY and len(results) < num_results:
         logger.info(f"Running Tavily search for: {query}")
         url = "https://api.tavily.com/search"
         payload = {
             "api_key": settings.TAVILY_API_KEY,
             "query": query,
-            "search_depth": "basic",
+            "search_depth": "advanced",  # deeper to surface blogs/news not just top results
             "include_answer": False,
-            "include_domains": [],
-            "max_results": num_results,
-            "days_back": 7
+            "include_domains": [],       # open to ALL domains: news, blogs, product sites
+            "exclude_domains": [],
+            "max_results": max(num_results, 10),  # get more per query for diversity
+            "days": 7                    # Tavily param: only last 7 days
         }
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(url, json=payload)
                 if resp.status_code == 200:
                     data = resp.json().get("results", [])
                     for r in data:
                         add_result(r.get("url"), r.get("title"), r.get("content"), "tavily")
                 else:
-                    logger.warning(f"Tavily API returned status {resp.status_code}")
+                    logger.warning(f"Tavily API returned status {resp.status_code}: {resp.text[:200]}")
         except Exception as e:
             logger.error(f"Tavily API error: {e}")
 
@@ -108,39 +107,11 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
 
     tavily_results = results[:num_results]
 
-    github_results = []
-    if company_name:
-        try:
-            github_data = await fetch_company_github_data(company_name)
-            repos = github_data.get("repos", [])
-            print(f"🐙 GitHub repos fetched: {len(repos)}")
-            
-            seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-            
-            for repo in repos:
-                updated_at_str = repo.get("updated_at")
-                if updated_at_str:
-                    try:
-                        updated_at = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00"))
-                        if updated_at < seven_days_ago:
-                            continue
-                    except ValueError:
-                        pass
-                
-                href = repo.get("html_url")
-                if href and href not in seen_urls:
-                    seen_urls.add(href)
-                    github_results.append({
-                        "url": href,
-                        "title": repo.get("full_name") or "",
-                        "snippet": repo.get("description") or "",
-                        "source": "github"
-                    })
-        except Exception as e:
-            logger.error(f"GitHub fallback error: {e}")
-
-    combined_results = tavily_results + github_results
-    print(f"🌐 Tavily: {len(tavily_results)}, GitHub: {len(github_results)}")
+    # Removed GitHub fetching here to avoid polluting LLM context with raw GitHub repos.
+    # GitHub data is already separately fetched and appended to the final ScanResponse in scan_pipeline.py.
+    
+    combined_results = tavily_results
+    print(f"🌐 Tavily/Web: {len(tavily_results)}")
     
     return combined_results
 

@@ -74,7 +74,7 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     all_results: list[dict[str, Any]] = []
     
     for q in queries:
-        results = await search_web_multi(q, company_name=company, num_results=3)
+        results = await search_web_multi(q, company_name=company, num_results=5)
         for r in results:
             url = r.get("url")
             if url and url not in seen_urls:

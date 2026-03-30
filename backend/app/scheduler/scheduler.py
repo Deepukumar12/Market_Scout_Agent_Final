@@ -9,7 +9,7 @@ def start_scheduler():
 
     # For testing, temporarily replace scheduler job
     # We schedule as an async job now
-    scheduler.add_job(run_auto_scan, "interval", minutes=1000000)
+    scheduler.add_job(run_auto_scan, "interval", minutes=1)
     
     # Original cron job
     # scheduler.add_job(run_auto_scan, "cron", hour=9, minute=0)

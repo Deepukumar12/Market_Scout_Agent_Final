@@ -64,14 +64,33 @@ async def get_report_history(
                     created_at = doc.get("created_at")
                     gen_at = created_at.strftime("%Y-%m-%d %H:%M") if created_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M")
 
+                features = doc.get("features", [])
+                
+                # Build proper markdown content with '##' headings for the PDF generator
+                full_text = "## Executive Summary\nTechnical intelligence scan result detailing recent platform updates, security patches, and market features from the surveillance tracking window.\n\n"
+                
+                for f in features:
+                    title = f.get("feature_title", "Protocol Update")
+                    cat = f.get("category", "General")
+                    date = f.get("publish_date", "Recent")
+                    desc = f.get("technical_summary", "")
+                    
+                    full_text += f"## {title} [{cat}]\n"
+                    full_text += f"Date Detected: {date}\n\n"
+                    full_text += f"{desc}\n\n"
+                
+                if not features:
+                    full_text += "## No Technical Vectors Detected\n"
+                    full_text += "The autonomous scanning engines did not detect any confirmed technical updates or platform changes within the recent surveillance window.\n"
+
                 real_reports.append(MissionReport(
                     id=str(doc.get("_id", doc.get("id"))),
                     title=f"Scan Analysis: {doc.get('company', doc.get('competitor', 'Unknown'))}",
                     report_type="TACTICAL",
-                    description=doc.get("executive_summary", "Technical intelligence scan result."),
+                    description=f"Identified {len(features)} new technical vectors and platform changes.",
                     generated_at=gen_at,
-                    content_summary=doc.get("executive_summary", "")[:150] + "...",
-                    full_content=doc.get("executive_summary", ""),
+                    content_summary=full_text[:150] + "...",
+                    full_content=full_text,
                     status="READY",
                     company=doc.get("company", doc.get("competitor", "Unknown")),
                     competitor_id=doc.get("competitor_id"),

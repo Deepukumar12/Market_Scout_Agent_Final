@@ -131,13 +131,17 @@ async def get_intel_stream(
                     domain = urlparse(full_url).netloc or "Open Web"
                 except: pass
 
+                ts = s.get("created_at") or s.get("scraped_at") or datetime.now(timezone.utc)
+                if isinstance(ts, datetime) and ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+
                 signals.append(IntelSignal(
                     id=str(s["_id"]),
                     company_name=s["query_tag"],
                     sector=comp_map.get(s["query_tag"], "Technology"),
                     signal_type="Market Signal",
                     confidence_score=0.88,
-                    timestamp=s.get("created_at") or s.get("scraped_at") or datetime.now(timezone.utc),
+                    timestamp=ts,
                     summary=s.get("article_summary") or s.get("technical_summary", "Market intelligence detected."),
                     source=domain,
                     url=full_url,
@@ -171,7 +175,14 @@ async def get_intel_stream(
                     except Exception:
                         pass
                         
-                final_timestamp = parsed_date if parsed_date else (f.get("created_at") or datetime.now(timezone.utc))
+                raw_ts = parsed_date if parsed_date else (f.get("created_at") or datetime.now(timezone.utc))
+                if isinstance(raw_ts, str):
+                    try:
+                        raw_ts = datetime.fromisoformat(raw_ts)
+                    except:
+                        raw_ts = datetime.now(timezone.utc)
+                if getattr(raw_ts, "tzinfo", None) is None:
+                    raw_ts = raw_ts.replace(tzinfo=timezone.utc)
 
                 signals.append(IntelSignal(
                     id=str(f["_id"]),
@@ -179,7 +190,7 @@ async def get_intel_stream(
                     sector=comp_map.get(f["company_name"], "Technology"),
                     signal_type="Feature Release",
                     confidence_score=0.95, 
-                    timestamp=final_timestamp,
+                    timestamp=raw_ts,
                     summary=f["feature_name"] + ": " + f["technical_summary"],
                     source=domain,
                     url=full_url,
@@ -212,7 +223,8 @@ async def get_last_seven_days_releases(
     try:
         now = get_now_ist()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_date = today_start - timedelta(days=7)
+        start_date = today_start - timedelta(days=6)
+        end_of_today = today_start + timedelta(days=1)
         
         if db.db is None: await db.connect()
         
@@ -225,7 +237,7 @@ async def get_last_seven_days_releases(
         if user_comp_names:
             cursor = db.db["feature_updates"].find({
                 "company_name": {"$in": user_comp_names},
-                "created_at": {"$gte": start_date, "$lt": today_start}
+                "created_at": {"$gte": start_date, "$lt": end_of_today}
             }).sort("created_at", -1)
             async for doc in cursor:
                 if len(features) >= 20: break
@@ -1259,7 +1271,7 @@ async def get_activity_timeline(
             user_comp_names = [c["name"] for c in await cursor.to_list(length=100)]
             
         # We will build a dictionary of activities keyed by date string YYYY-MM-DD
-        grouped_activities = { (now - timedelta(days=i)).strftime("%Y-%m-%d"): [] for i in range(1, 8) }
+        grouped_activities = { (now - timedelta(days=i)).strftime("%Y-%m-%d"): [] for i in range(7) }
         
         if user_comp_names:
             # Look back 14 days of scan data to catch delayed detections for the 7-day timeline
@@ -1311,11 +1323,11 @@ async def get_activity_timeline(
                         url=f.get("source_url")
                     ))
                     
-        # Construct the final list exactly in the last 7 days order (newest first, exclude today)
+        # Construct the final list exactly in the last 7 days order (newest first, INCLUDING today)
         days = []
-        for i in range(1, 8):
+        for i in range(7):
             date_key = (now - timedelta(days=i)).strftime("%Y-%m-%d")
-            days.append(DayActivity(date=date_key, activities=grouped_activities[date_key]))
+            days.append(DayActivity(date=date_key, activities=grouped_activities.get(date_key, [])))
             
     except Exception as e:
         print(f"Activity Timeline Error: {e}")
@@ -1365,12 +1377,12 @@ async def get_innovation_trends(current_user: User = Depends(get_current_user)):
     except:
         pass
     
-    for i in range(1, 8):
-        date_at = now - timedelta(days=8-i)
+    for i in range(7):
+        date_at = now - timedelta(days=6-i)
         date_str = date_at.strftime("%b %d")
         
-        start_date = datetime(date_at.year, date_at.month, date_at.day, 0, 0, 0)
-        end_date = datetime(date_at.year, date_at.month, date_at.day, 23, 59, 59)
+        start_date = datetime(date_at.year, date_at.month, date_at.day, 0, 0, 0, tzinfo=timezone.utc)
+        end_date = datetime(date_at.year, date_at.month, date_at.day, 23, 59, 59, tzinfo=timezone.utc)
         
         releases = {}
         for comp in competitor_pool:

@@ -93,26 +93,36 @@ class OllamaClient:
     ) -> List[str]:
         """
         Matches GeminiClient.generate_search_queries interface.
+        Generates 6-8 diverse queries covering news, blogs, press releases,
+        product launches, API updates, roadmap, and company announcements.
         """
         prompt = (
             f"You are a query planner for a competitive intelligence agent. "
             f"Given the company '{company_name}' and a {time_window_days}-day window, "
-            f"output exactly 3-4 search queries to find recent technical updates. "
-            f"Return ONLY a JSON object: {{\"queries\": [\"query1\", \"query2\"]}}. "
-            f"Ensure keys and values use DOUBLE QUOTES."
+            f"output 6-8 DIVERSE search queries to find EVERYTHING newsworthy about that company "
+            f"in the past {time_window_days} days. "
+            f"Cover these topic areas: news articles, blog posts, press releases, product launches, "
+            f"software/API releases, feature announcements, partnership news, acquisitions, "
+            f"future roadmap, and industry analysis. "
+            f"Return ONLY a JSON object: {{\"queries\": [\"query1\", \"query2\", ...]}}. "
+            f"Ensure keys and values use DOUBLE QUOTES. No other text."
         )
         
         try:
             res_text = self.generate(prompt, system="Output ONLY valid JSON. Standard format.")
             data = self._clean_json(res_text)
             queries = data.get("queries", [])
-            return [str(q).strip() for q in queries][:4]
+            return [str(q).strip() for q in queries][:8]
         except Exception as e:
             logger.error(f"Ollama query generation failed: {e}")
+            # Broad fallback covering multiple content types
             return [
-                f"{company_name} technical updates last {time_window_days} days",
-                f"{company_name} new features released",
-                f"{company_name} product changelog"
+                f"{company_name} news last {time_window_days} days",
+                f"{company_name} product launch announcement",
+                f"{company_name} blog post update",
+                f"{company_name} press release",
+                f"{company_name} new features software release",
+                f"{company_name} future roadmap plans",
             ]
 
     async def generate_scan_report(
@@ -125,9 +135,9 @@ class OllamaClient:
         """
         Matches GeminiClient.generate_scan_report interface.
         """
-        # Use more items (5) now that search results are increased, but keep it manageable for Ollama
+        # Evaluate up to 10 technical items to capture more blogs, news, updates.
         limited_items = []
-        for item in scraped_items[:5]:
+        for item in scraped_items[:10]:
             limited_items.append({
                 "title": item.get("title", "Unknown"),
                 "snippet": item.get("snippet", "")[:300],
