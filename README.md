@@ -17,8 +17,8 @@ ScoutIQ has been rigorously engineered to eliminate "mock data" or "synthetic fa
 ### 🧠 The Intelligence Pipeline (The 5-Step Scan)
 ScoutIQ's flagship scanning engine follows a strict, verifiable process:
 1.  **Step 1: Query Planning**: Autonomous LLM-driven decomposition of research objectives into 5-10 surgical search queries.
-2.  **Step 2: Distributed Search**: High-speed retrieval using Serper.dev and Tavily, orchestrating concurrent sweeps across technical blogs and news.
-3.  **Step 3: Headless Extraction**: Precision scraping via Firecrawl, converting complex web pages into clean, structured Markdown.
+2.  **Step 2: Distributed Search**: High-speed retrieval using the Tavily API, orchestrating concurrent sweeps across technical blogs and news strictly bounded by time.
+3.  **Step 3: Headless Extraction**: Precision multi-scraper (Firecrawl/Crawl4AI), converting complex web pages into clean, structured Markdown, enriched with robust Regex-based publication date extraction and dynamic YouTube video metadata parsing.
 4.  **Step 4: Technical Signal Filtering**: AI-driven removal of non-technical clutter (marketing, hiring, generic PR) to isolate true product vectors.
 5.  **Step 5: Structured Synthesis**: Gemini 1.5 Pro performs a multi-point extraction (Feature, Date, URL, Summary) with 100% source attribution.
 
@@ -49,7 +49,7 @@ ScoutIQ's flagship scanning engine follows a strict, verifiable process:
 | :--- | :--- |
 | **Backend Core** | Python 3.10+, FastAPI, MongoDB (Motor), Redis |
 | **Engine** | Gemini 1.5 Pro, Llama 3 (Groq), LangChain |
-| **Scraper Suite** | Firecrawl, Trafilatura, Zenserp, Tavily |
+| **Scraper Suite** | Firecrawl, Crawl4AI, Trafilatura, Tavily |
 | **Frontend** | React 18, Vite, TypeScript, Framer Motion, Zustand |
 | **Real-time** | Authenticated WebSockets for live telemetry |
 | **Export Engine** | JSPDF + HTML2Canvas for dynamic intelligence reports |
@@ -71,29 +71,28 @@ ScoutIQ utilizes an event-driven, multi-agent architecture designed for high-thr
 ### 🔄 Data & Intelligence Flow
 ```mermaid
 graph TD
-    User((User)) -->|Interact| FE[React Frontend]
-    FE -->|WebSocket| WS[Live Telemetry Stream]
-    FE -->|REST API| BE[FastAPI Backend]
+    %% Colors
+    classDef client fill:#0A84FF,stroke:#fff,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef processing fill:#1D1D1F,stroke:#fff,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef ai fill:#30D158,stroke:#fff,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef db fill:#FF9F0A,stroke:#fff,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+
+    User([User at Browser]) -->|View Dashboard| UI[Next.js Frontend]:::client
+    UI -->|Trigger Scan| Gateway{FastAPI Backend}:::processing
+    UI <-->|Stream Logs| Websockets[Websocket Notifications]:::processing
+
+    Gateway --> Planner[Strategic Query Planner]:::processing
+    Planner --> Search[Tavily News/Web Search]:::ai
+    Search --> Scraper[Multi-Scraper: Firecrawl/Crawl4AI]:::ai
     
-    subgraph "Intelligence Core"
-        BE -->|Trigger| IP[Intel Pipeline]
-        IP -->|Phase 1: Plane| PL[Query Planner]
-        IP -->|Phase 2: Search| SE[Distributed Search - Serper/Tavily]
-        IP -->|Phase 3: Scrape| SC[Headless Scraper - Firecrawl]
-        IP -->|Phase 4: Filter| FL[AI Signal Filter]
-        IP -->|Phase 5: Synthesis| SY[Gemini 1.5 Pro]
-    end
+    Scraper --> Clean[LSA Compressor & Regex]:::processing
+    Clean --> Chroma[(ChromaDB Cache)]:::db
     
-    SY -->|Persist| DB[(MongoDB)]
-    IP -->|Adaptive Logic| DE[Delta Engine]
-    DE -->|Update| DB
+    Chroma --> LLM[Local Ollama / Gemini / Groq]:::ai
+    LLM --> Delta[Delta Deduplication Engine]:::processing
+    Delta --> MongoDB[(MongoDB Permanent)]:::db
     
-    subgraph "Real-time Monitoring"
-        AL[Agent Logger] -->|Broadcast| WS
-        IP -->|Events| AL
-    end
-    
-    DB -->|Fetch| BE
+    MongoDB --> UI
 ```
 
 ### 🛠 Precise Tech Stack
@@ -101,7 +100,7 @@ graph TD
 - **Backend API**: FastAPI (Asynchronous), Pydantic v2 (Validation), Motor (Async MongoDB Driver).
 - **Real-time Engine**: WebSocket Protocol for sub-100ms log telemetry from the `AgentLogger`.
 - **AI Brain**: Gemini 1.5 Pro (Strategic Synthesis), Groq/Llama 3 (Narrative Processing).
-- **Surveillance Infrastructure**: Serper.dev (Search), Firecrawl (Deep Scaping), Delta Engine (Adaptive frequency & deduplication).
+- **Surveillance Infrastructure**: Tavily API (Search), Multi-Scraper via Firecrawl/Crawl4AI (Deep Scraping & YouTube Parsing), Delta Engine (Adaptive frequency & deduplication).
 
 ---
 
@@ -136,7 +135,7 @@ MarketScoutAgent/
 - **Database**: MongoDB (Local or Atlas)
 - **API Nodes**:
     - `GEMINI_API_KEY`: Primary Intelligence Synthesis
-    - `SERPER_API_KEY`: Global Search Capability
+    - `TAVILY_API_KEY`: Global Search Capability
     - `FIRECRAWL_API_KEY`: Technical Scraping Node
     - `GROQ_API_KEY`: Secondary Strategic Analysis (Llama 3)
 
