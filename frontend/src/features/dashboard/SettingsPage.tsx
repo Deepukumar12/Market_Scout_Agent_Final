@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Settings, Bell, ShieldCheck, User, LogOut, Check, Save, Sparkles, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,27 @@ const SettingsPage = () => {
     groqKey: '••••••••••••••••',
     githubToken: '••••••••••••••••'
   });
+
+  const [schedulerConfig, setSchedulerConfig] = useState({
+    interval_unit: 'days',
+    interval_value: 7
+  });
+
+  useEffect(() => {
+    const fetchSchedulerConfig = async () => {
+      try {
+        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/v1/settings/scheduler`);
+        if (res.ok) {
+          const data = await res.json();
+          setSchedulerConfig(data);
+        }
+      } catch (err) {
+        console.error('Failed to load scheduler config', err);
+      }
+    };
+    fetchSchedulerConfig();
+  }, []);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -115,8 +136,21 @@ const SettingsPage = () => {
 
   const saveSettings = async () => {
     setLoading(true);
+    
+    // Save scheduler config
+    try {
+        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+        await fetch(`${apiUrl}/api/v1/settings/scheduler`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(schedulerConfig)
+        });
+    } catch (err) {
+        console.error('Failed to save scheduler config', err);
+    }
+
     // Simulate API call and persist locally
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500));
     localStorage.setItem('scoutiq_preferences', JSON.stringify(preferences));
     setLoading(false);
     setSuccess(true);
@@ -307,6 +341,39 @@ const SettingsPage = () => {
                 </Button>
              </form>
           </SectionCard>
+
+           {/* Auto Update Scheduler */}
+           <SectionCard title="Auto Update Scheduler" icon={<Bell className="w-5 h-5 text-emerald-600" />}>
+              <div className="space-y-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Refresh Interval</label>
+                       <input 
+                         type="number"
+                         min="1"
+                         value={schedulerConfig.interval_value}
+                         onChange={(e) => setSchedulerConfig({...schedulerConfig, interval_value: parseInt(e.target.value) || 1})}
+                         className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                       />
+                    </div>
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Time Unit</label>
+                       <select 
+                         value={schedulerConfig.interval_unit}
+                         onChange={(e) => setSchedulerConfig({...schedulerConfig, interval_unit: e.target.value})}
+                         className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                       >
+                          <option value="minutes">Minutes</option>
+                          <option value="hours">Hours</option>
+                          <option value="days">Days</option>
+                       </select>
+                    </div>
+                 </div>
+                 <p className="text-[10px] text-[#6E6E73] dark:text-[#86868B] italic leading-relaxed">
+                    Set how often the autonomous Market Scout agent should scan for updates. Changes are applied dynamically to the background APScheduler.
+                 </p>
+              </div>
+           </SectionCard>
 
           {/* New Section: Scout AI Core */}
           <SectionCard title="Scout AI Core" icon={<Settings className="w-5 h-5 text-[#0071E3]" />}>

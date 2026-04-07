@@ -32,14 +32,15 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
     # Different APIs have different ways to handle time, we'll configure as best we can
 
     # Helper to add results
-    def add_result(url: str, title: str, snippet: str, source: str):
+    def add_result(url: str, title: str, snippet: str, source: str, published_date: Optional[str] = None):
         if url and url not in seen_urls and not url.lower().endswith(".pdf") and url.startswith("http"):
             seen_urls.add(url)
             results.append({
                 "url": url,
                 "title": title or "",
                 "snippet": snippet or "",
-                "source": source
+                "source": source,
+                "published_date": published_date
             })
 
 
@@ -64,7 +65,7 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
                 if resp.status_code == 200:
                     data = resp.json().get("results", [])
                     for r in data:
-                        add_result(r.get("url"), r.get("title"), r.get("content"), "tavily")
+                        add_result(r.get("url"), r.get("title"), r.get("content"), "tavily", r.get("published_date"))
                 else:
                     logger.warning(f"Tavily API returned status {resp.status_code}: {resp.text[:200]}")
         except Exception as e:

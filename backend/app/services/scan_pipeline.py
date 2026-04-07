@@ -93,6 +93,8 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         item = await scrape_url(url)
         if item:
             item["snippet"] = res.get("snippet") or ""
+            if not item.get("publish_date") and res.get("published_date"):
+                item["publish_date"] = res.get("published_date")
         return item
 
     tasks = [_scrape_task(r) for r in all_results]
@@ -174,8 +176,8 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
 
         # 3. If pipeline failed to find a date, use LLM's date if valid
         if not true_pub:
-            valid_date_format = ("-" in pub or "T" in pub)
-            if pub and valid_date_format:
+            valid_date_format = ("-" in pub and "XX" not in pub.upper() and pub.upper() != "UNKNOWN")
+            if pub and valid_date_format and len(pub) >= 8:
                 true_pub = pub
             else:
                 true_pub = scan_date_iso

@@ -12,6 +12,16 @@ interface AnalyzeModalProps {
   currentStep: number;
 }
 
+const POPULAR_COMPANIES = [
+  "Apple", "Amazon", "Alphabet", "Anthropic", "Adobe", "AMD", "Airbnb", "Atlassian",
+  "Meta", "Microsoft", "Mistral", "Netflix", "Nvidia", "Notion", "OpenAI",
+  "Google", "Github", "Gitlab", "Stripe", "SpaceX", "Slack", "Shopify", "Snowflake",
+  "Tesla", "TikTok", "Uber", "Vercel", "Zoom", "IIT Bombay", "IBM", "Intel",
+  "Oracle", "Salesforce", "Samsung", "Sony", "Spotify", "Square", "Snap", "Splunk",
+  "Palantir", "Pinterest", "Plaid", "Perplexity", "Qualcomm", "Reddit", "Roblox",
+  "Databricks", "Datadog", "DigitalOcean", "Discord", "Docker"
+];
+
 const AnalyzeModal: React.FC<AnalyzeModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -21,6 +31,32 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
   currentStep
 }) => {
   const [company, setCompany] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  const filteredSuggestions = company.trim() 
+    ? POPULAR_COMPANIES.filter(c => c.toLowerCase().startsWith(company.toLowerCase()) && c.toLowerCase() !== company.toLowerCase()).slice(0, 15)
+    : [];
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || filteredSuggestions.length === 0) return;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev < filteredSuggestions.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      e.preventDefault();
+      setCompany(filteredSuggestions[focusedIndex]);
+      setShowSuggestions(false);
+      setFocusedIndex(-1);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setFocusedIndex(-1);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +81,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative w-full max-w-xl bg-white rounded-[32px] shadow-2xl overflow-hidden"
+            className="relative w-full max-w-xl bg-white rounded-[32px] shadow-2xl"
           >
             <div className="p-8">
               <div className="flex items-center justify-between mb-8">
@@ -68,10 +104,44 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                       type="text"
                       placeholder="Enter company name (e.g. OpenAI)"
                       value={company}
-                      onChange={(e) => setCompany(e.target.value)}
+                      onChange={(e) => {
+                        setCompany(e.target.value);
+                        setShowSuggestions(true);
+                        setFocusedIndex(-1);
+                      }}
+                      onKeyDown={handleKeyDown}
+                      onFocus={() => setShowSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                       className="w-full bg-[#F5F5F7] border border-transparent focus:border-[#0071E3] focus:bg-white rounded-2xl py-5 pl-14 pr-6 text-[#1D1D1F] text-lg font-medium outline-none transition-all"
                       autoFocus
                     />
+                    
+                    <AnimatePresence>
+                      {showSuggestions && filteredSuggestions.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute z-10 w-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-64 overflow-y-auto"
+                        >
+                          {filteredSuggestions.map((suggestion, index) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              onMouseEnter={() => setFocusedIndex(index)}
+                              onClick={() => {
+                                setCompany(suggestion);
+                                setShowSuggestions(false);
+                                setFocusedIndex(-1);
+                              }}
+                              className={`w-full text-left px-6 py-3 font-medium transition-colors border-b border-gray-50 last:border-0 ${index === focusedIndex ? 'bg-[#F5F5F7] text-[#0071E3]' : 'hover:bg-[#F5F5F7] text-[#1D1D1F]'}`}
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                   
                   <div className="pt-4">
@@ -138,7 +208,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
               )}
             </div>
             
-            <div className="bg-[#F5F5F7] p-6 text-center">
+            <div className="bg-[#F5F5F7] rounded-b-[32px] p-6 text-center">
               <p className="text-sm text-[#6E6E73] font-medium">
                 Our AI agents are scanning thousands of technical sources in real-time.
               </p>

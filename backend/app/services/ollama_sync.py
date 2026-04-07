@@ -149,7 +149,7 @@ class OllamaClient:
             f"Sources: {json.dumps(limited_items)}\n\n"
             f"Output ONLY a JSON object: "
             f"{{\"competitor\": \"{competitor_name}\", \"scan_date\": \"{scan_date_iso}\", \"time_window_days\": {time_window_days}, "
-            f"\"features\": [{{\"feature_title\": \"string\", \"technical_summary\": \"string\", \"publish_date\": \"ISO string\", \"source_url\": \"string\", \"source_domain\": \"string\", \"category\": \"API|UI|Security\", \"confidence_score\": 85}}], "
+            f"\"features\": [{{\"feature_title\": \"string\", \"technical_summary\": \"string\", \"publish_date\": \"FIND EXACT YYYY-MM-DD inside article. If none, output UNKNOWN\", \"source_url\": \"string\", \"source_domain\": \"string\", \"category\": \"API|UI|Security\", \"confidence_score\": 85}}], "
             f"\"executive_summary\": \"string\", \"innovation_velocity_score\": 50}}\n\n"
             f"STRICT RULES:\n"
             f"1. Use double quotes for all JSON property names/values.\n"

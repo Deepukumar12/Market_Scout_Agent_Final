@@ -271,7 +271,7 @@ FIELD RULES:
 - time_window_days: use the integer provided.
 - total_sources_scanned: set to the number of items in scraped_sources.
 - total_valid_updates: set to the length of the features array you output.
-- Each feature: feature_title (from article), technical_summary (2-4 sentence summary from article), publish_date (ISO from that article), source_url, source_domain, category (API|UI|Infrastructure|Security|Platform|AI|SDK|News|Blog|Press Release|Partnership|Product), confidence_score (0-100 based on source clarity).
+- Each feature: feature_title (from article), technical_summary (2-4 sentence summary from article), publish_date (FIND THE EXACT DATE inside the article snippet/content and format it as YYYY-MM-DD. DO NOT hallucinate. If no exact date is found, output exactly 'UNKNOWN'), source_url, source_domain, category (API|UI|Infrastructure|Security|Platform|AI|SDK|News|Blog|Press Release|Partnership|Product), confidence_score (0-100 based on source clarity).
 
 Return only the JSON object. No additional text or explanation.
 """
