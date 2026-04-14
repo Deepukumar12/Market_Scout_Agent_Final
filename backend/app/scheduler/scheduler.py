@@ -1,3 +1,4 @@
+from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.agents.auto_scan_agent import run_auto_scan
 
@@ -25,6 +26,7 @@ async def init_scheduler():
         "interval", 
         id="auto_scan_job",
         replace_existing=True,
+        next_run_time=datetime.now(),
         **kwargs
     )
     

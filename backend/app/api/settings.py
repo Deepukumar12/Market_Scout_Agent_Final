@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Literal
+from datetime import datetime
 
 from app.scheduler.scheduler import scheduler
 from app.agents.auto_scan_agent import run_auto_scan
@@ -58,6 +59,7 @@ async def update_scheduler_config(config: SchedulerConfig):
         "interval", 
         id="auto_scan_job",
         replace_existing=True,
+        next_run_time=datetime.now(),
         **kwargs
     )
     
