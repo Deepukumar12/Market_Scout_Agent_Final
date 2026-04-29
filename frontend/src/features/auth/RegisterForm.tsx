@@ -2,15 +2,15 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Link, useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/Form"
+import { Input } from "@/components/ui/Input"
 import { registerSchema, RegisterSchema } from "./schemas"
 import { useAuthStore } from "@/store/authStore"
 import { motion } from "framer-motion"

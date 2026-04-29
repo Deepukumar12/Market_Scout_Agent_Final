@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Settings, Bell, ShieldCheck, User, LogOut, Check, Save, Sparkles, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/Button';
+import { Switch } from '@/components/ui/Switch';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 import { AnimatePresence } from 'framer-motion';

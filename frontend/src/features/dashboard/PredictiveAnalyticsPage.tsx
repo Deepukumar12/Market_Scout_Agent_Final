@@ -9,7 +9,7 @@ import {
 import { 
   Activity, Zap, BrainCircuit, Target, ArrowUpRight, Loader2, Trophy, BarChart3, TrendingUp
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';

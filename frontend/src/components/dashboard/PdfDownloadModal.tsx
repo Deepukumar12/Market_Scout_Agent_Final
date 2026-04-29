@@ -4,7 +4,7 @@ import {
   Target, Zap, Shield, TrendingUp,
   Activity, Clock, Calendar
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useIntelStore } from '@/store/intelStore';

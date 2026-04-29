@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Terminal, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 
 // WebSocket must connect to the backend. In dev, Vite proxies /ws to backend; fallback to direct backend URL.

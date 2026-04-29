@@ -4,7 +4,7 @@ import {
   Sparkles, Download, BrainCircuit, 
   Target, TrendingUp, ShieldAlert, Clock, CheckCircle2 
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { useIntelStore } from '@/store/intelStore';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';

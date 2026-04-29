@@ -2,7 +2,7 @@ import { useCompetitorStore } from '@/store/competitorStore';
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { PlusCircle, Radar, Globe2, Search, Shield, Target, ArrowUpRight, Loader2, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useIntelStore } from '@/store/intelStore';

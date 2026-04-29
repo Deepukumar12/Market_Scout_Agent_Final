@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Float, MeshDistortMaterial } from '@react-three/drei';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { 
   IntelligenceGlobe, 
   CompetitorPins 

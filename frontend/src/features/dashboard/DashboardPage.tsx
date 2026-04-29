@@ -8,7 +8,7 @@ import {
   TrendingUp,
   Download
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useCompetitorStore } from '@/store/competitorStore';
@@ -26,7 +26,7 @@ import MissionBriefing from '@/components/dashboard/MissionBriefing';
 import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 import { jsPDF } from 'jspdf';
 import { useState } from 'react';
-import { generateMasterDossier } from '@/services/MasterReportService';
+import { generateMasterDossier } from '@/services/masterReportService';
 import { useOutletContext } from 'react-router-dom';
 
 const DashboardPage = () => {

@@ -8,7 +8,7 @@ import {
   Eye,
   ArrowUpRight
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';
