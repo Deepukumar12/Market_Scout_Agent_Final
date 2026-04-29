@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';

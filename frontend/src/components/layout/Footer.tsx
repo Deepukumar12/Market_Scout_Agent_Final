@@ -1,6 +1,6 @@
 
 import { Zap, Github, Twitter, Linkedin, Mail, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 
 export function Footer() {
   return (

@@ -25,7 +25,7 @@ import {
   Tooltip, 
   ResponsiveContainer
 } from 'recharts';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
 import { jsPDF } from 'jspdf';

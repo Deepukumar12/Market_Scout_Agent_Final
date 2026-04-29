@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, ArrowRight, Download, Zap, Loader2, X, Filter, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 import { useIntelStore } from '@/store/intelStore';
 import { cn } from '@/lib/utils';
