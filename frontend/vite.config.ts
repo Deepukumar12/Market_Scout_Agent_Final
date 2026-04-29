@@ -24,5 +24,18 @@ export default defineConfig({
                 ws: true,
             }
         }
+    },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['react', 'react-dom', 'react-router-dom'],
+                    ui: ['lucide-react', 'framer-motion', '@radix-ui/react-accordion', '@radix-ui/react-switch'],
+                    charts: ['recharts'],
+                    three: ['three', '@react-three/fiber', '@react-three/drei']
+                }
+            }
+        },
+        chunkSizeWarningLimit: 1000
     }
 })

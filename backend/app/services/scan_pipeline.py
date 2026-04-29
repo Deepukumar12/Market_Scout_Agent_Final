@@ -46,11 +46,22 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     # -------------------------------------------------------------------------
     # STEP 1 – Query Planning (LLM)
     # -------------------------------------------------------------------------
+    queries = []
     try:
         queries = await client.generate_search_queries(company, time_window_days)
         logger.info("scoutiq_db step=query_planning company=%s queries=%s", company, queries)
     except Exception as e:
         logger.warning(f"scoutiq_db step=query_planning failed for {provider}: {e}")
+        
+        if provider != "ollama":
+            logger.info("Falling back to OLLAMA for query planning...")
+            try:
+                fallback_client = OllamaClient()
+                queries = await fallback_client.generate_search_queries(company, time_window_days)
+                logger.info("Fallback OLLAMA generated queries=%s", queries)
+            except Exception as fallback_e:
+                logger.warning(f"Fallback OLLAMA also failed: {fallback_e}")
+
         # If it's a critical logic error, return None. 
         # But for Ollama we added a fallback in generate_search_queries.
         if not queries: return None
@@ -73,9 +84,14 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     seen_urls: set[str] = set()
     all_results: list[dict[str, Any]] = []
     
-    for q in queries:
-        results = await search_web_multi(q, company_name=company, num_results=5)
-        for r in results:
+    search_tasks = [search_web_multi(q, company_name=company, num_results=5) for q in queries]
+    search_results_raw = await asyncio.gather(*search_tasks, return_exceptions=True)
+    
+    for res in search_results_raw:
+        if isinstance(res, Exception):
+            logger.warning(f"Search task failed: {res}")
+            continue
+        for r in res:
             url = r.get("url")
             if url and url not in seen_urls:
                 seen_urls.add(url)
@@ -134,6 +150,9 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     # -------------------------------------------------------------------------
     # STEP 5 – LLM Analysis (Ollama/Gemini)
     # -------------------------------------------------------------------------
+    # Initiate GitHub fetch concurrently with the heavy LLM analysis
+    github_task = asyncio.create_task(fetch_company_github_data(company, max_repos=15))
+
     try:
         out = await client.generate_scan_report(
             competitor_name=company,
@@ -143,7 +162,25 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         )
     except Exception as e:
         logger.error(f"scoutiq_db step={provider}_analysis failed: {e}")
-        return None
+        
+        if provider != "ollama":
+            logger.info("Falling back to OLLAMA for analysis...")
+            try:
+                fallback_client = OllamaClient()
+                out = await fallback_client.generate_scan_report(
+                    competitor_name=company,
+                    time_window_days=time_window_days,
+                    scraped_items=filtered,
+                    scan_date_iso=scan_date_iso,
+                )
+                logger.info("Fallback OLLAMA analysis succeeded")
+            except Exception as fallback_e:
+                logger.error(f"Fallback OLLAMA analysis also failed: {fallback_e}")
+                github_task.cancel()
+                return None
+        else:
+            github_task.cancel()
+            return None
 
     source_map = {item["url"]: item for item in filtered}
     
@@ -190,11 +227,13 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         
     github_data = None
     try:
-        github_data = await fetch_company_github_data(company, max_repos=15)
-        if github_data.get("error"):
-            github_data = None
+        github_result = await github_task
+        if not github_result.get("error"):
+            github_data = github_result
     except GitHubClientError as e:
         logger.debug("GitHub data skipped for %s: %s", company, e)
+    except asyncio.CancelledError:
+        logger.debug("GitHub fetch was cancelled")
 
     return ScanResponse(
         competitor=report.competitor,

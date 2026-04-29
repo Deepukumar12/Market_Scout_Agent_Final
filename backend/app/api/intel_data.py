@@ -92,6 +92,8 @@ class MonthlyFeature(BaseModel):
     release_date: str
     source_url: Optional[str]
     hash_id: str
+    summary: str = ""
+    source_type: str = "News"
 
 @router.get("/stream", response_model=IntelResponse)
 async def get_intel_stream(
@@ -1270,11 +1272,12 @@ async def get_activity_timeline(
             cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
             user_comp_names = [c["name"] for c in await cursor.to_list(length=100)]
             
-        # We will build a dictionary of activities keyed by date string YYYY-MM-DD
-        grouped_activities = { (now - timedelta(days=i)).strftime("%Y-%m-%d"): [] for i in range(7) }
+        # Create a strict calendar map of exactly the last 7 days
+        last_7_days = [(now - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
+        dynamic_groups = { day: [] for day in last_7_days }
         
         if user_comp_names:
-            # Look back 14 days of scan data to catch delayed detections for the 7-day timeline
+            # Look back 14 days to catch data that was scraped recently but published within the last 7 days
             fourteen_days_ago = now - timedelta(days=14)
             f_cursor = db.db["feature_updates"].find({
                 "company_name": {"$in": user_comp_names},
@@ -1294,40 +1297,50 @@ async def get_activity_timeline(
                     except Exception:
                         pass
                 
-                final_dt = parsed_date if parsed_date else f.get("created_at")
+                final_dt = parsed_date
+                
+                # Strict rule: If an update does NOT have a clear, verifiable date from the source, DO NOT display it.
                 if not final_dt:
                     continue
                 
                 # Format for grouping and display
                 date_key = final_dt.strftime("%Y-%m-%d")
                 
-                # Only include in our 7-day window
-                if date_key in grouped_activities:
-                    entry_key = f"{f['company_name']}|{f['feature_name']}|{date_key}"
-                    if entry_key in seen_entries:
-                        continue
-                    seen_entries.add(entry_key)
+                # Strict Rule: Must belong to exactly one of the last 7 calendar days.
+                if date_key not in dynamic_groups:
+                    continue
+                
+                entry_key = f"{f['company_name']}|{f.get('feature_name', '')}|{date_key}"
+                if entry_key in seen_entries:
+                    continue
+                seen_entries.add(entry_key)
+                
+                # Display exact original date from source
+                display_time = final_dt.strftime("%b %d, %Y")
                     
-                    display_time = final_dt.strftime("%b %d, %Y")
-                    if not parsed_date: # fallback has time components
-                        display_time = final_dt.strftime("%b %d, %Y - %H:%M:%S IST")
-                        
-                    grouped_activities[date_key].append(TimelineActivity(
-                        id=str(f["_id"]),
-                        day=date_key,
-                        title=f"Technical Vector Detected",
-                        organization=f["company_name"],
-                        description=f"{f['company_name']} deployed '{f['feature_name']}'.",
-                        type="feature",
-                        time=display_time,
-                        url=f.get("source_url")
-                    ))
+                dynamic_groups[date_key].append(TimelineActivity(
+                    id=str(f["_id"]),
+                    day=date_key,
+                    title=f"Technical Vector Detected",
+                    organization=f["company_name"],
+                    description=f"{f['company_name']} deployed '{f.get('feature_name', 'update')}'.",
+                    type="feature",
+                    time=display_time,
+                    url=f.get("source_url")
+                ))
                     
-        # Construct the final list exactly in the last 7 days order (newest first, INCLUDING today)
+        # Check if there is any activity at all
+        has_any_activity = any(len(acts) > 0 for acts in dynamic_groups.values())
+        
+        # Construct the final list using strictly the last 7 calendar days in descending order
         days = []
-        for i in range(7):
-            date_key = (now - timedelta(days=i)).strftime("%Y-%m-%d")
-            days.append(DayActivity(date=date_key, activities=grouped_activities.get(date_key, [])))
+        if has_any_activity:
+            for date_key in last_7_days:
+                days.append(DayActivity(date=date_key, activities=dynamic_groups[date_key]))
+                
+        # If has_any_activity is false, days remains [], triggering OPERATIONAL SILENCE DETECTED
+            
+        # If no days found, leave it empty to trigger 'OPERATIONAL SILENCE DETECTED' on the frontend.
             
     except Exception as e:
         print(f"Activity Timeline Error: {e}")
@@ -1371,34 +1384,68 @@ async def get_innovation_trends(current_user: User = Depends(get_current_user)):
     
     competitor_pool = []
     try:
+        import dateparser
         if db.db is None: await db.connect()
         cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1}).limit(5)
         competitor_pool = [c["name"] for c in await cursor.to_list(length=10)]
-    except:
-        pass
-    
-    for i in range(7):
-        date_at = now - timedelta(days=6-i)
-        date_str = date_at.strftime("%b %d")
         
-        start_date = datetime(date_at.year, date_at.month, date_at.day, 0, 0, 0, tzinfo=timezone.utc)
-        end_date = datetime(date_at.year, date_at.month, date_at.day, 23, 59, 59, tzinfo=timezone.utc)
+        # Create a strict calendar map of exactly the last 7 days
+        last_7_days = [(now - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
+        # We need the display formats for the chart (e.g. "Apr 29")
+        last_7_days_display = [(now - timedelta(days=i)).strftime("%b %d") for i in range(7)]
         
-        releases = {}
-        for comp in competitor_pool:
-            try:
-                count = 0
-                if db.db is not None:
-                    # Search in feature_updates for more accurate release tracking
-                    count = await db.db["feature_updates"].count_documents({
-                        "company_name": comp,
-                        "created_at": {"$gte": start_date, "$lte": end_date}
-                    })
-                releases[comp] = count
-            except:
-                releases[comp] = 0
+        dynamic_groups = { day: {"display": disp, "releases": {comp: 0 for comp in competitor_pool}} for day, disp in zip(last_7_days, last_7_days_display) }
+        
+        if competitor_pool:
+            fourteen_days_ago = now - timedelta(days=14)
+            f_cursor = db.db["feature_updates"].find({
+                "company_name": {"$in": competitor_pool},
+                "created_at": {"$gte": fourteen_days_ago}
+            })
             
-        timeline.append(InnovationTrendPoint(date=date_str, releases=releases))
+            seen_entries = set()
+            async for f in f_cursor:
+                rel_date_str = f.get("release_date")
+                parsed_date = None
+                if rel_date_str:
+                    try:
+                        parsed_date = dateparser.parse(str(rel_date_str))
+                    except Exception:
+                        pass
+                
+                final_dt = parsed_date
+                # Strict Rule: Must have an exact verifiable source date
+                if not final_dt:
+                    continue
+                    
+                date_key = final_dt.strftime("%Y-%m-%d")
+                
+                # Strict Rule: Must belong to exactly one of the last 7 calendar days.
+                if date_key not in dynamic_groups:
+                    continue
+                
+                # Prevent duplication
+                entry_key = f"{f['company_name']}|{f.get('feature_name', '')}|{date_key}"
+                if entry_key in seen_entries:
+                    continue
+                seen_entries.add(entry_key)
+                    
+                comp = f["company_name"]
+                if comp in dynamic_groups[date_key]["releases"]:
+                    dynamic_groups[date_key]["releases"][comp] += 1
+                    
+        # Grab exactly the last 7 calendar days, and reverse them to display chronological order (oldest -> newest) in the chart
+        sorted_date_keys = last_7_days[::-1]
+        
+        for date_key in sorted_date_keys:
+            timeline.append(InnovationTrendPoint(
+                date=dynamic_groups[date_key]["display"], 
+                releases=dynamic_groups[date_key]["releases"]
+            ))
+            
+    except Exception as e:
+        print(f"Innovation Trends Error: {e}")
+        return InnovationTrendsResponse(timeline=[], top_innovators=[], sector_shift=[])
     
     # Real calculation of innovators and shifts
     innovators = []

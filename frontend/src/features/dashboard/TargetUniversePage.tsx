@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
     Activity, Globe, Zap, Search,
-    ArrowUpRight, Plus, Terminal, RefreshCw, Layers, Download
+    ArrowUpRight, Plus, Terminal, RefreshCw, Layers
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -36,7 +34,6 @@ const TargetUniversePage = () => {
     const [signals, setSignals] = useState<IntelSignal[]>([]);
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const { token } = useAuthStore();
     const navigate = useNavigate();
 
@@ -69,53 +66,6 @@ const TargetUniversePage = () => {
         return () => clearInterval(interval);
     }, [token]);
 
-    const handleExportPDF = () => {
-        const doc = new jsPDF();
-        const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-        
-        // Header
-        doc.setFillColor(29, 29, 31);
-        doc.rect(0, 0, 210, 40, 'F');
-        doc.setFontSize(22);
-        doc.setTextColor(255, 255, 255);
-        doc.setFont("helvetica", "bold");
-        doc.text("TARGET UNIVERSE INTEL", 20, 25);
-        doc.setFontSize(10);
-        doc.setTextColor(0, 113, 227); // blue
-        doc.text("LIVE SIGNAL INTERCEPT REPORT", 20, 32);
-
-        let y = 55;
-        
-        // Summary Stats
-        doc.setFontSize(12);
-        doc.setTextColor(29, 29, 31);
-        doc.text(`Active Signals Tracked: ${signals.length}`, 20, y);
-        y += 15;
-
-        // Signals List
-        doc.setFontSize(14);
-        doc.setTextColor(0, 113, 227);
-        doc.text("SITUATIONAL INTERCEPTS", 20, y);
-        y += 10;
-
-        signals.slice(0, 20).forEach(s => {
-            if (y > 270) { doc.addPage(); y = 30; }
-            doc.setFontSize(10);
-            doc.setTextColor(29, 29, 31);
-            doc.setFont("helvetica", "bold");
-            doc.text(`${s.company_name} [${s.sentiment}]`, 20, y);
-            y += 5;
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
-            doc.setTextColor(100, 100, 100);
-            const splitSummary = doc.splitTextToSize(s.summary, 170);
-            doc.text(splitSummary, 20, y);
-            y += (splitSummary.length * 4) + 6;
-        });
-
-        doc.save(`SCOUTIQ_SIGNAL_INTERCEPT_${dateStr.replace(/\s+/g, '_')}.pdf`);
-        setIsPdfModalOpen(false);
-    };
 
     const getSentimentColor = (sentiment: string) => {
         switch(sentiment) {
@@ -160,21 +110,6 @@ const TargetUniversePage = () => {
                         <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                         SYNC STREAM
                     </Button>
-                    <Button 
-                        variant="outline"
-                        onClick={() => setIsPdfModalOpen(true)}
-                        className="rounded-xl px-6 border-[#E5E5EA] dark:border-white/10 bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl text-[#1D1D1F] dark:text-white font-black text-[10px] uppercase tracking-widest h-10 hover:shadow-apple transition-all gap-2"
-                    >
-                        <Download size={16} strokeWidth={3} />
-                        Export Intel
-                    </Button>
-
-                    <PdfDownloadModal 
-                        isOpen={isPdfModalOpen}
-                        onClose={() => setIsPdfModalOpen(false)}
-                        onDownload={handleExportPDF}
-                        title="Signal Discovery"
-                    />
                 </div>
             </div>
 

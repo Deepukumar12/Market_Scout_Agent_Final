@@ -107,6 +107,10 @@ When a scan is triggered (manually via the dashboard or automatically via the sc
 - Historical sentiment tracking across technical documentation, news articles, and public signals.
 - Evaluates the broader market reaction to competitor moves.
 
+### 📄 Intelligence Dossier & Reports
+- **Full Spectrum Audit**: Generate comprehensive multi-page master reports covering all monitored competitors.
+- **Strategic Intelligence**: High-fidelity intelligence reports with clean branding and structured layouts directly in the dashboard.
+
 ---
 
 ## 🛠 Complete Technology Stack
@@ -269,6 +273,7 @@ A core tenet of this project is **Zero Mock Data in Production**.
 - [x] **Dynamic Settings API**: Full control over scheduler intervals via UI.
 - [x] **Ollama Fallback Architecture**: Zero-downtime execution even without internet.
 - [x] **Local AI Resilience**: Engineered to run on local models (Ollama) with ChromaDB for caching.
+- [x] **Strategic Intelligence Suite**: Multi-page intelligence reports with source attribution.
 - [ ] **Multi-Agent Debate Protocol**: Implementing agentic debate for deeper strategic confidence scoring.
 - [ ] **Slack/Teams Integration**: Push intelligence alerts directly to corporate communication channels.
 

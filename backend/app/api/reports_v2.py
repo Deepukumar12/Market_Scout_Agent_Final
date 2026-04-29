@@ -59,14 +59,14 @@ async def get_report_history(
             cursor = db.db["reports"].find(query).sort("generated_at", -1).limit(limit)
             async for doc in cursor:
                 # Ensure we have a valid generated_at date
+                from app.core.datetime_utils import safe_format_date
                 gen_at = doc.get("generated_at")
                 if not gen_at:
-                    created_at = doc.get("created_at")
-                    gen_at = created_at.strftime("%Y-%m-%d %H:%M") if created_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+                    gen_at = safe_format_date(doc.get("created_at"))
 
                 features = doc.get("features", [])
                 
-                # Build proper markdown content with '##' headings for the PDF generator
+                # Build proper markdown content with '##' headings for the dashboard report view
                 full_text = "## Executive Summary\nTechnical intelligence scan result detailing recent platform updates, security patches, and market features from the surveillance tracking window.\n\n"
                 
                 for f in features:

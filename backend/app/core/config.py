@@ -55,11 +55,12 @@ class Settings(BaseSettings):
 
 
     # ---------------------------------------------------
-    # SECURITY
+    # SECURITY & ERROR TRACKING
     # ---------------------------------------------------
     SECRET_KEY: str = "dev-only-secret-key-change-me-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    SENTRY_DSN: str = ""
 
 
     # ---------------------------------------------------
@@ -80,7 +81,7 @@ class Settings(BaseSettings):
     # GEMINI
     # ---------------------------------------------------
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-1.5-flash"
     GEMINI_API_BASE: str = "https://generativelanguage.googleapis.com/v1beta"
     GEMINI_MAX_OUTPUT_TOKENS: int = 2048
 
@@ -90,6 +91,13 @@ class Settings(BaseSettings):
     # ---------------------------------------------------
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
+
+    # ---------------------------------------------------
+    # OPENAI (Optional / Future Support)
+    # ---------------------------------------------------
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o"
 
 
     # ---------------------------------------------------
@@ -114,6 +122,13 @@ class Settings(BaseSettings):
     # GITHUB (optional intelligence source)
     # ---------------------------------------------------
     GITHUB_TOKEN: str = ""
+
+
+    # ---------------------------------------------------
+    # PAYMENTS & MONETIZATION
+    # ---------------------------------------------------
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
 
 
     # ---------------------------------------------------

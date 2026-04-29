@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useIntelStore, ScanFeature } from '@/store/intelStore';
 import { useCompetitorStore } from '@/store/competitorStore';
@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
   ShieldCheck, 
-  
   Zap, 
   Layers, 
   Cpu, 
@@ -15,8 +14,6 @@ import {
   LineChart,
   TrendingUp,
   Activity,
-  Download,
-  Calendar,
   Search
 } from 'lucide-react';
 import { 
@@ -26,8 +23,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { Button } from '@/components/ui/Button';
-
-import { jsPDF } from 'jspdf';
+import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
 
 // @ts-ignore
 const getCategoryStyles = (category: string) => {
@@ -41,17 +37,11 @@ const getCategoryStyles = (category: string) => {
   }
 };
 
-import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
-
-import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
-import { useState } from 'react';
-
 const IntelligenceReportPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { scanReport, activities, loading, error, runScan, fetchActivityTimeline, clear } = useIntelStore();
   const { competitors, fetchCompetitors } = useCompetitorStore();
-  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   const competitor = competitors.find((c: any) => String(c._id || c.id) === id);
 
@@ -76,158 +66,6 @@ const IntelligenceReportPage = () => {
     }
   }, [competitor, fetchActivityTimeline]);
 
-  const handleExportPDF = () => {
-    if (!scanReport) return;
-
-    const doc = new jsPDF();
-    const displayName = scanReport?.competitor || competitor?.name || 'Competitor';
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    // Premium Branding
-    doc.setFillColor(29, 29, 31);
-    doc.rect(0, 0, 210, 40, 'F');
-    
-    doc.setFontSize(24);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.text("INTELLIGENCE BRIEFING", 20, 25);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(0, 113, 227);
-    doc.text("CONFIDENTIAL SECTOR SURVEILLANCE", 20, 32);
-
-    // Metadata Block
-    doc.setTextColor(29, 29, 31);
-    doc.setFontSize(18);
-    doc.text(displayName.toUpperCase(), 20, 55);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(110, 110, 115);
-    doc.text(`TIMESCAMP: ${dateStr} | ${timeStr}`, 20, 62);
-    doc.text(`PROTOCOL: NEURAL-STREAM-V4`, 20, 67);
-    
-    doc.setDrawColor(229, 229, 234);
-    doc.line(20, 75, 190, 75);
-
-    // Summary Matrix
-    doc.setFontSize(12);
-    doc.setTextColor(0, 113, 227);
-    doc.text("EXECUTIVE SUMMARY", 20, 85);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(29, 29, 31);
-    doc.text(`Total Critical Signals: ${scanReport.total_valid_updates}`, 20, 95);
-    doc.text(`Network Nodes Scanned: ${scanReport.total_sources_scanned}`, 20, 102);
-    doc.text(`Threat Level: ${scanReport.total_valid_updates > 3 ? 'ELEVATED' : 'STABLE'}`, 20, 109);
-
-    // Detailed Activity Loop (Day-wise)
-    let y = 125;
-    doc.setFontSize(12);
-    doc.setTextColor(0, 113, 227);
-    doc.text("7-DAY OPERATIONS CHRONOLOGY", 20, y);
-    y += 15;
-
-    // Grouping activities by date for the PDF structure
-    const dailyActivities = activities || [];
-    
-    dailyActivities.forEach((day: any) => {
-      if (day.activities.length === 0) return;
-      
-      if (y > 250) {
-        doc.addPage();
-        y = 30;
-      }
-      
-      doc.setFontSize(10);
-      doc.setTextColor(29, 29, 31);
-      doc.setFont("helvetica", "bold");
-      doc.text(day.date.toUpperCase(), 20, y);
-      y += 8;
-      
-      doc.setDrawColor(0, 113, 227);
-      doc.setLineWidth(0.5);
-      doc.line(20, y - 5, 20, y + (day.activities.length * 20)); // Timeline line
-
-      day.activities.forEach((act: any) => {
-        if (y > 260) {
-          doc.addPage();
-          y = 30;
-        }
-        
-        doc.setFontSize(9);
-        doc.setTextColor(0, 113, 227);
-        doc.text(`[${act.time}]`, 25, y);
-        
-        doc.setTextColor(29, 29, 31);
-        doc.setFont("helvetica", "bold");
-        doc.text(act.title, 40, y);
-        y += 5;
-        
-        doc.setFontSize(8);
-        doc.setTextColor(110, 110, 115);
-        doc.setFont("helvetica", "normal");
-        const splitDesc = doc.splitTextToSize(act.description, 140);
-        doc.text(splitDesc, 40, y);
-        y += (splitDesc.length * 4) + 6;
-      });
-      
-      y += 5;
-    });
-
-    // Technical Signatures (Features)
-    doc.addPage();
-    y = 30;
-    doc.setFontSize(12);
-    doc.setTextColor(0, 113, 227);
-    doc.text("TECHNICAL SIGNAL ARCHIVE", 20, y);
-    y += 15;
-
-    scanReport.features.forEach((f) => {
-      if (y > 240) {
-        doc.addPage();
-        y = 30;
-      }
-      
-      doc.setFontSize(10);
-      doc.setTextColor(29, 29, 31);
-      doc.setFont("helvetica", "bold");
-      doc.text(f.feature_title.toUpperCase(), 20, y);
-      y += 6;
-      
-      doc.setFontSize(8);
-      doc.setTextColor(110, 110, 115);
-      doc.setFont("helvetica", "normal");
-      const fDate = new Date(f.publish_date);
-      const fDateStr = fDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-      const fTimeStr = fDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-      
-      doc.text(`CATEGORY: ${f.category} | SYNC: ${fDateStr} ${fTimeStr}`, 20, y);
-      y += 5;
-      
-      doc.setTextColor(0, 113, 227);
-      doc.text(`SOURCE: ${f.source_url}`, 20, y);
-      y += 5;
-
-      doc.setTextColor(110, 110, 115);
-      const splitText = doc.splitTextToSize(f.technical_summary, 170);
-      doc.text(splitText, 20, y);
-      y += (splitText.length * 5) + 12;
-    });
-
-    // Footer
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.text(`Market Scout Intelligence Network | Protocol 4.2 | Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
-    }
-
-    doc.save(`${displayName.replace(/\s+/g, '_')}_INTEL_v4.pdf`);
-    setIsPdfModalOpen(false);
-  };
 
   const groupedFeatures = useMemo(() => {
     // 1. Initialize the 7 calendar days (yesterday back to -7) for the operational pulse
@@ -304,20 +142,6 @@ const IntelligenceReportPage = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            className="rounded-full px-6 border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#3A3A3C] font-black text-[10px] uppercase tracking-widest h-10 shadow-sm"
-            onClick={() => setIsPdfModalOpen(true)}
-          >
-            <Download size={16} className="mr-2" /> EXPORT PDF
-          </Button>
-
-          <PdfDownloadModal 
-            isOpen={isPdfModalOpen}
-            onClose={() => setIsPdfModalOpen(false)}
-            onDownload={handleExportPDF}
-            title={displayName}
-          />
           <Button className="rounded-full px-6 bg-[#0071E3] text-white hover:bg-[#0077ED] font-black text-[10px] uppercase tracking-widest h-10 shadow-lg shadow-[#0071E3]/20">
             <Activity size={16} className="mr-2" /> LIVE MONITOR
           </Button>

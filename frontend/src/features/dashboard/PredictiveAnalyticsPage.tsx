@@ -13,8 +13,6 @@ import { Button } from '@/components/ui/Button';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
-import { jsPDF } from 'jspdf';
-import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 
 interface PerformerMetric {
     competitor_id: string;
@@ -39,7 +37,6 @@ const PredictiveAnalyticsPage = () => {
   
   const [loading, setLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<PredictiveAnalysisResult | null>(null);
-  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   useEffect(() => {
     fetchCompetitors();
@@ -78,55 +75,6 @@ const PredictiveAnalyticsPage = () => {
       }
   };
   
-  const handleExportPDF = () => {
-    const doc = new jsPDF();
-    const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    
-    // Header
-    doc.setFillColor(29, 29, 31);
-    doc.rect(0, 0, 210, 40, 'F');
-    doc.setFontSize(22);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.text("NEURAL FORECAST REPORT", 20, 25);
-    doc.setFontSize(10);
-    doc.setTextColor(175, 82, 222);
-    doc.text("PREDICTIVE MARKET INTELLIGENCE", 20, 32);
-
-    let y = 55;
-    
-    if (analysisResult) {
-      // Top Performers
-      doc.setFontSize(14);
-      doc.setTextColor(16, 185, 129); // emerald-500
-      doc.text("HIGH VELOCITY PERFORMERS", 20, y);
-      y += 10;
-      
-      analysisResult.top_performers.forEach(p => {
-        doc.setFontSize(10);
-        doc.setTextColor(29, 29, 31);
-        doc.text(`${p.name}: ${p.change_velocity_score}% Velocity | ${p.innovation_index} Innovation Index`, 20, y);
-        y += 7;
-      });
-      
-      y += 10;
-      // Predictions
-      doc.setFontSize(14);
-      doc.setTextColor(175, 82, 222); // purple-500
-      doc.text("MARKET TREND PREDICTIONS", 20, y);
-      y += 10;
-      
-      analysisResult.trending_predictions.forEach(p => {
-        doc.setFontSize(10);
-        doc.setTextColor(29, 29, 31);
-        doc.text(`${p.name}: ${p.market_sentiment} Sentiment | Probability: ${(p.trend_probability * 100).toFixed(0)}%`, 20, y);
-        y += 7;
-      });
-    }
-
-    doc.save(`SCOUTIQ_PREDICTIVE_REPORT_${dateStr.replace(/\s+/g, '_')}.pdf`);
-    setIsPdfModalOpen(false);
-  };
 
   // Deduplicate combined array by competitor_id to prevent redundant UI traces
   const allPerformers = analysisResult 
@@ -179,22 +127,6 @@ const PredictiveAnalyticsPage = () => {
              </div>
           </div>
           <div className="flex gap-4">
-             <Button 
-                variant="outline"
-                disabled={!analysisResult}
-                onClick={() => setIsPdfModalOpen(true)}
-                className="rounded-xl px-6 border-[#E5E5EA] dark:border-white/10 bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl text-[#1D1D1F] dark:text-white font-black text-[10px] uppercase tracking-widest h-11 hover:shadow-apple transition-all gap-2"
-             >
-                <TrendingUp size={16} strokeWidth={3} />
-                Export Forecast
-             </Button>
-
-             <PdfDownloadModal 
-                isOpen={isPdfModalOpen}
-                onClose={() => setIsPdfModalOpen(false)}
-                onDownload={handleExportPDF}
-                title="Predictive Analytics"
-             />
           </div>
           <motion.h1 
             initial={{ opacity: 0, x: -20 }}

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Shield, Zap, TrendingUp, BarChart3 } from 'lucide-react';
+import { Shield, Zap, BarChart3 } from 'lucide-react';
 import { MarketComparisonMetric } from '@/store/intelStore';
 import { getCompetitorColor } from '@/lib/utils';
 

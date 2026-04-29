@@ -26,7 +26,7 @@ async def async_run_auto_scan():
         await db.connect()
 
     try:
-        competitors = get_all_competitors()
+        competitors = await get_all_competitors()
 
         if not competitors:
             logger.warning("⚠️ No competitors found in database")
@@ -41,7 +41,7 @@ async def async_run_auto_scan():
 
         # 2️⃣ Loop per user
         for user_id, comps in user_competitor_map.items():
-            email = get_user_email(user_id)
+            email = await get_user_email(user_id)
             if not email:
                 logger.warning(f"⚠️ No email found for user_id: {user_id}, skipping")
                 continue

@@ -3,6 +3,7 @@ GitHub API client for Market Scout: search repos, org repos, and repo details.
 Uses GITHUB_TOKEN when set for higher rate limits and relevant data.
 """
 import logging
+import asyncio
 from typing import Any, Optional
 
 import httpx
@@ -154,34 +155,42 @@ async def fetch_company_github_data(company_name: str, max_repos: int = 15) -> d
         # Still try unauthenticated search; rate limits are strict
         logger.debug("GITHUB_TOKEN not set; GitHub data may be limited")
     try:
-        # 1) Search repos by company name (in name, description, or readme)
         search_query = f"{company}"
-        repos = await search_repositories(query=search_query, per_page=max_repos, sort="stars")
-        for r in repos:
-            result["repos"].append({
-                "full_name": r.get("full_name"),
-                "html_url": r.get("html_url"),
-                "description": r.get("description") or "",
-                "stargazers_count": r.get("stargazers_count", 0),
-                "language": r.get("language"),
-                "updated_at": r.get("updated_at"),
-                "topics": r.get("topics", [])[:5],
-            })
+        repos_task = asyncio.create_task(search_repositories(query=search_query, per_page=max_repos, sort="stars"))
+        orgs_task = asyncio.create_task(search_users_or_orgs(company, per_page=3))
 
-        # 2) Try to find org(s) matching company name and get their repos
-        orgs = await search_users_or_orgs(company, per_page=3)
-        for o in orgs:
-            login = o.get("login")
-            if not login:
-                continue
-            result["orgs_found"].append({
-                "login": login,
-                "avatar_url": o.get("avatar_url"),
-                "url": o.get("html_url"),
-            })
-            # Fetch top repos for this org (avoid duplicate work if already in search)
-            try:
-                org_repos = await get_org_repos(login, per_page=10, sort="stars")
+        repos, orgs = await asyncio.gather(repos_task, orgs_task, return_exceptions=True)
+
+        if not isinstance(repos, Exception):
+            for r in repos:
+                result["repos"].append({
+                    "full_name": r.get("full_name"),
+                    "html_url": r.get("html_url"),
+                    "description": r.get("description") or "",
+                    "stargazers_count": r.get("stargazers_count", 0),
+                    "language": r.get("language"),
+                    "updated_at": r.get("updated_at"),
+                    "topics": r.get("topics", [])[:5],
+                })
+
+        org_repo_tasks = []
+        if not isinstance(orgs, Exception):
+            for o in orgs:
+                login = o.get("login")
+                if not login:
+                    continue
+                result["orgs_found"].append({
+                    "login": login,
+                    "avatar_url": o.get("avatar_url"),
+                    "url": o.get("html_url"),
+                })
+                org_repo_tasks.append(get_org_repos(login, per_page=10, sort="stars"))
+
+        if org_repo_tasks:
+            org_repos_results = await asyncio.gather(*org_repo_tasks, return_exceptions=True)
+            for org_repos in org_repos_results:
+                if isinstance(org_repos, Exception):
+                    continue
                 for r in org_repos:
                     full_name = r.get("full_name")
                     if not any(x.get("full_name") == full_name for x in result["repos"]):
@@ -194,8 +203,6 @@ async def fetch_company_github_data(company_name: str, max_repos: int = 15) -> d
                             "updated_at": r.get("updated_at"),
                             "topics": r.get("topics", [])[:5],
                         })
-            except GitHubClientError:
-                pass
         # Dedupe and sort by stars
         seen = set()
         unique = []

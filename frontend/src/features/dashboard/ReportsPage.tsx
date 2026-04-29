@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, ArrowRight, Download, Zap, Loader2, X, Filter, Trash2 } from 'lucide-react';
+import { Clock, ArrowRight, Zap, Loader2, X, Filter, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 import { useIntelStore } from '@/store/intelStore';
 import { cn } from '@/lib/utils';
-import { jsPDF } from "jspdf";
-import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 
 // --- Types ---
 interface MissionReport {
@@ -31,7 +29,6 @@ const ReportsPage = () => {
   const [generating, setGenerating] = useState(false);
   const [selectedReport, setSelectedReport] = useState<MissionReport | null>(null);
   const [filter, setFilter] = useState('ALL');
-  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   // Fetch Reports
   const fetchReports = async () => {
@@ -78,154 +75,6 @@ const ReportsPage = () => {
       }
   };
 
-  // PDF Generation Logic
-  const generatePDF = (report: MissionReport | null = null) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    const primaryColor = [0, 113, 227]; // #0071E3
-    const secondaryColor = [175, 82, 222]; // #AF52DE
-    const textColor = [29, 29, 31]; // #1D1D1F
-    const lightTextColor = [110, 110, 115]; // #6E6E73
-    let yPos = 30;
-
-    const addFooter = (pageNumber: number) => {
-      doc.setFontSize(8);
-      doc.setTextColor(175, 175, 180);
-      doc.text("MARKET SCOUT INTELLIGENCE • CONFIDENTIAL", margin, pageHeight - 10);
-      doc.text(`Page ${pageNumber}`, pageWidth - margin - 10, pageHeight - 10);
-    };
-
-    // @ts-ignore
-const addHeader = (title: string) => {
-      // Header Bar
-      doc.setFillColor(250, 250, 252);
-      doc.rect(0, 0, pageWidth, 20, 'F');
-      
-      // Logo text
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text("MARKET", margin, 12);
-      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-      doc.text("SCOUT", margin + 17, 12);
-      
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(lightTextColor[0], lightTextColor[1], lightTextColor[2]);
-      doc.text("INTELLIGENCE BRIEFING", pageWidth - margin - 40, 12);
-    };
-
-    const addReportContent = (r: MissionReport) => {
-      if (yPos > 240) { doc.addPage(); yPos = 30; addHeader(r.title); addFooter(doc.internal.pages.length - 1); }
-      
-      // Title
-      doc.setFontSize(22);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      doc.text(r.title.toUpperCase(), margin, yPos);
-      yPos += 12;
-
-      // Metadata
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text(`[ ${r.report_type} ]`, margin, yPos);
-      doc.setTextColor(lightTextColor[0], lightTextColor[1], lightTextColor[2]);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Generated on ${r.generated_at} • Ref: ${r.id.split('-')[0]}`, margin + 35, yPos);
-      yPos += 15;
-
-      // Description
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(12);
-      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      const descLines = doc.splitTextToSize(`"${r.description}"`, pageWidth - (margin * 2));
-      doc.text(descLines, margin, yPos);
-      yPos += (descLines.length * 7) + 8;
-
-      // Source Link if available
-      if (r.source_url) {
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.text("SOURCE DOCUMENTATION:", margin, yPos);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(lightTextColor[0], lightTextColor[1], lightTextColor[2]);
-        doc.text(r.source_url, margin + 45, yPos);
-        yPos += 12;
-      } else {
-        yPos += 7;
-      }
-
-      // Content Sections
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      
-      const sections = r.full_content.split('##');
-      sections.forEach((section) => {
-        if (!section.trim()) return;
-        
-        const sectionLines = section.trim().split('\n');
-        const sectionTitle = sectionLines[0].trim();
-        const sectionBody = sectionLines.slice(1).join('\n').trim();
-
-        if (yPos > 240) { doc.addPage(); yPos = 30; addHeader(r.title); addFooter(doc.internal.pages.length - 1); }
-
-        // Section Title
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-        doc.text(sectionTitle, margin, yPos);
-        yPos += 8;
-
-        // Section Underline (subtle)
-        doc.setDrawColor(240, 240, 245);
-        doc.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
-        yPos += 5;
-
-        // Section Body
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        const cleanText = sectionBody.replace(/[*#]/g, '');
-        const splitText = doc.splitTextToSize(cleanText, pageWidth - (margin * 2));
-        
-        // Handle page overflow for text blocks
-        splitText.forEach((line: string) => {
-          if (yPos > 270) { 
-            doc.addPage(); 
-            yPos = 30; 
-            addHeader(r.title); 
-            addFooter(doc.internal.pages.length - 1); 
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(11);
-          }
-          doc.text(line, margin, yPos);
-          yPos += 6;
-        });
-        
-        yPos += 12;
-      });
-    };
-
-    if (report) {
-      addHeader(report.title);
-      addReportContent(report);
-      addFooter(1);
-      doc.save(`${report.title.toLowerCase().replace(/\s+/g, '_')}_brief.pdf`);
-    } else {
-      reports.forEach((r, idx) => {
-        if (idx > 0) doc.addPage();
-        yPos = 30;
-        addHeader(r.title);
-        addReportContent(r);
-        addFooter(doc.internal.pages.length - 1);
-      });
-      doc.save(`scoutiq_db_comprehensive_briefings.pdf`);
-    }
-  };
-
   // @ts-ignore
 const getSourceDisplay = (url?: string) => {
     if (!url) return 'Unknown Origin';
@@ -247,20 +96,6 @@ const getSourceDisplay = (url?: string) => {
           <p className="text-[#6E6E73] dark:text-[#86868B] dark:text-[#86868B] dark:text-[#A1A1A6] mt-2 font-medium italic">Access all generated market intelligence and autonomous scout briefings.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            onClick={() => setIsPdfModalOpen(true)}
-            className="rounded-full px-6 border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#3A3A3C] font-black text-[10px] uppercase tracking-widest h-10 shadow-sm"
-          >
-            <Download size={16} className="mr-2" /> Export All
-          </Button>
-
-          <PdfDownloadModal 
-            isOpen={isPdfModalOpen}
-            onClose={() => setIsPdfModalOpen(false)}
-            onDownload={() => generatePDF(null)}
-            title="Intelligence Archive"
-          />
           <Button 
             onClick={handleGenerate}
             disabled={generating}
@@ -394,9 +229,6 @@ const getSourceDisplay = (url?: string) => {
                     </Button>
                   )}
                   <Button variant="ghost" onClick={() => setSelectedReport(null)} className="rounded-full text-[#6E6E73] dark:text-[#86868B]">Close</Button>
-                  <Button onClick={() => generatePDF(selectedReport)} className="rounded-full bg-[#0071E3] text-white hover:bg-[#0071E3]/90 px-8">
-                    <Download size={18} className="mr-2" /> Download PDF
-                  </Button>
                 </div>
               </div>
             </motion.div>

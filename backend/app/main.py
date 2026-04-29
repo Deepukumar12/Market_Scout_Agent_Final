@@ -13,6 +13,17 @@ from app.api.auth import router as auth_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from app.core.config import settings
+import sentry_sdk
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
+    logger.info("Sentry initialized for error tracking.")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Connect to DB
@@ -35,14 +46,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="MarketScout Agent Backend", lifespan=lifespan)
 
-# CORS middleware
+# Security and CORS Middleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+import os
+
+# Allow configurable CORS in production, default to all for local dev
+allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict in production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Optional: Require allowed hosts in production
+allowed_hosts = os.getenv("ALLOWED_HOSTS", "*").split(",")
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 # Include API Routers
 # api_router includes: /competitors, /reports, /scan, /websockets AND NOW /agent (markdown)

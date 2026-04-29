@@ -5,28 +5,15 @@ Handles user-related database operations such as fetching user email
 based on user_id from competitors collection.
 """
 
-from pymongo import MongoClient
 from bson import ObjectId
 from bson.errors import InvalidId
-import os
-from dotenv import load_dotenv
 import logging
-
-# Load environment variables
-load_dotenv()
+from app.core.database import db
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
-# MongoDB connection
-client = MongoClient(os.getenv("MONGODB_URL"))
-db = client[os.getenv("DATABASE_NAME")]
-
-# Users collection
-users_collection = db["users"]
-
-
-def get_user_email(user_id: str):
+async def get_user_email(user_id: str):
     """
     Fetch user email using user_id from competitors collection.
 
@@ -42,6 +29,9 @@ def get_user_email(user_id: str):
             logger.warning("⚠️ user_id is None or empty")
             return None
 
+        if db.db is None:
+            await db.connect()
+
         # 🔥 Convert string → ObjectId
         try:
             user_object_id = ObjectId(user_id)
@@ -50,7 +40,7 @@ def get_user_email(user_id: str):
             return None
 
         # Query database
-        user = users_collection.find_one({"_id": user_object_id})
+        user = await db.db["users"].find_one({"_id": user_object_id})
 
         if not user:
             logger.warning(f"❌ No user found for ObjectId: {user_object_id}")

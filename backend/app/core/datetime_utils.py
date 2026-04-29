@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 # Indian Standard Time (IST) is UTC+5:30
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -17,3 +18,20 @@ def to_ist(dt: datetime) -> datetime:
 def format_ist(dt: datetime, format_str: str = "%Y-%m-%d %H:%M:%S") -> str:
     """Formats a datetime as a string in IST."""
     return to_ist(dt).strftime(format_str)
+
+def safe_format_date(dt: Any, format_str: str = "%Y-%m-%d %H:%M") -> str:
+    """Safely formats a datetime object or string."""
+    if dt is None:
+        return datetime.now(IST).strftime(format_str)
+    if isinstance(dt, datetime):
+        return to_ist(dt).strftime(format_str)
+    if isinstance(dt, str):
+        try:
+            from dateparser import parse
+            parsed = parse(dt)
+            if parsed:
+                return to_ist(parsed).strftime(format_str)
+        except:
+            pass
+        return dt
+    return str(dt)

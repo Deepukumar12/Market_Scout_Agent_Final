@@ -110,7 +110,3 @@ def generate_user_pdf_report(user_email, user_reports, output_path):
     pdf.output(output_path)
     logger.info(f"✅ Refined PDF report generated at: {output_path}")
     return output_path
-
-    pdf.output(output_path)
-    logger.info(f"✅ Enhanced PDF report generated at: {output_path}")
-    return output_path

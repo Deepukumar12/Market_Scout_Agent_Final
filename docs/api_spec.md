@@ -75,7 +75,7 @@ Returns core macroscopic computational health tracking:
 System states require persistent asynchronous awareness keeping users updated exactly when the deep extraction completes entirely in the background.
 
 **`GET /api/v1/notifications`**
-- Retrieves historical agent notifications stored explicitly inside MongoDB regarding PDF intelligence generation or pipeline trigger completion variables mapping cleanly onto standard Inbox modules natively. 
+- Retrieves historical agent notifications stored explicitly inside MongoDB regarding intelligence report generation or pipeline trigger completion variables mapping cleanly onto standard Inbox modules natively. 
 
 **`ws://api/v1/ws/{client_id}`**
 - Fast-tracks stateless bi-directional sockets returning the agent's progress stream.

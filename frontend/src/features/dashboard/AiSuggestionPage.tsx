@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Sparkles, Download, BrainCircuit, 
+  Sparkles, BrainCircuit, 
   Target, TrendingUp, ShieldAlert, Clock, CheckCircle2 
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useIntelStore } from '@/store/intelStore';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import jsPDF from 'jspdf';
 import { cn } from '@/lib/utils';
-import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 
 type FocusArea = 'Revenue' | 'Efficiency' | 'Innovation' | 'MarketShare';
 type RiskLevel = 'Low' | 'Medium' | 'High';
@@ -64,7 +62,6 @@ const AiSuggestionPage = () => {
   const [focusArea, setFocusArea] = useState<FocusArea>('Innovation');
   const [riskLevel, setRiskLevel] = useState<RiskLevel>('Medium');
   const [selectedComp, setSelectedComp] = useState<string>('');
-  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   useEffect(() => {
     fetchCompetitors();
@@ -75,61 +72,6 @@ const AiSuggestionPage = () => {
     await fetchStrategicPlan(cid, focusArea, riskLevel);
   };
 
-  const downloadPdf = () => {
-    if (!idea) return;
-    const doc = new jsPDF();
-    const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-
-    // Premium Header
-    doc.setFillColor(29, 29, 31);
-    doc.rect(0, 0, 210, 45, 'F');
-    doc.setFontSize(22);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.text("STRATEGIC INITIATIVE BRIEF", 20, 25);
-    doc.setFontSize(10);
-    doc.setTextColor(0, 113, 227);
-    doc.text(`SYNTHESIZED AI ANALYSIS: ${dateStr.toUpperCase()}`, 20, 32);
-
-    let y = 60;
-    doc.setFontSize(18);
-    doc.setTextColor(29, 29, 31);
-    doc.text(idea.title, 20, y);
-    y += 12;
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    const splitSummary = doc.splitTextToSize(idea.summary, 170);
-    doc.text(splitSummary, 20, y);
-    y += (splitSummary.length * 6) + 15;
-
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(175, 82, 222);
-    doc.text("IMPACT ANALYSIS", 20, y);
-    y += 10;
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(29, 29, 31);
-    doc.text(`Impact Level: ${idea.impact}`, 20, y); y += 6;
-    doc.text(`Confidence: ${idea.confidence}%`, 20, y); y += 6;
-    doc.text(`Est. ROI: ${idea.estimatedROI}`, 20, y); y += 6;
-    doc.text(`Time to Market: ${idea.timeToMarket}`, 20, y);
-
-    y += 15;
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(175, 82, 222);
-    doc.text("REVENUE PROJECTION", 20, y); y += 10;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(29, 29, 31);
-    doc.text("Projected capture velocity over 12 months shows significant scalability.", 20, y);
-
-    doc.save(`${idea.title.replace(/\s+/g, '_')}_Strategic_Brief.pdf`);
-    setIsPdfModalOpen(false);
-  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
@@ -441,20 +383,6 @@ const AiSuggestionPage = () => {
                   <TrendingUp className="w-5 h-5" />
                   Regenerate Strategy
                 </Button>
-                <Button 
-                  onClick={() => setIsPdfModalOpen(true)}
-                  className="w-full bg-white hover:bg-slate-50 text-slate-900 rounded-2xl py-6 gap-2 border border-slate-200 font-medium shadow-sm transition-all active:scale-[0.98]"
-                >
-                  <Download className="w-5 h-5" />
-                  Export Strategic Brief
-                </Button>
-
-                <PdfDownloadModal 
-                  isOpen={isPdfModalOpen}
-                  onClose={() => setIsPdfModalOpen(false)}
-                  onDownload={downloadPdf}
-                  title="Strategic Asset"
-                />
               </div>
             </div>
           </motion.div>

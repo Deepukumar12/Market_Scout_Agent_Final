@@ -1,10 +1,11 @@
 fastapi
-uvicorn
+uvicorn[standard]
+gunicorn
 motor
 celery
 redis
 python-multipart
-python-jose
+python-jose[cryptography]
 passlib
 argon2-cffi
 httpx
@@ -37,3 +38,4 @@ urllib3<2.0.0
 json-repair
 fpdf2
 crawl4ai
+sentry-sdk[fastapi]

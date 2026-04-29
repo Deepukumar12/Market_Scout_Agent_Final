@@ -18,6 +18,8 @@ class CompetitorBase(BaseModel):
     )
     monitoring_enabled: bool = True
     scan_frequency: str = "Daily"  # Daily, Weekly, Manual
+    priority: str = "Medium" # Low, Medium, High
+    sector: str = "Technology"
 
 class CompetitorCreate(CompetitorBase):
     pass
