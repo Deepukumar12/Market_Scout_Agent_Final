@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Calculator, Command, FileText, 
+  Search, Command, FileText, 
   Settings, Users, Activity, Shield, Zap, 
   ArrowRight, LayoutDashboard, Globe
 } from 'lucide-react';
@@ -16,8 +16,16 @@ const CommandPalette = ({ open, setOpen }: { open: boolean, setOpen: (o: boolean
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Grouped Commands
-  const groups = [
+  type CommandItem = {
+    id: string;
+    label: string;
+    icon: any;
+    path: string;
+    shortcut?: string;
+    sub?: string;
+  };
+
+  const groups: { label: string, items: CommandItem[] }[] = [
     {
       label: 'Navigation',
       items: [
@@ -50,14 +58,14 @@ const CommandPalette = ({ open, setOpen }: { open: boolean, setOpen: (o: boolean
   // Filter items
   const filteredItems = groups.map(group => ({
     ...group,
-    items: group.items.filter(item => 
+    items: group.items.filter((item: CommandItem) => 
       item.label.toLowerCase().includes(query.toLowerCase()) || 
       (item.sub && item.sub.toLowerCase().includes(query.toLowerCase()))
     )
   })).filter(group => group.items.length > 0);
 
   // Flatten for keyboard nav
-  const flatItems = filteredItems.flatMap(g => g.items);
+  const flatItems: CommandItem[] = filteredItems.flatMap(g => g.items);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -142,13 +150,13 @@ const CommandPalette = ({ open, setOpen }: { open: boolean, setOpen: (o: boolean
                   <p className="text-sm">No results found.</p>
                 </div>
               ) : (
-                filteredItems.map((group, gIdx) => (
+                filteredItems.map((group) => (
                   <div key={group.label} className="mb-4 last:mb-0">
                     <h4 className="px-3 py-2 text-[10px] uppercase font-bold text-slate-500 tracking-widest sticky top-0 bg-[#0b1221]/95 backdrop-blur z-10">
                       {group.label}
                     </h4>
                     <div className="space-y-1">
-                      {group.items.map((item, idx) => {
+                      {group.items.map((item) => {
                         const globalIndex = flatItems.indexOf(item);
                         const isActive = globalIndex === activeIndex;
                         

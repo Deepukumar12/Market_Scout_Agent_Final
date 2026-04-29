@@ -1,7 +1,7 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Sphere, Html, OrbitControls, Stars, PerspectiveCamera, Environment, Ring, Sparkles, Float } from '@react-three/drei';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo, useRef, useState, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Sphere, Html, OrbitControls, Stars, Environment, Ring, Sparkles, Float } from '@react-three/drei';
+import { motion, } from 'framer-motion';
 import { useCompetitorStore } from '../../store/competitorStore';
 import * as THREE from 'three';
 import clsx from 'clsx';
@@ -344,7 +344,7 @@ const ThreeHero = () => {
 // Helper: Group that handles the rotation for everything attached to the planet
 const RotatingGroup = ({ visualData, hoveredId, setHoveredId }: any) => {
     const groupRef = useRef<THREE.Group>(null);
-    useFrame((state) => {
+    useFrame((_state) => {
         if (groupRef.current) {
             groupRef.current.rotation.y += 0.001; // Independent slow drift
         }

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
   ShieldCheck, 
-  ExternalLink, 
+  
   Zap, 
   Layers, 
   Cpu, 
@@ -26,10 +26,10 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
 
 import { jsPDF } from 'jspdf';
 
+// @ts-ignore
 const getCategoryStyles = (category: string) => {
   switch (category.toUpperCase()) {
     case 'API': return { color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-100 dark:border-blue-500/20', icon: <Code size={14} /> };

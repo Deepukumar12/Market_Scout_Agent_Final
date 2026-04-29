@@ -97,7 +97,8 @@ const ReportsPage = () => {
       doc.text(`Page ${pageNumber}`, pageWidth - margin - 10, pageHeight - 10);
     };
 
-    const addHeader = (title: string) => {
+    // @ts-ignore
+const addHeader = (title: string) => {
       // Header Bar
       doc.setFillColor(250, 250, 252);
       doc.rect(0, 0, pageWidth, 20, 'F');
@@ -163,7 +164,7 @@ const ReportsPage = () => {
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       
       const sections = r.full_content.split('##');
-      sections.forEach((section, idx) => {
+      sections.forEach((section) => {
         if (!section.trim()) return;
         
         const sectionLines = section.trim().split('\n');
@@ -225,7 +226,8 @@ const ReportsPage = () => {
     }
   };
 
-  const getSourceDisplay = (url?: string) => {
+  // @ts-ignore
+const getSourceDisplay = (url?: string) => {
     if (!url) return 'Unknown Origin';
     try {
       const hostname = new URL(url).hostname;

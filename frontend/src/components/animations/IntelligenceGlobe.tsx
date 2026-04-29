@@ -1,5 +1,5 @@
 
-import React, { useRef, useMemo, forwardRef } from 'react';
+import { useRef, useMemo, forwardRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Sphere, MeshDistortMaterial, Html, Ring } from '@react-three/drei';
 import * as THREE from 'three';

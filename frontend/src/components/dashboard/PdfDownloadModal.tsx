@@ -1,11 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FileText, Download, X, Layers, 
-  Target, Zap, Shield, TrendingUp,
+  Download, X, 
+  Target, Shield, TrendingUp,
   Activity, Clock, Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useIntelStore } from '@/store/intelStore';
 
@@ -17,7 +16,7 @@ interface PdfDownloadModalProps {
 }
 
 const PdfDownloadModal = ({ isOpen, onClose, onDownload, title }: PdfDownloadModalProps) => {
-  const { globalMetrics, activities } = useIntelStore();
+  const { globalMetrics} = useIntelStore();
   const [preparing, setPreparing] = useState(false);
 
   useEffect(() => {
