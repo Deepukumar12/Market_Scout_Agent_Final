@@ -103,7 +103,7 @@ const AiSuggestionPage = () => {
               >
                 <option value="">Select Competitor (Default: Market)</option>
                 {competitors.map((c: any) => (
-                  <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                  <option key={c._id || c.id || c.name} value={c.name}>{c.name}</option>
                 ))}
               </select>
             </div>

@@ -129,11 +129,13 @@ const router = createBrowserRouter([
 ]);
 
 import { ThemeProvider } from '@/context/ThemeContext';
+import { Toaster } from 'react-hot-toast';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>
       <RouterProvider router={router} />
+      <Toaster position="bottom-right" />
     </ThemeProvider>
   </React.StrictMode>,
 );

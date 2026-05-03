@@ -5,6 +5,7 @@ Uses GITHUB_TOKEN when set for higher rate limits and relevant data.
 import logging
 import asyncio
 from typing import Any, Optional
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -135,10 +136,11 @@ async def search_users_or_orgs(query: str, per_page: int = 5) -> list[dict[str, 
         return []
 
 
-async def fetch_company_github_data(company_name: str, max_repos: int = 15) -> dict[str, Any]:
+async def fetch_company_github_data(company_name: str, max_repos: int = 15, time_window_days: int = 7) -> dict[str, Any]:
     """
     Fetch relevant GitHub data for a company: search repos by company name,
     try to find matching org and its repos, then return a structured summary.
+    Filters repos to only include those updated within time_window_days.
     """
     company = (company_name or "").strip()
     if not company:
@@ -151,11 +153,14 @@ async def fetch_company_github_data(company_name: str, max_repos: int = 15) -> d
         "error": None,
     }
 
+    cutoff_dt = datetime.now(timezone.utc) - timedelta(days=time_window_days)
+    cutoff_date_str = cutoff_dt.strftime("%Y-%m-%d")
+
     if not settings.GITHUB_TOKEN:
         # Still try unauthenticated search; rate limits are strict
         logger.debug("GITHUB_TOKEN not set; GitHub data may be limited")
     try:
-        search_query = f"{company}"
+        search_query = f"{company} pushed:>{cutoff_date_str}"
         repos_task = asyncio.create_task(search_repositories(query=search_query, per_page=max_repos, sort="stars"))
         orgs_task = asyncio.create_task(search_users_or_orgs(company, per_page=3))
 
@@ -192,6 +197,15 @@ async def fetch_company_github_data(company_name: str, max_repos: int = 15) -> d
                 if isinstance(org_repos, Exception):
                     continue
                 for r in org_repos:
+                    updated_at_str = r.get("pushed_at") or r.get("updated_at")
+                    if updated_at_str:
+                        try:
+                            updated_dt = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00"))
+                            if updated_dt < cutoff_dt:
+                                continue
+                        except Exception:
+                            pass
+
                     full_name = r.get("full_name")
                     if not any(x.get("full_name") == full_name for x in result["repos"]):
                         result["repos"].append({

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Loader2, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { getCompanySuggestions } from '@/services/api';
 
 interface AnalyzeModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface AnalyzeModalProps {
   status: 'idle' | 'running' | 'completed' | 'error';
   progressSteps: string[];
   currentStep: number;
+  liveLogs?: string[];
 }
 
 const POPULAR_COMPANIES = [
@@ -28,15 +30,39 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
   onAnalyze, 
   status,
   progressSteps,
-  currentStep
+  currentStep,
+  liveLogs = []
 }) => {
   const [company, setCompany] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const filteredSuggestions = company.trim() 
-    ? POPULAR_COMPANIES.filter(c => c.toLowerCase().startsWith(company.toLowerCase()) && c.toLowerCase() !== company.toLowerCase()).slice(0, 15)
-    : [];
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!company.trim() || company.trim().length < 2) {
+        setDynamicSuggestions([]);
+        setIsSearching(false);
+        return;
+      }
+      
+      setIsSearching(true);
+      try {
+        const results = await getCompanySuggestions(company.trim());
+        setDynamicSuggestions(results.filter((c: string) => c.toLowerCase() !== company.trim().toLowerCase()));
+      } catch (e) {
+        console.error("Suggestion fetch error:", e);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounce = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(debounce);
+  }, [company]);
+
+  const filteredSuggestions = dynamicSuggestions;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || filteredSuggestions.length === 0) return;
@@ -189,6 +215,21 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                       </div>
                     ))}
                   </div>
+
+                  {status === 'running' && liveLogs.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="mt-6 p-4 bg-[#1D1D1F] rounded-2xl font-mono text-[11px] space-y-1.5 overflow-hidden"
+                    >
+                      {liveLogs.map((log, i) => (
+                        <div key={i} className="flex gap-2">
+                          <span className="text-[#34C759] shrink-0">➜</span>
+                          <span className="text-gray-400 break-all">{log}</span>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
 
                   {status === 'completed' && (
                     <motion.div 

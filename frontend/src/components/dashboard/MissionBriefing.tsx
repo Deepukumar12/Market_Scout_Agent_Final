@@ -8,7 +8,7 @@ interface MissionBriefingProps {
 
 const MissionBriefing = ({ data }: MissionBriefingProps) => {
   if (!data) return (
-    <div className="p-10 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple animate-pulse">
+    <div className="p-6 md:p-10 rounded-[32px] md:rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple animate-pulse">
       <div className="h-6 w-48 bg-gray-200 dark:bg-white/5 rounded-full mb-6" />
       <div className="space-y-4">
         <div className="h-4 w-full bg-gray-100 dark:bg-white/5 rounded-full" />
@@ -24,14 +24,14 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
           <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">
             Strategic <span className="text-[#0071E3]">Briefing</span>
           </h1>
-          <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mt-1 italic">Automated Market Intelligence Summary</p>
+          <p className="text-[10px] font-black text-[#636366] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mt-1 italic">Automated Market Intelligence Summary</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="px-4 py-2 rounded-full bg-blue-50 dark:bg-[#0071E3]/20 border border-[#0071E3]/20 flex items-center gap-2">
             <Activity size={14} className="text-[#0071E3]" />
             <span className="text-[10px] font-black text-[#0071E3] uppercase tracking-widest italic">{data.sentiment_pulse}</span>
           </div>
-          <p className="text-[9px] font-bold text-[#86868B] uppercase tracking-widest italic">Updated: {new Date(data.last_updated).toLocaleTimeString('en-IN')}</p>
+          <p className="text-[9px] font-bold text-[#636366] dark:text-[#A1A1A6] uppercase tracking-widest italic">Updated: {new Date(data.last_updated).toLocaleTimeString('en-IN')}</p>
         </div>
       </div>
 
@@ -40,7 +40,7 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-12 p-10 rounded-[40px] bg-gradient-to-br from-white/90 to-[#F5F5F7]/90 dark:from-[#1D1D1F]/90 dark:to-[#2C2C2E]/90 backdrop-blur-2xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-lg relative overflow-hidden group"
+          className="lg:col-span-12 p-6 md:p-10 rounded-[32px] md:rounded-[40px] bg-gradient-to-br from-white/90 to-[#F5F5F7]/90 dark:from-[#1D1D1F]/90 dark:to-[#2C2C2E]/90 backdrop-blur-2xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-lg relative overflow-hidden group"
         >
           {/* Decorative Gloss */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
@@ -49,7 +49,7 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse" />
-                <span className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.25em] italic">Live Intelligence Stream</span>
+                <span className="text-[10px] font-black text-[#636366] dark:text-[#A1A1A6] uppercase tracking-[0.25em] italic">Live Intelligence Stream</span>
               </div>
               <h2 className="text-2xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic leading-snug mb-6 max-w-2xl">
                 {data.executive_summary}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useIntelStore, ScanFeature } from '@/store/intelStore';
 import { useCompetitorStore } from '@/store/competitorStore';
@@ -54,11 +54,19 @@ const IntelligenceReportPage = () => {
   useEffect(() => {
     if (id) {
       runScan(id);
+      const interval = setInterval(() => {
+        runScan(id);
+        if (competitor && competitor.name) {
+          fetchActivityTimeline(competitor.name);
+        }
+      }, 30000); // 30s refresh for specific report monitoring
+      return () => {
+        clearInterval(interval);
+        clear();
+      };
     }
-    return () => {
-      clear();
-    };
-  }, [id, runScan, clear]);
+    return () => clear();
+  }, [id, runScan, clear, competitor, fetchActivityTimeline]);
 
   useEffect(() => {
     if (competitor && competitor.name) {

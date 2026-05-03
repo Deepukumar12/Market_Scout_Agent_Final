@@ -117,6 +117,7 @@ interface IntelState {
   runMarketScan: (payload: { company_name: string; website?: string | null; time_window_days?: number }) => Promise<void>;
   analyzeCompany: (company: string) => Promise<void>;
   deleteReport: (reportId: string) => Promise<void>;
+  refreshAllData: (query?: string) => Promise<void>;
   clear: () => void;
 }
 
@@ -191,7 +192,7 @@ export const useIntelStore = create<IntelState>((set) => ({
     }
   },
 
-  fetchSignals: async () => {
+  fetchSignals: async () => { set({ loading: true });
     try {
         const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
         const res = await fetch(`${apiUrl}/api/v1/intelligence/stream?limit=50`, {
@@ -199,7 +200,7 @@ export const useIntelStore = create<IntelState>((set) => ({
         });
         if(res.ok) {
             const data = await res.json();
-            set({ signals: data.signals || [] });
+            set({ signals: data.signals || [], loading: false });
         }
     } catch(error) {
         console.error("Failed to fetch intelligence data:", error);
@@ -451,6 +452,21 @@ export const useIntelStore = create<IntelState>((set) => ({
     } catch(err) {
         console.error("Failed to fetch competitors:", err);
     }
+  },
+
+  refreshAllData: async (query?: string) => {
+    // Refresh all global dashboard data points in parallel
+    await Promise.allSettled([
+      useIntelStore.getState().fetchHistory(query),
+      useIntelStore.getState().fetchSignals(),
+      useIntelStore.getState().fetchActivityTimeline(query),
+      useIntelStore.getState().fetchInnovationTrends(),
+      useIntelStore.getState().fetchGlobalMetrics(),
+      useIntelStore.getState().fetchMarketComparison(),
+      useIntelStore.getState().fetchMonthlyReleases(),
+      useIntelStore.getState().fetchMissionBriefing(),
+      useIntelStore.getState().fetchCompetitors(),
+    ]);
   },
 
   clear: () => set({ 

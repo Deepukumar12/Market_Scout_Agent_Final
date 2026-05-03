@@ -24,7 +24,7 @@ const MonthlyFeatures = ({ features, title = "Monthly Releases", subtitle = "Tec
               </div>
             </div>
           )}
-          <div className="bg-white/30 dark:bg-[#1D1D1F]/30 backdrop-blur-xl p-8 rounded-[40px] border border-dashed border-[#E5E5EA] dark:border-white/10 text-center">
+          <div className="bg-white/30 dark:bg-[#1D1D1F]/30 backdrop-blur-xl p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-dashed border-[#E5E5EA] dark:border-white/10 text-center">
              <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest italic mb-2">OPERATIONAL SILENCE DETECTED</p>
              <p className="text-xs font-medium text-[#6E6E73] dark:text-[#86868B] italic">{emptyState}</p>
           </div>
@@ -50,7 +50,7 @@ const MonthlyFeatures = ({ features, title = "Monthly Releases", subtitle = "Tec
         </div>
       )}
 
-      <div className="h-[400px] sm:h-[500px] lg:h-[600px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-[#E5E5EA] dark:scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="max-h-[400px] sm:max-h-[500px] lg:max-h-[700px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-[#E5E5EA] dark:scrollbar-thumb-white/10 scrollbar-track-transparent">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, i) => (
             <motion.div
@@ -59,7 +59,7 @@ const MonthlyFeatures = ({ features, title = "Monthly Releases", subtitle = "Tec
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
               whileHover={{ y: -5 }}
-              className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple flex flex-col group relative overflow-hidden"
+              className="p-6 md:p-8 rounded-[32px] md:rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple flex flex-col group relative overflow-hidden"
             >
               {/* Gloss Highlight */}
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#0071E3]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -101,7 +101,7 @@ const MonthlyFeatures = ({ features, title = "Monthly Releases", subtitle = "Tec
       </div>
 
       {features.length === 0 && (
-        <div className="p-20 rounded-[40px] border-2 border-dashed border-[#E5E5EA] dark:border-white/10 flex flex-col items-center justify-center text-[#86868B] italic">
+        <div className="p-10 md:p-20 rounded-[32px] md:rounded-[40px] border-2 border-dashed border-[#E5E5EA] dark:border-white/10 flex flex-col items-center justify-center text-[#86868B] italic">
           <p className="text-sm font-bold uppercase tracking-widest">No signals detected in the current cycle</p>
           <p className="text-[10px] mt-2">Intelligence gathering active...</p>
         </div>

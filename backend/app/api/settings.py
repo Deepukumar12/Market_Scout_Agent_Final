@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Literal
 from datetime import datetime
@@ -6,6 +6,8 @@ from datetime import datetime
 from app.scheduler.scheduler import scheduler
 from app.agents.auto_scan_agent import run_auto_scan
 from app.core.database import db
+from app.api.auth import get_current_user
+from app.models.user import User
 
 router = APIRouter()
 
@@ -14,7 +16,7 @@ class SchedulerConfig(BaseModel):
     interval_value: int
 
 @router.get("/scheduler", response_model=SchedulerConfig)
-async def get_scheduler_config():
+async def get_scheduler_config(current_user: User = Depends(get_current_user)):
     """Get the current auto-scan scheduler configuration"""
     settings = await db.db.system_settings.find_one({"_id": "scheduler"}) if db.db is not None else None
     if settings:
@@ -26,7 +28,7 @@ async def get_scheduler_config():
     return SchedulerConfig(interval_unit="days", interval_value=7)
 
 @router.post("/scheduler")
-async def update_scheduler_config(config: SchedulerConfig):
+async def update_scheduler_config(config: SchedulerConfig, current_user: User = Depends(get_current_user)):
     """Update the auto-scan scheduler interval and reschedule the APScheduler job"""
     
     # 1. Save to database

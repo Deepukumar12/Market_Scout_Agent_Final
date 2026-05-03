@@ -4,15 +4,14 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 import os
 import logging
-from dotenv import load_dotenv
+from app.core.config import settings
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 def send_email_report(to_email, subject, content, attachment_path=None):
     try:
-        sender = os.getenv("EMAIL_USER")
-        password = os.getenv("EMAIL_PASS")
+        sender = settings.EMAIL_USER
+        password = settings.EMAIL_PASS
 
         msg = MIMEMultipart()
         msg["Subject"] = subject

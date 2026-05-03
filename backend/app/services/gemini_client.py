@@ -1,3 +1,5 @@
+import logging
+import asyncio
 import json
 from typing import Any, Dict, List, Optional
 try:
@@ -18,7 +20,7 @@ class GeminiClientError(Exception):
     """Base error for Gemini client failures."""
 
 
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -95,7 +97,7 @@ class GeminiClient:
                 "responseSchema": schema,
             },
         }
-        import asyncio
+        
         last_error: Optional[Exception] = None
         for attempt in range(max_retries + 1):
             try:
@@ -222,7 +224,7 @@ IMPORTANT:
             },
         }
 
-        import asyncio
+        
         last_error: Optional[Exception] = None
         for attempt in range(max_retries + 1):
             try:
@@ -306,7 +308,7 @@ Return only the JSON object. No additional text or explanation.
             },
         }
 
-        import asyncio
+        
         last_error: Optional[Exception] = None
         for attempt in range(max_retries + 1):
             try:

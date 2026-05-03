@@ -137,43 +137,36 @@ def _extract_date_from_url(url: str) -> Optional[datetime]:
     return None
 
 def _extract_date_from_soup(soup: BeautifulSoup, url: str = "") -> Optional[datetime]:
-    """Try to find a publish date from JSON-LD, meta tags, time elements, or URL."""
-    # 1. JSON-LD (often most reliable)
-    dt = _extract_date_from_json_ld(soup)
-    if dt:
-        return dt
-
-    # 2. Meta tags
-    for tag_name, attrs in DATE_PATTERNS:
-        if tag_name == "time" and attrs.get("datetime") is True:
-            for el in soup.find_all("time"):
-                dt_str = el.get("datetime")
-                if dt_str:
-                    parsed = _parse_iso_date(dt_str)
-                    if parsed:
-                        return parsed
-            continue
-        for el in soup.find_all(tag_name, attrs):
-            content = el.get("content") or el.get("datetime")
-            if content:
-                parsed = _parse_iso_date(content)
-                if parsed:
-                    return parsed
-    
-    # 3. URL fallback
-    if url:
-        dt = _extract_date_from_url(url)
-        if dt:
-            return dt
-
-    # 4. Content fallback (Regex)
+    """
+    STRICT VISIBLE TEXT ONLY: Extracts the date only if it is visible to a human eye in the text.
+    Ignores all hidden backend HTML (JSON-LD, meta tags, etc.).
+    """
     import re
     text_content = soup.get_text(separator=" ", strip=True)
-    # Look for patterns like "Published Date: March 24, 2026" or "Updated: 2026-03-24"
-    # Expanded regex to catch more variations
-    match = re.search(r'(?:Published|Updated|Release|Posted)\s*(?:Date)?\s*:?\s*([A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4})', text_content, re.IGNORECASE)
+    if not text_content:
+        return None
+        
+    # We look at the first 2000 characters where datelines usually exist
+    search_area = text_content[:2000]
+    
+    # 1. Look for explicit datelines with keywords
+    match = re.search(r'(?:Published|Updated|Release|Posted)(?:\s*Date)?\s*[:\-]?\s*([A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4}|\d{1,2}\s+[A-Za-z]+\s+\d{4})', search_area, re.IGNORECASE)
     if match:
-        dt_str = match.group(1)
+        parsed = _parse_iso_date(match.group(1))
+        if parsed:
+            return parsed
+
+    # 2. Look for standalone dates often found at the top of articles (e.g. "April 27, 2026" or "27 April 2026")
+    match = re.search(r'\b([A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+[A-Z][a-z]{2,8}\s+\d{4})\b', search_area)
+    if match:
+        parsed = _parse_iso_date(match.group(1))
+        if parsed:
+            return parsed
+            
+    # 3. Look for standard YYYY-MM-DD, YYYY.MM.DD, YYYY/MM/DD
+    match = re.search(r'\b(\d{4}[-./]\d{2}[-./]\d{2})\b', search_area)
+    if match:
+        dt_str = match.group(1).replace('.', '-').replace('/', '-')
         parsed = _parse_iso_date(dt_str)
         if parsed:
             return parsed
@@ -361,9 +354,9 @@ def filter_by_time_and_technical(
     time_window_days: int,
 ) -> list[dict[str, Any]]:
     """
-    Step 3 – Date filtering. Discard if publish_date is EXPLICITLY older than time_window_days.
-    If publish_date is missing, we keep it (lenient) because Tavily already filters by 'days: 7'.
-    Today's content is INCLUDED — news published today is valid intelligence.
+    STRICT VISIBLE DATE FILTER:
+    Discard if the article does not have a human-visible publish_date in its text.
+    Discard if the visible date is older than time_window_days.
     """
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=time_window_days)
@@ -372,21 +365,20 @@ def filter_by_time_and_technical(
     for item in items:
         pub_iso = item.get("publish_date")
         if not pub_iso:
-            # Lenient: if we can't find a date, trust the search engine's time filter.
-            valid.append(item)
+            # STRICT RULE: Reject if no visible date is found.
+            logger.info(f"Discarding content: No human-visible date found in text for {item.get('url')}")
             continue
 
         dt = _parse_iso_date(pub_iso)
         if not dt:
-            valid.append(item)
+            logger.info(f"Discarding content: Invalid human-visible date format for {item.get('url')}")
             continue
 
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
 
-        # Only discard if the article is clearly older than the time window
         if dt < cutoff:
-            logger.info(f"Discarding old content: {item.get('url')} (published {pub_iso})")
+            logger.info(f"Discarding old content: {item.get('url')} (visible date {pub_iso} is older than 7 days)")
             continue
 
         valid.append(item)
@@ -397,18 +389,23 @@ def filter_by_time_and_technical(
 
 def filter_content_technical_only(
     items: list[dict[str, Any]],
+    required_regex: Optional[re.Pattern] = None,
+    block_regex: Optional[re.Pattern] = None,
 ) -> list[dict[str, Any]]:
     """
     Step 4 – Content filtering. Keep only articles that:
-    - Contain at least one required technical keyword (API, Feature, Release, Update, etc.)
-    - Are not dominated by non-technical content (hiring, funding, events, marketing).
+    - Contain at least one required keyword (dynamic or global fallback)
+    - Are not dominated by spam/irrelevant content.
     """
+    req_kw = required_regex if required_regex else REQUIRED_TECHNICAL_KEYWORDS
+    blk_kw = block_regex if block_regex else NON_TECHNICAL_BLOCK
+
     result = []
     for item in items:
         combined = f"{item.get('title', '')} {item.get('content', '')} {item.get('snippet', '')}"
-        if not REQUIRED_TECHNICAL_KEYWORDS.search(combined):
+        if not req_kw.search(combined):
             continue
-        block_matches = len(NON_TECHNICAL_BLOCK.findall(combined))
+        block_matches = len(blk_kw.findall(combined))
         if block_matches > NON_TECHNICAL_MAX_MATCHES:
             continue
         result.append(item)

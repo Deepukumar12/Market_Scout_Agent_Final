@@ -1,8 +1,9 @@
-
 from datetime import datetime, timezone
+import logging
 from typing import List
 
-from fastapi import APIRouter, Depends
+from bson import ObjectId
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.database import db
 from app.services.delta_engine import FREQUENCY_DEFAULT_HOURS
@@ -14,6 +15,7 @@ from app.models.competitor import (
 )
 from app.models.user import User
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -52,6 +54,8 @@ async def list_competitors(
         if "_id" in doc:
             doc["_id"] = str(doc["_id"])
         competitors.append(Competitor(**doc))
+        
+    # Strictly database driven - return empty if no competitors found
     return competitors
 
 
@@ -118,21 +122,21 @@ async def delete_competitor(
         summaries_coll = db.db["article_summaries"]
         await summaries_coll.delete_many({"query_tag": competitor["name"]})
     except Exception as e:
-        print(f"Warning: Failed to delete summaries for {competitor['name']}: {e}")
+        logger.warning(f"Failed to delete summaries for {competitor['name']}: {e}")
 
     # 2. Delete associated reports
     try:
         reports_coll = db.db["reports"]
         await reports_coll.delete_many({"competitor_id": competitor_id})
     except Exception as e:
-        print(f"Warning: Failed to delete reports for {competitor_id}: {e}")
+        logger.warning(f"Failed to delete reports for {competitor_id}: {e}")
 
     # 3. Delete from intelligence cache
     try:
         cache_coll = db.db["cache"]
         await cache_coll.delete_one({"competitor_id": competitor_id})
     except Exception as e:
-        print(f"Warning: Failed to delete cache for {competitor_id}: {e}")
+        logger.warning(f"Failed to delete cache for {competitor_id}: {e}")
 
     # 4. Delete the competitor itself
     await collection.delete_one({"_id": ObjectId(competitor_id)})

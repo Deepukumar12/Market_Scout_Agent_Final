@@ -7,7 +7,7 @@ import {
   ArrowUpRight,
   TrendingUp
 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useCompetitorStore } from '@/store/competitorStore';
@@ -23,6 +23,7 @@ import MonthlyFeatures from '@/components/dashboard/MonthlyFeatures';
 import MissionBriefing from '@/components/dashboard/MissionBriefing';
 
 import { useOutletContext } from 'react-router-dom';
+import { Button } from '@/components/ui/Button';
 
 const DashboardPage = () => {
   const { fetchCompetitors } = useCompetitorStore();
@@ -64,13 +65,7 @@ const DashboardPage = () => {
     fetchMissionBriefing();
   }, [fetchCompetitors, fetchHistory, fetchSignals, fetchActivityTimeline, fetchInnovationTrends, fetchGlobalMetrics, fetchMarketComparison, fetchMonthlyReleases, fetchMissionBriefing, searchQuery]);
 
-  // Polling for real-time updates every 15 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchActivityTimeline(searchQuery);
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [fetchActivityTimeline, searchQuery]);
+  // Global polling is now handled by DashboardLayout refreshAllData
 
   const chartData = innovationTrends?.timeline || [];
   const chartCompetitors = chartData.length > 0 ? Object.keys(chartData[0].releases) : [];
@@ -98,6 +93,68 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-14 pb-20">
+      {/* Premium Dashboard Hero */}
+      <section className="relative overflow-hidden rounded-[32px] md:rounded-[48px] bg-[#1D1D1F] p-6 md:p-12 text-white shadow-2xl">
+        <div className="relative z-10 max-w-2xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 mb-6"
+          >
+            <div className="px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#34C759] animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest italic">Global Surveillance Active</span>
+            </div>
+            <span className="text-[10px] font-black text-white/70 uppercase tracking-widest italic">System v1.0.4 Stable</span>
+          </motion.div>
+          
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter uppercase italic leading-[0.9] md:leading-[0.8] mb-6"
+          >
+            Welcome back, <br />
+            <span className="text-[#0071E3]">Commander.</span>
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-lg text-white/80 font-medium italic max-w-lg mb-10"
+          >
+            Your autonomous intelligence network has processed {globalMetrics?.articles_processed || '0'} signals in the last 24 hours. No critical threats detected in your primary sector.
+          </motion.p>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex items-center gap-4"
+          >
+            <Button className="bg-white text-black hover:bg-white/90 rounded-2xl h-12 px-8 font-black text-[10px] uppercase tracking-widest italic">
+              View Detailed Audit
+            </Button>
+            <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-2xl h-12 px-8 font-black text-[10px] uppercase tracking-widest italic">
+              Sector Analysis
+            </Button>
+          </motion.div>
+        </div>
+
+        {/* Abstract Background Decoration */}
+        <div className="absolute right-0 top-0 bottom-0 w-1/2 overflow-hidden pointer-events-none opacity-50">
+           <svg viewBox="0 0 400 400" className="w-full h-full text-[#0071E3]/20">
+              <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+           </svg>
+        </div>
+      </section>
+
       {/* Strategic Mission Briefing Section */}
       <MissionBriefing data={missionBriefing} />
 
@@ -105,7 +162,7 @@ const DashboardPage = () => {
       <section>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-sm font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic mb-2">7-Days Operations Pulse</h2>
+            <h2 className="text-sm font-black text-[#636366] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic mb-2">7-Days Operations Pulse</h2>
             <div className="flex items-center gap-2 text-[#0071E3] text-[10px] font-black uppercase tracking-widest cursor-pointer group italic">
                 Detailed Analytics <ArrowUpRight size={14} strokeWidth={3} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </div>
@@ -120,6 +177,7 @@ const DashboardPage = () => {
             change="Real-time" 
             trend="up" 
             icon={Users} 
+            isLoading={!globalMetrics}
           />
           <StatCard 
             title="Reports Generated" 
@@ -127,6 +185,7 @@ const DashboardPage = () => {
             change="Total" 
             trend="up" 
             icon={FileText} 
+            isLoading={!globalMetrics}
           />
           <StatCard 
             title="Features Discovered" 
@@ -134,6 +193,7 @@ const DashboardPage = () => {
             change="Insights" 
             trend="up" 
             icon={Sparkles} 
+            isLoading={!globalMetrics}
           />
           <StatCard 
             title="Articles Processed" 
@@ -141,6 +201,7 @@ const DashboardPage = () => {
             change="Database" 
             trend="up" 
             icon={Newspaper} 
+            isLoading={!globalMetrics}
           />
         </div>
       </section>
@@ -206,7 +267,7 @@ const DashboardPage = () => {
             <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">
               7-Day Operations Pulse <span className="text-[#0071E3]">– Activity Timeline</span>
             </h1>
-            <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mt-1 italic">
+            <p className="text-[10px] font-black text-[#636366] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mt-1 italic">
               Real-Time Surveillance Data
             </p>
           </div>
@@ -226,7 +287,7 @@ const DashboardPage = () => {
           <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">
             Intelligence <span className="text-[#0071E3]">Reports</span>
           </h1>
-          <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">
+          <p className="text-[10px] font-black text-[#636366] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">
             {searchQuery ? `Historical surveillance records for ${searchQuery}` : "Past 7 Days Operations"}
           </p>
         </div>

@@ -128,6 +128,11 @@ export const getOrgRepos = async (org: string, perPage = 20, page = 1, sort = 'u
 };
 
 // Intelligence Endpoints
+export const getCompanySuggestions = async (q: string) => {
+    const response = await api.get('/intelligence/suggest-companies', { params: { q } });
+    return response.data;
+};
+
 export const getGlobalMetrics = async () => {
     const response = await api.get('/intelligence/global-metrics');
     return response.data;
@@ -193,6 +198,17 @@ export const markAllNotificationsRead = async () => {
 
 export const clearNotifications = async () => {
     const response = await api.delete('/notifications/clear');
+    return response.data;
+};
+
+// Scheduler Settings
+export const getSchedulerConfig = async () => {
+    const response = await api.get('/settings/scheduler');
+    return response.data;
+};
+
+export const updateSchedulerConfig = async (config: { interval_unit: string, interval_value: number }) => {
+    const response = await api.post('/settings/scheduler', config);
     return response.data;
 };
 

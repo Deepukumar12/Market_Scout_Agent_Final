@@ -48,8 +48,14 @@ const AnalyticsPage = () => {
     fetchCompetitors();
   }, [fetchCompetitors]);
 
+  useEffect(() => {
+    if (!selectedCompetitorId && competitors.length > 0) {
+      setSelectedCompetitorId(competitors[0].id);
+    }
+  }, [competitors, selectedCompetitorId, setSelectedCompetitorId]);
+
   const fetchData = async () => {
-      if (!selectedCompetitorId || selectedCompetitorId === 'null') return;
+      if (!selectedCompetitorId) return;
       setLoading(true);
       try {
         const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
@@ -69,7 +75,7 @@ const AnalyticsPage = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000); // 30s refresh for cleaner UI
+    const interval = setInterval(fetchData, 10000); // 10s refresh for high-fidelity real-time feel
     return () => clearInterval(interval);
   }, [refreshKey, selectedCompetitorId]);
 
@@ -90,7 +96,7 @@ const AnalyticsPage = () => {
           >
             <option value="" disabled>Select a competitor</option>
             {competitors.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c._id || c.id} value={c._id || c.id}>{c.name}</option>
             ))}
           </select>
 

@@ -13,48 +13,89 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion, LayoutGroup } from 'framer-motion';
 
-const menuItems = [
-  { icon: LayoutDashboard, text: 'Dashboard', path: '/dashboard' },
-  { icon: BarChart3, text: 'Analytics', path: '/dashboard/analytics' },
-  { icon: Users, text: 'Competitors', path: '/dashboard/competitors' },
-  { icon: FileText, text: 'Reports', path: '/dashboard/reports' },
-  { icon: Sparkles, text: 'Insights', path: '/dashboard/ai-suggestion' },
-  { icon: TrendingUp, text: 'Predictive', path: '/dashboard/predictive-analytics' },
-  { icon: Smile, text: 'Sentiment', path: '/dashboard/sentiment-analysis' },
-  { icon: Globe, text: 'Target Universe', path: '/dashboard/target-universe' },
-  { icon: ShieldAlert, text: 'Risk', path: '/dashboard/risk' },
-  { icon: Users, text: 'Add Competitor', path: '/dashboard/add-competitor' },
-  { icon: Settings, text: 'Settings', path: '/dashboard/settings' },
+const menuGroups = [
+  {
+    label: 'Main',
+    items: [
+      { icon: LayoutDashboard, text: 'Overview', path: '/dashboard' },
+      { icon: BarChart3, text: 'Analytics', path: '/dashboard/analytics' },
+      { icon: Globe, text: 'Target Universe', path: '/dashboard/target-universe' },
+    ]
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      { icon: Sparkles, text: 'AI Insights', path: '/dashboard/ai-suggestion' },
+      { icon: TrendingUp, text: 'Predictive', path: '/dashboard/predictive-analytics' },
+      { icon: Smile, text: 'Sentiment', path: '/dashboard/sentiment-analysis' },
+      { icon: ShieldAlert, text: 'Risk Audit', path: '/dashboard/risk' },
+    ]
+  },
+  {
+    label: 'Management',
+    items: [
+      { icon: Users, text: 'Competitors', path: '/dashboard/competitors' },
+      { icon: FileText, text: 'Reports', path: '/dashboard/reports' },
+      { icon: Users, text: 'Add New', path: '/dashboard/add-competitor' },
+    ]
+  },
+  {
+    label: 'System',
+    items: [
+      { icon: Settings, text: 'Settings', path: '/dashboard/settings' },
+    ]
+  }
 ];
 
 import ThemeToggle from './ThemeToggle';
 
-const Sidebar: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
+const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen, onClose }) => {
   return (
-    <aside className="w-72 h-screen bg-white/80 dark:bg-[#1D1D1F]/80 backdrop-blur-xl border-r border-[#E5E5EA] dark:border-white/10 pt-24 pb-12 flex flex-col fixed left-0 top-0 z-40">
-      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === '/dashboard'}
-            onClick={onClose}
-            className={({ isActive }) => cn(
-              "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",
-              isActive 
-                ? "bg-[#0071E3] text-white shadow-apple-blue font-bold" 
-                : "text-[#6E6E73] dark:text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E]"
-            )}
-          >
-            {({ isActive }) => (
-              <>
-                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-                <span className="text-[15px]">{item.text}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
+    <aside className={cn(
+      "w-72 h-screen bg-white dark:bg-[#0A0A0B] border-r border-[#E5E5EA] dark:border-white/5 pt-24 pb-12 flex flex-col fixed left-0 top-0 z-40 transition-all duration-300",
+      isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+    )}>
+      <nav className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar relative">
+        <LayoutGroup>
+          {menuGroups.map((group) => (
+            <div key={group.label} className="space-y-2">
+              <h4 className="px-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">
+                {group.label}
+              </h4>
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end={item.path === '/dashboard'}
+                    onClick={onClose}
+                    className={({ isActive }) => cn(
+                      "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group relative",
+                      isActive 
+                        ? "bg-[#0071E3]/10 text-[#0071E3] font-bold" 
+                        : "text-[#6E6E73] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-white/5"
+                    )}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <motion.div 
+                            layoutId="active-nav"
+                            className="absolute left-0 w-1 h-5 bg-[#0071E3] rounded-r-full"
+                          />
+                        )}
+                        <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={cn(isActive ? "text-[#0071E3]" : "text-current opacity-70")} />
+                        <span className="text-[14px]">{item.text}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          ))}
+        </LayoutGroup>
       </nav>
 
       <div className="px-6 mt-auto space-y-4">

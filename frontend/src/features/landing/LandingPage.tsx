@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Float, MeshDistortMaterial } from '@react-three/drei';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { useRef, useEffect } from 'react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { useRef, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { 
   IntelligenceGlobe, 
@@ -15,7 +15,9 @@ import {
   Activity,
   Lock,
   Cpu,
-  LayoutGrid
+  LayoutGrid,
+  Menu,
+  X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Footer } from '@/components/layout/Footer';
@@ -52,7 +54,7 @@ const BentoCard = ({
       <h3 className="text-2xl font-bold mb-3 tracking-tight">{title}</h3>
       <p className={cn(
         "text-sm font-medium leading-relaxed max-w-[280px]",
-        variant === "light" ? "text-[#6E6E73] dark:text-[#86868B]" : "text-[#86868B] dark:text-[#A1A1A6]"
+        variant === "light" ? "text-[#4D4D54] dark:text-[#A1A1A6]" : "text-[#52525B] dark:text-[#A1A1A6]"
       )}>{description}</p>
     </div>
     <div className="relative z-10 mt-8">
@@ -76,6 +78,7 @@ const FeatureLabel = ({ children, color = "#0071E3" }: any) => (
 export default function LandingPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { globalMetrics, fetchGlobalMetrics } = useIntelStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     fetchGlobalMetrics();
@@ -96,10 +99,10 @@ export default function LandingPage() {
       <motion.nav 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="fixed top-0 w-full z-50 px-6 py-6"
+        className="fixed top-0 w-full z-50 px-4 py-6"
       >
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between backdrop-blur-2xl bg-white/80 rounded-full border border-[#E5E5EA] dark:border-white/10 px-8 py-4 shadow-apple">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between backdrop-blur-2xl bg-white/80 rounded-full border border-[#E5E5EA] dark:border-white/10 px-6 py-4 shadow-apple relative">
             <Link to="/" className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#0071E3] flex items-center justify-center shadow-apple">
                 <Zap className="w-5 h-5 text-white" />
@@ -109,22 +112,53 @@ export default function LandingPage() {
               </span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-10">
+            <div className="hidden lg:flex items-center gap-10">
               {['Features', 'Intelligence', 'Security'].map((item) => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="text-sm font-bold text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] transition-colors uppercase tracking-widest text-[10px]">
+                <a key={item} href={`#${item.toLowerCase()}`} className="text-sm font-bold text-[#4D4D54] dark:text-[#A1A1A6] hover:text-[#1D1D1F] transition-colors uppercase tracking-widest text-[10px]">
                   {item}
                 </a>
               ))}
             </div>
 
-            <div className="flex items-center gap-4">
-              <Link to="/login" className="text-[10px] font-black text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] px-4 uppercase tracking-widest italic">Sign In</Link>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Link to="/login" className="hidden sm:block text-[10px] font-black text-[#4D4D54] dark:text-[#A1A1A6] hover:text-[#1D1D1F] px-4 uppercase tracking-widest italic">Sign In</Link>
               <Link to="/dashboard">
-                <Button className="bg-[#1D1D1F] hover:bg-[#323235] text-white px-8 py-2.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-apple transition-all">
-                  Launch Console
+                <Button className="bg-[#1D1D1F] hover:bg-[#323235] text-white px-6 sm:px-8 py-2 rounded-full font-black text-[10px] uppercase tracking-widest shadow-apple transition-all h-10">
+                  Console
                 </Button>
               </Link>
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden p-2 text-[#1D1D1F] dark:text-white"
+              >
+                {isMobileMenuOpen ? <X /> : <Menu />}
+              </button>
             </div>
+
+            {/* Mobile Menu Dropdown */}
+            <AnimatePresence>
+              {isMobileMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full left-0 right-0 mt-4 bg-white rounded-3xl border border-[#E5E5EA] shadow-2xl p-6 flex flex-col gap-4 lg:hidden"
+                >
+                  {['Features', 'Intelligence', 'Security'].map((item) => (
+                    <a 
+                      key={item} 
+                      href={`#${item.toLowerCase()}`} 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-lg font-black text-[#1D1D1F] uppercase italic tracking-tighter"
+                    >
+                      {item}
+                    </a>
+                  ))}
+                  <div className="h-px bg-[#F5F5F7] my-2" />
+                  <Link to="/login" className="text-lg font-black text-[#4D4D54] uppercase italic tracking-tighter">Sign In</Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </motion.nav>
@@ -141,11 +175,11 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
            >
              <FeatureLabel>Version 1.0 Stable</FeatureLabel>
-             <h1 className="text-8xl md:text-[160px] font-black tracking-tighter leading-[0.8] uppercase italic text-[#1D1D1F]">
+             <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-[160px] font-black tracking-tighter leading-[0.8] uppercase italic text-[#1D1D1F]">
                 Autonomous <br />
                 <span className="text-[#0071E3]">Signals.</span>
              </h1>
-             <p className="mt-12 text-xl md:text-2xl text-[#6E6E73] dark:text-[#86868B] font-medium italic max-w-2xl mx-auto leading-relaxed">
+             <p className="mt-12 text-xl md:text-2xl text-[#4D4D54] dark:text-[#A1A1A6] font-medium italic max-w-2xl mx-auto leading-relaxed">
                 The world's first autonomous competitive intelligence network. Built for the era of hyper-velocity technical shifts.
              </p>
            </motion.div>
@@ -171,7 +205,7 @@ export default function LandingPage() {
         {/* Visionary Background */}
         <div className="absolute inset-0 -z-10 bg-white">
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-40">
-              <Canvas camera={{ position: [0, 0, 5] }}>
+              <Canvas camera={{ position: [0, 0, 5] }} dpr={[1, 1]}>
                 <ambientLight intensity={0.5} />
                 <Float speed={4} rotationIntensity={1} floatIntensity={1}>
                    <mesh>
@@ -183,6 +217,80 @@ export default function LandingPage() {
            </div>
         </div>
       </motion.section>
+
+      {/* Product Preview Section */}
+      <section className="py-20 relative overflow-hidden">
+         <div className="max-w-7xl mx-auto px-8">
+            <motion.div
+               initial={{ opacity: 0, y: 40 }}
+               whileInView={{ opacity: 1, y: 0 }}
+               viewport={{ once: true }}
+               className="relative z-10 bg-[#1D1D1F] rounded-[48px] p-4 md:p-8 shadow-2xl border border-white/10"
+            >
+               {/* Mockup Top Bar */}
+               <div className="flex items-center justify-between mb-8 px-4">
+                  <div className="flex gap-2">
+                     <div className="w-3 h-3 rounded-full bg-red-500/50" />
+                     <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
+                     <div className="w-3 h-3 rounded-full bg-green-500/50" />
+                  </div>
+                  <div className="px-6 py-2 rounded-full bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-white/40">
+                     scout-intelligence-console.v1.0.4
+                  </div>
+                  <div className="w-12" />
+               </div>
+               
+               {/* Mockup Content */}
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2 aspect-video bg-[#0A0A0B] rounded-[32px] border border-white/5 p-8 relative overflow-hidden">
+                     <div className="flex items-center justify-between mb-12">
+                        <div className="space-y-1">
+                           <div className="text-[10px] font-black text-[#0071E3] uppercase tracking-widest italic">Operational Overview</div>
+                           <div className="text-3xl font-black text-white italic">COMMAND CENTER</div>
+                        </div>
+                        <div className="flex gap-3">
+                           {[1,2,3].map(i => <div key={i} className="w-10 h-10 rounded-xl bg-white/5 border border-white/5" />)}
+                        </div>
+                     </div>
+                     
+                     {/* Simple Chart Mockup */}
+                     <div className="flex items-end gap-2 h-40">
+                        {[40, 70, 45, 90, 65, 80, 55, 95, 70, 85].map((h, i) => (
+                           <motion.div 
+                              key={i}
+                              initial={{ height: 0 }}
+                              whileInView={{ height: `${h}%` }}
+                              transition={{ delay: i * 0.05 }}
+                              className="flex-1 bg-[#0071E3]/20 border-t-2 border-[#0071E3] rounded-t-lg"
+                           />
+                        ))}
+                     </div>
+                  </div>
+                  
+                  <div className="space-y-6">
+                     {[1,2].map(i => (
+                        <div key={i} className="bg-white/5 rounded-[32px] border border-white/5 p-6 space-y-4">
+                           <div className="w-12 h-12 rounded-2xl bg-[#0071E3]/20 flex items-center justify-center">
+                              <Zap className="w-6 h-6 text-[#0071E3]" />
+                           </div>
+                           <div className="space-y-2">
+                              <div className="h-4 w-32 bg-white/20 rounded-full" />
+                              <div className="h-2 w-full bg-white/5 rounded-full" />
+                              <div className="h-2 w-3/4 bg-white/5 rounded-full" />
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+
+               {/* Glass Reflection */}
+               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-[48px]" />
+            </motion.div>
+            
+            {/* Glow Effect */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[#0071E3]/10 blur-[120px] pointer-events-none" />
+         </div>
+      </section>
 
       {/* Bento Feature Grid */}
       <section className="py-40 px-8 bg-white border-y border-[#E5E5EA] dark:border-white/10" id="features">
@@ -302,7 +410,7 @@ export default function LandingPage() {
                <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.9] text-[#1D1D1F] mb-12">
                   The <span className="text-[#0071E3]">Signal</span> <br />is Here.
                </h2>
-               <p className="text-xl text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed max-w-xl mb-12">
+               <p className="text-xl text-[#4D4D54] dark:text-[#A1A1A6] font-medium leading-relaxed max-w-xl mb-12">
                   Our Intelligence Globe processes millions of data points per second. It identifies patterns that humans miss, providing a 90-day predictive window into your competitors' next move.
                </p>
                <div className="flex items-center gap-12 border-t border-[#E5E5EA] dark:border-white/10 pt-12">
@@ -310,11 +418,11 @@ export default function LandingPage() {
                      <div className="text-4xl font-black italic text-[#1D1D1F]">
                         {globalMetrics?.articles_processed ? `${Math.min(99, 85 + (globalMetrics.articles_processed % 10))}%` : '87%'}
                      </div>
-                     <div className="text-[10px] font-black uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6]">Precision Level</div>
+                     <div className="text-[10px] font-black uppercase tracking-widest text-[#52525B] dark:text-[#A1A1A6]">Precision Level</div>
                   </div>
                   <div>
                      <div className="text-4xl font-black italic text-[#1D1D1F]">99.9%</div>
-                     <div className="text-[10px] font-black uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6]">Agent Uptime</div>
+                     <div className="text-[10px] font-black uppercase tracking-widest text-[#52525B] dark:text-[#A1A1A6]">Agent Uptime</div>
                   </div>
                </div>
             </div>
@@ -334,7 +442,7 @@ export default function LandingPage() {
                
                {/* Live Overlay */}
                <div className="absolute top-10 left-10 p-6 bg-white/70 backdrop-blur-xl rounded-[24px] border border-white shadow-apple">
-                  <div className="text-[10px] font-black text-[#6E6E73] dark:text-[#86868B] uppercase tracking-widest mb-1">Global Load</div>
+                  <div className="text-[10px] font-black text-[#4D4D54] dark:text-[#A1A1A6] uppercase tracking-widest mb-1">Global Load</div>
                   <div className="text-2xl font-black italic text-[#1D1D1F]">NORMAL</div>
                </div>
             </div>
@@ -349,7 +457,7 @@ export default function LandingPage() {
                <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.9]">
                   Ironclad <br /><span className="text-[#0071E3]">Confidentiality.</span>
                </h2>
-               <p className="text-xl md:text-2xl text-[#86868B] dark:text-[#A1A1A6] font-medium leading-relaxed italic">
+               <p className="text-xl md:text-2xl text-[#52525B] dark:text-[#A1A1A6] font-medium leading-relaxed italic">
                   Your tracking criteria is yours and yours alone. Scout Agent uses end-to-end encrypted pipelines to ensure your competitive strategy remains a secret.
                </p>
                
@@ -369,7 +477,7 @@ export default function LandingPage() {
 
             {/* Subtle Abstract Tech Background */}
             <div className="absolute right-[-20%] top-0 h-full w-full pointer-events-none opacity-20 hidden lg:block">
-               <Canvas camera={{ position: [0, 0, 5] }}>
+               <Canvas camera={{ position: [0, 0, 5] }} dpr={[1, 1]}>
                   <mesh rotation={[1, 1, 1]}>
                      <torusKnotGeometry args={[2, 0.4, 128, 32]} />
                      <meshPhongMaterial color="#0071E3" wireframe />
@@ -386,7 +494,7 @@ export default function LandingPage() {
             <h2 className="text-7xl md:text-[140px] font-black tracking-tight uppercase italic leading-[0.8] text-[#1D1D1F]">
                Ready to <br /><span className="text-[#0071E3]">Evolve?</span>
             </h2>
-            <p className="text-2xl text-[#6E6E73] dark:text-[#86868B] font-medium italic">
+            <p className="text-2xl text-[#4D4D54] dark:text-[#A1A1A6] font-medium italic">
                Join 500+ category leaders monitoring the technical future.
             </p>
             <div className="flex justify-center pt-8">

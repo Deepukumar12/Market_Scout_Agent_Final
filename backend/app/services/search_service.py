@@ -3,6 +3,7 @@ Step 2: Search Execution using Tavily + DuckDuckGo fallback.
 Broadened to capture news, blogs, press releases, product pages, and more.
 """
 import logging
+import time
 from typing import Any, List, Dict, Optional
 import httpx
 from datetime import datetime, timedelta
@@ -11,10 +12,30 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+class SearchCache:
+    """Simple in-memory TTL cache for search results."""
+    def __init__(self, ttl_seconds: int = 3600):
+        self._cache = {}
+        self._ttl = ttl_seconds
+
+    def get(self, query: str) -> Optional[List[Dict[str, Any]]]:
+        if query in self._cache:
+            data, timestamp = self._cache[query]
+            if time.time() - timestamp < self._ttl:
+                logger.info(f"CACHE HIT: {query}")
+                return data
+            del self._cache[query]
+        return None
+
+    def set(self, query: str, results: List[Dict[str, Any]]):
+        self._cache[query] = (results, time.time())
+
+_search_cache = SearchCache()
+
 class SearchServiceError(Exception):
     """Search API unavailable or misconfigured."""
 
-async def search_web_multi(query: str, company_name: Optional[str] = None, num_results: int = 10) -> List[Dict[str, Any]]:
+async def search_web_multi(query: str, company_name: Optional[str] = None, num_results: int = 10, time_window_days: int = 7) -> List[Dict[str, Any]]:
     """
     Run a search using available search providers (Zenserp, Tavily, Brave) and pool results.
     Each result: {"url": str, "title": str, "snippet": str, "source": str}
@@ -24,6 +45,11 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
     if any(keyword in query.lower() for keyword in blocked_keywords):
         logger.warning(f"Guardrail triggered: Out-of-scope request for query '{query}'")
         return []
+
+    # 🟢 Cache Check
+    cached_data = _search_cache.get(query)
+    if cached_data:
+        return cached_data
 
     results: List[Dict[str, Any]] = []
     seen_urls = set()
@@ -57,7 +83,7 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
             "include_domains": [],       # open to ALL domains: news, blogs, product sites
             "exclude_domains": [],
             "max_results": max(num_results, 10),  # get more per query for diversity
-            "days": 7                    # Tavily param: only last 7 days
+            "days": time_window_days              # Tavily param: respect requested time window
         }
         try:
             async with httpx.AsyncClient(timeout=15) as client:
@@ -76,7 +102,7 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
         logger.info(f"Running DuckDuckGo fallback search for: {query}")
         # Note: This is a simple HTML-based scraper for DDG as a last-resort fallback.
         # In a production environment, one might use 'duckduckgo-search' library.
-        ddg_url = f"https://html.duckduckgo.com/html/?q={query}+after%3A{(datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')}"
+        ddg_url = f"https://html.duckduckgo.com/html/?q={query}+after%3A{(datetime.now() - timedelta(days=time_window_days)).strftime('%Y-%m-%d')}"
         try:
             headers = {"User-Agent": "Mozilla/5.0"}
             async with httpx.AsyncClient(timeout=10) as client:
@@ -112,7 +138,10 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
     # GitHub data is already separately fetched and appended to the final ScanResponse in scan_pipeline.py.
     
     combined_results = tavily_results
-    print(f"🌐 Tavily/Web: {len(tavily_results)}")
+    logger.info(f"🌐 Tavily/Web: {len(tavily_results)} results found.")
+    
+    # 🟢 Set Cache
+    _search_cache.set(query, combined_results)
     
     return combined_results
 

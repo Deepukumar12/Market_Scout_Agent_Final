@@ -1,5 +1,5 @@
 """
-Scheduler: runs competitor scans every 15 minutes for competitors due for refresh.
+Scheduler: runs competitor scans every 24 hours for competitors due for refresh.
 Uses next_scheduled_check and scan_frequency_hours (adaptive).
 """
 import logging
@@ -58,12 +58,12 @@ def start_scheduler():
     _scheduler = AsyncIOScheduler()
     _scheduler.add_job(
         _run_scheduled_scans,
-        trigger=IntervalTrigger(minutes=15),
+        trigger=IntervalTrigger(hours=24),
         id="competitor_scans",
         replace_existing=True,
     )
     _scheduler.start()
-    logger.info("Scheduler started (competitor scans every 15 min)")
+    logger.info("Scheduler started (competitor scans every 24 hours)")
 
 
 def stop_scheduler():

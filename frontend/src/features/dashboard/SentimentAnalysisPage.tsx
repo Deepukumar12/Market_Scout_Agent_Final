@@ -45,25 +45,34 @@ const SentimentAnalysisPage = () => {
   }, [fetchCompetitors]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!selectedCompetitorId) return;
-      setLoading(true);
-      try {
-        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${apiUrl}/api/v1/intelligence/sentiment-analysis?competitor_id=${selectedCompetitorId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+    if (!selectedCompetitorId && competitors.length > 0) {
+      setSelectedCompetitorId(competitors[0].id);
+    }
+  }, [competitors, selectedCompetitorId, setSelectedCompetitorId]);
+
+  const fetchData = async () => {
+    if (!selectedCompetitorId) return;
+    setLoading(true);
+    try {
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/v1/intelligence/sentiment-analysis?competitor_id=${selectedCompetitorId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
       }
-    };
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 15000); // 15s refresh for sentiment data
+    return () => clearInterval(interval);
   }, [selectedCompetitorId, token]);
 
   const pieData = data ? [
@@ -88,7 +97,7 @@ const SentimentAnalysisPage = () => {
             className="h-10 px-4 rounded-full border border-[#E5E5EA] bg-white text-sm font-bold text-[#1D1D1F] focus:outline-none shadow-apple-sm"
           >
             {competitors.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c._id || c.id} value={c._id || c.id}>{c.name}</option>
             ))}
           </select>
           <Button variant="outline" className="rounded-full border-[#E5E5EA] bg-white shadow-apple-sm">

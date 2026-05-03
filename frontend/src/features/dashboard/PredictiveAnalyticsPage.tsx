@@ -42,9 +42,14 @@ const PredictiveAnalyticsPage = () => {
     fetchCompetitors();
   }, [fetchCompetitors]);
 
-  const handleInitializePipeline = async () => {
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 15000); // 15s refresh for predictive updates
+    return () => clearInterval(interval);
+  }, [token]);
+
+  const fetchData = async () => {
       setLoading(true);
-      setAnalysisResult(null);
       try {
           // @ts-ignore - import.meta.env is provided by Vite
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -53,26 +58,17 @@ const PredictiveAnalyticsPage = () => {
           });
           if (res.ok) {
               const data = await res.json();
-              // Default mock sectors are removed to ensure only real data is shown.
-              // This check ensures that if the API returns an empty or invalid result,
-              // we don't display it as a valid analysis.
-              if (!data || (data.top_performers?.length === 0 && data.stable_performers?.length === 0 && data.trending_predictions?.length === 0)) {
-                  setAnalysisResult(null); // Explicitly set to null if data is empty/invalid
-                  setLoading(false);
-                  return;
-              }
-              // Add delay for effect
-              setTimeout(() => {
-                  setAnalysisResult(data);
-                  setLoading(false);
-              }, 1500);
-          } else {
-              setLoading(false);
+              setAnalysisResult(data);
           }
       } catch (e) {
           console.error(e);
+      } finally {
           setLoading(false);
       }
+  };
+
+  const handleInitializePipeline = () => {
+    fetchData();
   };
   
 

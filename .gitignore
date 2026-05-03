@@ -49,3 +49,8 @@ frontend_logs.txt
 backend_logs.txt
 backend_log_trace.txt
 
+### Database & Scratch
+backend/chroma_db/
+backend/scratch/
+test/
+

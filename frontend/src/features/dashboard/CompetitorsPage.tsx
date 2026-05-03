@@ -1,30 +1,77 @@
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useEffect, useState, useMemo } from 'react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PlusCircle, Radar, Globe2, Search, Shield, Target, ArrowUpRight, Loader2, Trash2 } from 'lucide-react';
+import { PlusCircle, Radar, Globe2, Search, Shield, Target, ArrowUpRight, Loader2, Trash2, FileDown, Download } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useIntelStore } from '@/store/intelStore';
+import { toast } from 'react-hot-toast';
 
 const CompetitorsPage = () => {
   const { competitors, loading, error, fetchCompetitors, removeCompetitor } = useCompetitorStore();
+  const { searchQuery } = useOutletContext<{ searchQuery: string }>();
   const { globalMetrics, fetchGlobalMetrics } = useIntelStore();
-  const [filterQuery, setFilterQuery] = useState('');
+  const [localFilter, setLocalFilter] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchCompetitors();
     fetchGlobalMetrics();
+    const interval = setInterval(() => {
+      fetchCompetitors();
+      fetchGlobalMetrics();
+    }, 15000); // 15s sync for master grid
+    return () => clearInterval(interval);
   }, [fetchCompetitors, fetchGlobalMetrics]);
 
   const filteredCompetitors = useMemo(() => {
-    if (!filterQuery.trim()) return competitors;
+    const combinedQuery = (searchQuery || '' + localFilter || '').toLowerCase().trim();
+    if (!combinedQuery) return competitors;
     return competitors.filter(c => 
-      c.name.toLowerCase().includes(filterQuery.toLowerCase()) || 
-      (c.url && c.url.toLowerCase().includes(filterQuery.toLowerCase()))
+      c.name.toLowerCase().includes(combinedQuery) || 
+      (c.url && c.url.toLowerCase().includes(combinedQuery))
     );
-  }, [competitors, filterQuery]);
+  }, [competitors, searchQuery, localFilter]);
+
+  const handleExportPDF = async (competitorIds: string[] = []) => {
+    setIsExporting(true);
+    try {
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+      const token = localStorage.getItem('scoutiq_token');
+      
+      const response = await fetch(`${apiUrl}/api/v1/intelligence/export-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ competitor_ids: competitorIds })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Market_Scout_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('Intelligence Archive Exported Successfully');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'PDF Generation Protocol Failure');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="relative max-w-7xl mx-auto space-y-12 pb-20">
@@ -58,11 +105,20 @@ const CompetitorsPage = () => {
             <input 
               type="text"
               placeholder="SEARCH UNIVERSE..."
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
+              value={localFilter}
+              onChange={(e) => setLocalFilter(e.target.value)}
               className="bg-white/50 dark:bg-[#1D1D1F]/50 border border-[#E5E5EA] dark:border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-xs font-bold text-[#1D1D1F] dark:text-white uppercase tracking-widest placeholder:text-[#86868B] dark:text-[#A1A1A6] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:border-[#0071E3]/30 transition-all w-full backdrop-blur-xl"
             />
           </div>
+          <Button
+            onClick={() => handleExportPDF()}
+            variant="outline"
+            disabled={isExporting}
+            className="border-[#0071E3]/30 text-[#0071E3] hover:bg-[#0071E3]/5 font-black h-12 px-6 rounded-2xl transition-all group uppercase tracking-widest text-[10px]"
+          >
+            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+            {isExporting ? 'Generating...' : 'Download All Competitors PDF'}
+          </Button>
           <Button
             onClick={() => navigate('/dashboard/add-competitor')}
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-black h-12 px-8 rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 group uppercase tracking-widest text-[10px]"
@@ -131,8 +187,13 @@ const CompetitorsPage = () => {
                 </div>
               </div>
               <div className="text-center">
-                <span className="inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 text-emerald-400 bg-emerald-500/5">
-                  {c.status || 'Active'}
+                <span className={cn(
+                  "inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                  String(c._id || c.id).startsWith('s') 
+                    ? "border-blue-500/20 text-blue-400 bg-blue-500/5 animate-pulse" 
+                    : "border-emerald-500/20 text-emerald-400 bg-emerald-500/5"
+                )}>
+                  {String(c._id || c.id).startsWith('s') ? 'System Node' : (c.status || 'Active')}
                 </span>
               </div>
               <div className="text-center">
@@ -158,8 +219,19 @@ const CompetitorsPage = () => {
                         }
                       }}
                       className="p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-all"
+                      title="Terminate Node"
                     >
                       <Trash2 size={12} />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleExportPDF([c._id || c.id]);
+                      }}
+                      className="p-1.5 rounded-lg bg-[#0071E3]/10 border border-[#0071E3]/20 text-[#0071E3] hover:bg-[#0071E3]/20 transition-all"
+                      title="Download Competitor PDF"
+                    >
+                      <Download size={12} />
                     </button>
                     <div className="text-[9px] text-slate-500 font-mono uppercase tracking-widest self-center">GEN-7 ARCHIVE</div>
                   </div>
@@ -171,12 +243,19 @@ const CompetitorsPage = () => {
             <div className="px-8 py-20 text-center relative overflow-hidden">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent" />
               <div className="relative z-10 space-y-4">
-                  <Shield className="w-12 h-12 text-[#E5E5EA] mx-auto" />
+                  <Radar className="w-12 h-12 text-[#0071E3] mx-auto animate-pulse" />
                   <div>
-                    <h3 className="text-xl font-black text-[#1D1D1F] uppercase italic tracking-tighter">No Entities Detected</h3>
-                    <p className="text-sm text-[#6E6E73] dark:text-[#86868B] max-w-xs mx-auto mt-2 font-medium italic">
-                       {filterQuery ? `Filter "${filterQuery}" returned zero signal nodes.` : "The competition universe is currently empty. Deploy an agent to begin surveillance."}
+                    <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Surveillance Grid Active</h3>
+                    <p className="text-sm text-[#6E6E73] dark:text-[#86868B] max-w-xs mx-auto mt-2 font-medium italic leading-relaxed">
+                       {filterQuery ? `Telemetry mismatch for "${filterQuery}".` : "Auto-loading flagship nodes for global market intelligence benchmarks."}
                     </p>
+                    <Button
+                      onClick={() => navigate('/dashboard/add-competitor')}
+                      variant="outline"
+                      className="mt-6 border-[#0071E3]/30 text-[#0071E3] uppercase text-[10px] font-black tracking-widest py-4 px-8 rounded-2xl"
+                    >
+                      Deploy Custom Agent
+                    </Button>
                  </div>
               </div>
             </div>

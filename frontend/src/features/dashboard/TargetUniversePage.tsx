@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 interface IntelSignal {
@@ -36,6 +36,13 @@ const TargetUniversePage = () => {
     const [loading, setLoading] = useState(true);
     const { token } = useAuthStore();
     const navigate = useNavigate();
+    const { searchQuery } = useOutletContext<{ searchQuery: string }>();
+
+    const filteredSignals = signals.filter(s => 
+        !searchQuery || 
+        s.company_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        s.sector.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const fetchData = async () => {
         setLoading(true);
@@ -62,7 +69,7 @@ const TargetUniversePage = () => {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 30000); // Auto-refresh every 30s
+        const interval = setInterval(fetchData, 15000); // Auto-refresh every 15s for high-fidelity stream
         return () => clearInterval(interval);
     }, [token]);
 
@@ -123,12 +130,12 @@ const TargetUniversePage = () => {
                             Live Signal Intercepts
                         </h2>
                         <span className="text-[10px] bg-[#0071E3]/10 text-[#0071E3] px-2 py-1 rounded border border-[#0071E3]/20 font-mono">
-                            {signals.length} SIGNALS ACTIVE
+                            {filteredSignals.length} SIGNALS {searchQuery ? 'MATCHED' : 'ACTIVE'}
                         </span>
                     </div>
                         
                     <div className="divide-y divide-[#E5E5EA] max-h-[700px] overflow-y-auto custom-scrollbar">
-                        {signals.map((signal, idx) => (
+                        {filteredSignals.map((signal, idx) => (
                             <motion.div 
                                 key={signal.id}
                                 initial={{ opacity: 0, x: -20 }}

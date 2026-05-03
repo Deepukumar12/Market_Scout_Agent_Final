@@ -35,26 +35,29 @@ const RiskPage = () => {
     fetchCompetitors();
   }, [fetchCompetitors]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!selectedCompetitorId) return;
-      setLoading(true);
-      try {
-        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${apiUrl}/api/v1/intelligence/risk-assessment?competitor_id=${selectedCompetitorId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    if (!selectedCompetitorId) return;
+    setLoading(true);
+    try {
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/v1/intelligence/risk-assessment?competitor_id=${selectedCompetitorId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
       }
-    };
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 20000); // 20s refresh for risk data
+    return () => clearInterval(interval);
   }, [selectedCompetitorId, token]);
 
   return (
@@ -74,7 +77,7 @@ const RiskPage = () => {
           >
             <option value="" disabled>Select a competitor</option>
             {competitors.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c._id || c.id} value={c._id || c.id}>{c.name}</option>
             ))}
           </select>
         </div>
@@ -121,7 +124,7 @@ const RiskPage = () => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {data.vulnerabilities.map((v, i) => (
-                    <div key={i} className="p-6 rounded-3xl bg-[#F5F5F7] border border-[#E5E5EA] flex items-center gap-4 group">
+                    <div key={`vuln-${i}-${v}`} className="p-6 rounded-3xl bg-[#F5F5F7] border border-[#E5E5EA] flex items-center gap-4 group">
                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-[#FF3B30] shadow-apple-sm group-hover:scale-110 transition-transform">
                           <Zap size={18} />
                        </div>
@@ -138,7 +141,7 @@ const RiskPage = () => {
                 </h3>
                 <div className="space-y-4">
                    {data.competitive_threats.map((t, i) => (
-                     <div key={i} className="flex items-center justify-between p-6 rounded-3xl bg-[#F5F5F7] hover:bg-[#F5F5F7]/80 transition-all">
+                     <div key={`threat-${i}-${t.competitor}`} className="flex items-center justify-between p-6 rounded-3xl bg-[#F5F5F7] hover:bg-[#F5F5F7]/80 transition-all">
                         <div className="flex flex-col">
                            <span className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest mb-1">{t.competitor}</span>
                            <span className="text-sm font-bold text-[#1D1D1F]">{t.threat}</span>
@@ -168,7 +171,7 @@ const RiskPage = () => {
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                 {data.mitigation_strategies.map((s, i) => (
-                  <div key={i} className="flex gap-4 items-start">
+                  <div key={`mitigation-${i}`} className="flex gap-4 items-start">
                      <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-[#86868B] dark:text-[#A1A1A6] shrink-0 mt-1">{i+1}</span>
                      <p className="text-white/80 font-medium leading-relaxed">{s}</p>
                   </div>

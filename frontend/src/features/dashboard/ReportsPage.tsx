@@ -4,6 +4,7 @@ import { Clock, ArrowRight, Zap, Loader2, X, Filter, Trash2 } from 'lucide-react
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 import { useIntelStore } from '@/store/intelStore';
+import { useOutletContext } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 // --- Types ---
@@ -22,6 +23,7 @@ interface MissionReport {
 const ReportsPage = () => {
   const { token } = useAuthStore();
   const { deleteReport } = useIntelStore();
+  const { searchQuery } = useOutletContext<{ searchQuery: string }>();
   
   // State
   const [reports, setReports] = useState<MissionReport[]>([]);
@@ -34,7 +36,8 @@ const ReportsPage = () => {
   const fetchReports = async () => {
       try {
           const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
-          const res = await fetch(`${apiUrl}/api/v1/reports/history?limit=12`, {
+          const queryParam = searchQuery ? `&competitor=${encodeURIComponent(searchQuery)}` : '';
+          const res = await fetch(`${apiUrl}/api/v1/reports/history?limit=12${queryParam}`, {
               headers: { Authorization: `Bearer ${token}` }
           });
           if(res.ok) {
@@ -50,7 +53,9 @@ const ReportsPage = () => {
 
   useEffect(() => {
       fetchReports();
-  }, [token]);
+      const interval = setInterval(fetchReports, 20000); // 20s refresh for intelligence briefings
+      return () => clearInterval(interval);
+  }, [token, searchQuery]);
 
   // Generate New Report
   const handleGenerate = async () => {

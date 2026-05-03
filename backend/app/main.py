@@ -61,6 +61,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Performance and Timing Middleware
+import time
+from fastapi import Request
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    process_time = time.perf_counter() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    logger.info(f"Path: {request.url.path} | Process Time: {process_time:.4f}s")
+    return response
+
 # Optional: Require allowed hosts in production
 allowed_hosts = os.getenv("ALLOWED_HOSTS", "*").split(",")
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)

@@ -64,47 +64,20 @@ async def post_scan(
             "source_url": body.website
         })
         await db.db["reports"].insert_one(report_doc)
-    except Exception as e:
-        logger.error(f"Failed to persist ad-hoc scan: {e}")
-
-    # 3. Trigger Email Report for immediate feedback
-    try:
-        # Fetch last 7 days of features for this specific scanning cycle's context
-        historical_raw = await get_cached_features(body.company_name, limit=20, days=7)
-        features = []
-        for h in historical_raw:
-            features.append(ScanFeature(
-                feature_title=h.get("feature_name", "Unknown"),
-                technical_summary=h.get("technical_summary", ""),
-                publish_date=h.get("release_date", ""),
-                source_url=h.get("source_url", ""),
-                source_domain=h.get("source_domain", "archived"),
-                category=h.get("category", "Platform"),
-                confidence_score=int(h.get("confidence_score") or 70)
-            ))
-            
-        if features:
-            user_reports = [{"company": body.company_name, "features": features}]
-            pdf_filename = f"Market_Scout_Report_{body.company_name}_{now.strftime('%H%M')}.pdf"
-            pdf_path = f"/tmp/{pdf_filename}"
-            
-            generate_user_pdf_report(current_user.email, user_reports, pdf_path)
-            
-            subject = f"Market Scout AI: Manual Scan Report - {body.company_name}"
-            content = f"Your manual intelligence scan for {body.company_name} is complete. Attached is the technical report."
-            
-            send_email_report(
-                to_email=current_user.email,
-                subject=subject,
-                content=content,
-                attachment_path=pdf_path
+        
+        # 3. Create Notification for the UI
+        feature_count = len(result.features)
+        if feature_count > 0:
+            await create_notification(
+                user_id=str(current_user.id),
+                title=f"Scan Complete: {body.company_name}",
+                message=f"Agent discovered {feature_count} new technical signals for {body.company_name}.",
+                type=NotificationType.INFO,
+                competitor_id=body.company_name
             )
-            
-            if os.path.exists(pdf_path):
-                os.remove(pdf_path)
-            logger.info(f"📧 Manual scan email sent to {current_user.email}")
+            logger.info(f"Notification generated for {current_user.email} regarding {body.company_name}")
             
     except Exception as e:
-        logger.error(f"Failed to trigger manual scan email: {e}")
+        logger.error(f"Failed to persist ad-hoc scan or create notification: {e}")
 
     return result

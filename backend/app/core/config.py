@@ -81,7 +81,7 @@ class Settings(BaseSettings):
     # GEMINI
     # ---------------------------------------------------
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-2.0-flash"
     GEMINI_API_BASE: str = "https://generativelanguage.googleapis.com/v1beta"
     GEMINI_MAX_OUTPUT_TOKENS: int = 2048
 
@@ -137,6 +137,13 @@ class Settings(BaseSettings):
     # If True → fake search results
     # If False → real web search + scraping
     MOCK_MODE: bool = False
+
+
+    # ---------------------------------------------------
+    # EMAIL SETTINGS
+    # ---------------------------------------------------
+    EMAIL_USER: str = ""
+    EMAIL_PASS: str = ""
 
 
     # ---------------------------------------------------

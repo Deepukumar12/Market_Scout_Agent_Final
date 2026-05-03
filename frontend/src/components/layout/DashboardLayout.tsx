@@ -8,11 +8,13 @@ import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';
 
 import { useNotificationStore } from '@/store/notificationStore';
-import { motion } from 'framer-motion';
+import { useIntelStore } from '@/store/intelStore';
+import { motion, AnimatePresence } from 'framer-motion';
 import { analyzeCompany } from '@/services/api';
 
 const DashboardLayout = () => {
   const { user } = useAuthStore();
+  const { refreshAllData } = useIntelStore();
   const { fetchCompetitors } = useCompetitorStore();
   const { fetchNotifications } = useNotificationStore();
   const location = useLocation();
@@ -21,6 +23,8 @@ const DashboardLayout = () => {
   const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'running' | 'completed' | 'error'>('idle');
   const [currentStep, setCurrentStep] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [liveLogs, setLiveLogs] = useState<string[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const progressSteps = [
     'Initializing AI Scout agents...',
@@ -30,14 +34,21 @@ const DashboardLayout = () => {
     'Generating intelligence report...'
   ];
 
+  // Global Real-Time Synchronization Engine
   useEffect(() => {
+    // Initial fetch
+    refreshAllData(searchQuery);
     fetchNotifications();
-    // Refresh notifications every 60 seconds
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
 
-  // Ensure competitor list is available globally
+    // High-frequency polling for "Real-Time" feel (10 seconds)
+    const interval = setInterval(() => {
+        refreshAllData(searchQuery);
+        fetchNotifications();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [refreshAllData, fetchNotifications, searchQuery]);
+
   useEffect(() => {
     fetchCompetitors();
   }, [location.pathname, fetchCompetitors]);
@@ -45,30 +56,42 @@ const DashboardLayout = () => {
   const handleAnalyze = async (company: string) => {
     setAnalyzeStatus('running');
     setCurrentStep(0);
+    setLiveLogs([]);
     
-    // Simulate progress for UX
-    const interval = setInterval(() => {
-      setCurrentStep(prev => (prev < progressSteps.length - 1 ? prev + 1 : prev));
-    }, 2000);
+    // 🌐 WebSocket Connection for real-time intelligence feed
+    const token = localStorage.getItem('scoutiq_token');
+    const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1/ws/logs?token=${token}`);
+    
+    ws.onmessage = (event) => {
+      const message = event.data;
+      setLiveLogs(prev => [...prev, message].slice(-5)); // Keep last 5 logs for cleaner UI
+      
+      // Map message categories to progress steps
+      if (message.includes('Phase 1')) setCurrentStep(0);
+      else if (message.includes('Phase 2')) setCurrentStep(1);
+      else if (message.includes('Phase 3')) setCurrentStep(2);
+      else if (message.includes('Phase 4')) setCurrentStep(3);
+      else if (message.includes('operation successful')) setCurrentStep(4);
+    };
 
     try {
       await analyzeCompany(company);
-      clearInterval(interval);
+      ws.close();
       setCurrentStep(progressSteps.length - 1);
       setAnalyzeStatus('completed');
-      fetchCompetitors(); // Refresh list
+      fetchCompetitors();
     } catch (error) {
-      clearInterval(interval);
+      ws.close();
       setAnalyzeStatus('error');
     }
   };
 
   const handleCloseModal = () => {
     setIsAnalyzeModalOpen(false);
-    // Reset status after a delay so the animation finishes
     setTimeout(() => {
       setAnalyzeStatus('idle');
       setCurrentStep(0);
+      setLiveLogs([]);
     }, 300);
   };
 
@@ -79,6 +102,7 @@ const DashboardLayout = () => {
         onAnalyzeClick={() => setIsAnalyzeModalOpen(true)}
         onNotificationClick={() => setIsNotificationOpen(true)}
         onSearch={(q) => setSearchQuery(q)}
+        onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
       />
 
       <NotificationCenter 
@@ -86,8 +110,21 @@ const DashboardLayout = () => {
         onClose={() => setIsNotificationOpen(false)}
       />
 
-      <div className="flex pt-20">
-        <Sidebar />
+      <div className="flex pt-20 relative">
+        {/* Mobile Sidebar Overlay */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
+            />
+          )}
+        </AnimatePresence>
+
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
         
         <main className="flex-1 lg:ml-72 p-6 md:p-10 w-full overflow-hidden">
           <motion.div
@@ -108,6 +145,7 @@ const DashboardLayout = () => {
         status={analyzeStatus}
         progressSteps={progressSteps}
         currentStep={currentStep}
+        liveLogs={liveLogs}
       />
     </div>
   );

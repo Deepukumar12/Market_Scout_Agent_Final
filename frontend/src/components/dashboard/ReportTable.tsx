@@ -19,23 +19,23 @@ interface ReportTableProps {
 
 const ReportTable: React.FC<ReportTableProps> = ({ reports, onRowClick }) => {
   return (
-    <div className="bg-white/70 backdrop-blur-xl rounded-[40px] border border-[#E5E5EA] shadow-apple overflow-hidden">
-      <div className="p-8 border-b border-[#E5E5EA]">
-        <h3 className="text-xl font-black text-[#1D1D1F] uppercase italic tracking-tighter">SURVEILLANCE <span className="text-[#0071E3]">LOGS</span></h3>
+    <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple overflow-hidden">
+      <div className="p-8 border-b border-[#E5E5EA] dark:border-white/10">
+        <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">SURVEILLANCE <span className="text-[#0071E3]">LOGS</span></h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="bg-[#F5F5F7]/50">
-              <th className="px-8 py-4 text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em]">ENTITY IDENTIFIER</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em]">VECTOR COUNT</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em]">TELEMETRY SOURCES</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em]">LAST SIGNAL</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em]">STATUS</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em]"></th>
+            <tr className="bg-[#F5F5F7]/50 dark:bg-white/5">
+              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">ENTITY IDENTIFIER</th>
+              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">VECTOR COUNT</th>
+              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">TELEMETRY SOURCES</th>
+              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">LAST SIGNAL</th>
+              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">STATUS</th>
+              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E5E5EA]">
+          <tbody className="divide-y divide-[#E5E5EA] dark:divide-white/5">
             {reports.map((report) => (
               <motion.tr 
                 key={report.id}
@@ -44,11 +44,11 @@ const ReportTable: React.FC<ReportTableProps> = ({ reports, onRowClick }) => {
                 className="cursor-pointer transition-colors border-b border-[#E5E5EA]/50 last:border-0"
               >
                 <td className="px-8 py-5">
-                  <span className="font-black text-[#1D1D1F] uppercase italic tracking-tighter">{report.company}</span>
+                  <span className="font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">{report.company}</span>
                 </td>
-                <td className="px-8 py-5 text-[#6E6E73] font-medium italic">{report.featuresFound} VECTORS</td>
-                <td className="px-8 py-5 text-[#6E6E73] font-medium italic">{report.sources} SIGNALS</td>
-                <td className="px-8 py-5 text-[#6E6E73] font-medium italic text-xs">{report.time}</td>
+                <td className="px-8 py-5 text-[#4D4D54] dark:text-[#D1D1D6] font-medium italic">{report.featuresFound} VECTORS</td>
+                <td className="px-8 py-5 text-[#4D4D54] dark:text-[#D1D1D6] font-medium italic">{report.sources} SIGNALS</td>
+                <td className="px-8 py-5 text-[#4D4D54] dark:text-[#D1D1D6] font-medium italic text-xs">{report.time}</td>
                 <td className="px-8 py-5">
                   <span className={cn(
                     "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",

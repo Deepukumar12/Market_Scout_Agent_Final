@@ -87,15 +87,27 @@ async def run_competitor_scan(
     
     # NEW: Aggregate historical features to ensure "Continuous Last Seven Released"
     historical_raw = await get_cached_features(competitor.name, limit=20)
-    seen_hashes = {f.get("hash_id") for f in result.features if hasattr(f, 'hash_id')} # Note: ScanFeature model doesn't have hash_id yet but it might in future
-    # Better: Deduplicate by title+date
-    seen_keys = {f"{f.feature_title}|{f.publish_date}" for f in result.features}
+    
+    # Aggressively deduplicate by URL and Title
+    seen_urls = {(f.source_url or "").strip().rstrip('/').lower() for f in result.features}
+    seen_titles = {f.feature_title.lower().strip() for f in result.features}
     
     merged_features = list(result.features)
     for h in historical_raw:
-        # Use DB keys: 'feature_name' and 'release_date'
-        key = f"{h.get('feature_name')}|{h.get('release_date')}"
-        if key not in seen_keys and len(merged_features) < 15:
+        h_url = (h.get("source_url") or "").strip().rstrip('/').lower()
+        h_title = (h.get("feature_name") or "Untitled Feature").lower().strip()
+        
+        # QUALITY FILTER: Do not pull in old unknown features from the database!
+        if "unknown" in h_title or "untitled" in h_title or not h_title:
+            continue
+        
+        # Prevent pulling in old duplicates from the database
+        if h_url and h_url in seen_urls:
+            continue
+        if h_title in seen_titles:
+            continue
+
+        if len(merged_features) < 15:
             merged_features.append(ScanFeature(
                 feature_title=h.get("feature_name", "Untitled Feature"),
                 technical_summary=h.get("technical_summary", "No summary available"),
@@ -105,7 +117,9 @@ async def run_competitor_scan(
                 category=h.get("category", "Platform"),
                 confidence_score=int(h.get("confidence_score") or 70)
             ))
-            seen_keys.add(key)
+            if h_url:
+                seen_urls.add(h_url)
+            seen_titles.add(h_title)
 
     # Simple risk score: higher frequency of technical releases = higher risk
     new_risk = min(1.0, len(merged_features) * 0.1) 

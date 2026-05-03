@@ -1,14 +1,16 @@
+import logging
 from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.agents.auto_scan_agent import run_auto_scan
+from app.core.database import db
+
+logger = logging.getLogger(__name__)
 
 # Standardize on AsyncIOScheduler to share the same event loop as FastAPI/Motor
 scheduler = AsyncIOScheduler()
 
-from app.core.database import db
-
 async def init_scheduler():
-    print("🕒 Scheduler (Daily Reports) started...")
+    logger.info("🕒 Scheduler (Daily Reports) initialized.")
 
     # Fetch configuration from the database
     settings = await db.db.system_settings.find_one({"_id": "scheduler"}) if db.db is not None else None
@@ -26,13 +28,13 @@ async def init_scheduler():
         "interval", 
         id="auto_scan_job",
         replace_existing=True,
-        next_run_time=datetime.now(),
         **kwargs
     )
     
     scheduler.start()
+    logger.info(f"🕒 Scheduler started with interval: {interval_value} {interval_unit}")
 
 def stop_scheduler():
     if scheduler.running:
         scheduler.shutdown()
-        print("🕒 Scheduler (Daily Reports) stopped.")
+        logger.info("🕒 Scheduler (Daily Reports) stopped.")

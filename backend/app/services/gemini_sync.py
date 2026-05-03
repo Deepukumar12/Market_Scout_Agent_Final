@@ -40,9 +40,17 @@ def _gemini_generate_text(
     }
     if system_instruction:
         body["systemInstruction"] = {"parts": [{"text": system_instruction}]}
-    resp = requests.post(url, json=body, timeout=60)
-    if resp.status_code >= 400:
-        raise RuntimeError(f"Gemini API error {resp.status_code}: {resp.text[:300]}")
+    import time
+    for attempt in range(3):
+        resp = requests.post(url, json=body, timeout=60)
+        if resp.status_code == 429:
+            wait_time = (attempt + 1) * 5
+            logger.warning(f"Gemini API error 429 (Quota). Retrying in {wait_time}s...")
+            time.sleep(wait_time)
+            continue
+        if resp.status_code >= 400:
+            raise RuntimeError(f"Gemini API error {resp.status_code}: {resp.text[:300]}")
+        break
     data = resp.json()
     candidates = data.get("candidates") or []
     if not candidates:

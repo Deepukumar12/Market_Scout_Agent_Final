@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown } from 'lucide-react';
+import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotificationStore } from '@/store/notificationStore';
@@ -11,10 +11,11 @@ interface NavbarProps {
   onAnalyzeClick: () => void;
   onNotificationClick: () => void;
   onSearch: (query: string) => void;
+  onMenuClick: () => void;
   user: any;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, onSearch, user }) => {
+const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, onSearch, onMenuClick, user }) => {
   const { unreadCount } = useNotificationStore();
   const { logout } = useAuthStore();
   const navigate = useNavigate();
@@ -40,17 +41,26 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
   return (
     <header className="h-20 fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-[#E5E5EA] dark:border-white/10 flex items-center justify-between px-8">
       <div className="flex items-center gap-12 flex-1">
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 cursor-pointer"
-          onClick={() => navigate('/dashboard')}
-        >
-          <div className="w-8 h-8 bg-[#0071E3] rounded-lg flex items-center justify-center shadow-lg shadow-[#0071E3]/20">
-            <div className="w-4 h-4 bg-white rounded-sm rotate-45" />
-          </div>
-          <span className="text-xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">Market <span className="text-[#AF52DE]">Scout</span></span>
-        </motion.div>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={onMenuClick}
+            className="lg:hidden p-2 rounded-xl hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white transition-colors"
+          >
+            <LayoutGrid size={24} />
+          </button>
+
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => navigate('/dashboard')}
+          >
+            <div className="w-8 h-8 bg-[#0071E3] rounded-lg flex items-center justify-center shadow-lg shadow-[#0071E3]/20">
+              <div className="w-4 h-4 bg-white rounded-sm rotate-45" />
+            </div>
+            <span className="hidden sm:inline text-xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">Market <span className="text-[#AF52DE]">Scout</span></span>
+          </motion.div>
+        </div>
 
         <div className="relative max-w-md w-full group">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">

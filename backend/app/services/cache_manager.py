@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 def is_cache_valid(competitor_doc: dict) -> bool:
     """
     Return True if we should use cached data (no fresh scan needed).
+    Strictly hardcoded to 24 hours to preserve API credits, completely independent of email schedules.
     """
     last = competitor_doc.get("last_checked_at")
-    freq = competitor_doc.get("scan_frequency_hours", 24)
+    freq = 24 # HARDCODED 24 HOURS
     if last is None:
         return False
     if isinstance(last, datetime) and last.tzinfo is None:

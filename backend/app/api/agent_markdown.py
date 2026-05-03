@@ -6,7 +6,8 @@ from app.core.security import get_current_user
 from app.core.database import get_database
 from app.models.user import User
 from app.models.competitor import CompetitorStatus
-from app.agent import run_agent
+from app.services.scan_pipeline import run_scan
+from app.models.scan import ScanRequest
 import logging
 
 logger = logging.getLogger(__name__)
@@ -70,8 +71,10 @@ async def analyze_company(
                 }}
             )
 
-        # 2. Run agent asynchronously
-        report = await run_agent(company_name)
+        # 2. Run agent asynchronously via modern pipeline
+        scan_req = ScanRequest(company_name=company_name, time_window_days=7)
+        await run_scan(scan_req)
+        report = f"Intelligence scan for {company_name} complete."
         
         # 3. Update status to Active and perhaps save the report snippet if we had a field
         await collection.update_one(

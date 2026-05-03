@@ -1,14 +1,19 @@
+import logging
+import time
+import traceback
 from datetime import timedelta
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
-
-from app.core import config
-from app.core.database import db
-from app.core.security import create_access_token, get_current_user, get_password_hash, verify_password
-from app.models.user import User, UserCreate, UserUpdate, PasswordChange
 from bson import ObjectId
 
+from app.core import config
+from app.core.database import db, get_database
+from app.core.security import create_access_token, get_current_user, get_password_hash, verify_password
+from app.models.user import User, UserCreate, UserUpdate, PasswordChange
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -18,15 +23,14 @@ async def register(user: UserCreate):
     Register a new user and immediately issue a JWT so the client can be
     considered authenticated right after signup.
     """
-    print(f"DEBUG: Registering user {user.email}")
+    logger.info(f"Registering user {user.email}")
     
-    from app.core.database import get_database
     database = await get_database()
 
     collection = database["users"]
     existing_user = await collection.find_one({"email": user.email})
     if existing_user:
-        print(f"ERROR: Email {user.email} already exists")
+        logger.error(f"Email {user.email} already exists")
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = get_password_hash(user.password)
@@ -60,10 +64,8 @@ async def register(user: UserCreate):
         return {"access_token": access_token, "token_type": "bearer"}
 
     except Exception as e:
-        print(f"Error in register: {e}")
-        import traceback
-
-        traceback.print_exc()
+        logger.error(f"Error in register: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -73,12 +75,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     OAuth2 password flow-compatible login endpoint that returns a signed JWT.
     Also logs basic timing so we can see where any slowdown is happening.
     """
-    import time
-
     start = time.perf_counter()
     try:
-        from app.core.database import get_database
-
         db_start = time.perf_counter()
         database = await get_database()
         db_end = time.perf_counter()
@@ -89,8 +87,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         user = await collection.find_one({"email": form_data.username})
         query_end = time.perf_counter()
 
-        print(
-            f"DEBUG LOGIN: user={form_data.username}, "
+        logger.info(
+            f"LOGIN: user={form_data.username}, "
             f"db_connect_ms={(db_end - db_start)*1000:.1f}, "
             f"query_ms={(query_end - query_start)*1000:.1f}, "
             f"found={user is not None}"
@@ -99,9 +97,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         verify_start = time.perf_counter()
         if not user or not verify_password(form_data.password, user["hashed_password"]):
             verify_end = time.perf_counter()
-            print(
-                f"DEBUG LOGIN: password_check_ms={(verify_end - verify_start)*1000:.1f}, "
-                "result=invalid"
+            logger.warning(
+                f"LOGIN FAILED: user={form_data.username}, "
+                f"password_check_ms={(verify_end - verify_start)*1000:.1f}"
             )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -124,15 +122,16 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         )
 
         total_ms = (time.perf_counter() - start) * 1000
-        print(
-            f"DEBUG LOGIN: password_check_ms={(verify_end - verify_start)*1000:.1f}, "
-            f"total_ms={total_ms:.1f}, result=success"
+        logger.info(
+            f"LOGIN SUCCESS: user={user['email']}, "
+            f"password_check_ms={(verify_end - verify_start)*1000:.1f}, "
+            f"total_ms={total_ms:.1f}"
         )
 
         return {"access_token": access_token, "token_type": "bearer"}
 
     except Exception as e:
-        print(f"Error in login: {e}")
+        logger.error(f"Error in login: {e}")
         # Only re-raise HTTPExceptions, wrap others
         if isinstance(e, HTTPException):
             raise e
@@ -156,7 +155,6 @@ async def update_profile(
     """
     Update basic user profile info.
     """
-    from app.core.database import get_database
     database = await get_database()
     collection = database["users"]
 
@@ -185,7 +183,6 @@ async def change_password(
     """
     Secure password rotation.
     """
-    from app.core.database import get_database
     database = await get_database()
     collection = database["users"]
 
