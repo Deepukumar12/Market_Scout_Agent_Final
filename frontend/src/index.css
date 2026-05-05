@@ -1,0 +1,122 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+@layer base {
+  :root {
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --background: 210 20% 98%;
+    --foreground: 220 15% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 10%;
+    --primary: 212 100% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 220 15% 15%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 220 15% 35%;
+    --accent: 212 100% 96%;
+    --accent-foreground: 212 100% 30%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 212 100% 45%;
+    --radius: 1.25rem;
+  }
+
+  .dark {
+    --background: 240 10% 2%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 4%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 5%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 212 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 10%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 10% 12%;
+    --muted-foreground: 240 5% 80%;
+    --accent: 240 10% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 10% 12%;
+    --input: 240 10% 12%;
+    --ring: 212 100% 50%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
+  }
+}
+
+/* Custom Utilities for Glassmorphism & Glow */
+.glass-panel {
+  @apply bg-white/70 dark:bg-black/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/20 shadow-apple;
+}
+
+.text-gradient-apple {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-[#0071E3] to-[#AF52DE];
+}
+
+.shadow-apple {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -1px rgba(0, 0, 0, 0.01), 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 20px 25px -5px rgba(0, 0, 0, 0.03);
+}
+
+.dark .shadow-apple {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.shadow-apple-large {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 20px 25px -5px rgba(0, 0, 0, 0.04), 0 30px 40px -10px rgba(0, 0, 0, 0.05);
+}
+
+.dark .shadow-apple-large {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 30px 40px -10px rgba(0, 0, 0, 0.3);
+}
+
+.backdrop-blur-apple {
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E5E5EA;
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3A3A3C;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #D1D1D6;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #48484A;
+}

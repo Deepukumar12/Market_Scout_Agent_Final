@@ -1,0 +1,97 @@
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+import logging
+
+from app.core.database import db
+from app.api.api import api_router
+from app.api.auth import router as auth_router
+# from app.agent import run_agent # Removed as moved to router
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+from app.core.config import settings
+import sentry_sdk
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
+    logger.info("Sentry initialized for error tracking.")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Connect to DB and Cache
+    await db.connect()
+    from app.services.cache_service import cache
+    await cache.connect()
+    
+    from app.core.config import settings
+    from app.services.scheduler_service import start_scheduler as start_old_scheduler
+    from app.scheduler.scheduler import init_scheduler, stop_scheduler as stop_daily_scheduler
+    logger.info(f"GEMINI_API_KEY configured: {bool(settings.GEMINI_API_KEY)}")
+    logger.info(f"GROQ_API_KEY configured: {bool(settings.GROQ_API_KEY)} (Llama 3)")
+    logger.info(f"OLLAMA_MODEL configured: {settings.OLLAMA_MODEL} (Local Fallback)")
+    logger.info(f"GITHUB_TOKEN configured: {bool(settings.GITHUB_TOKEN)}")
+    start_old_scheduler()
+    await init_scheduler()
+    yield
+    # Shutdown: Stop scheduler, disconnect DB
+    from app.services.scheduler_service import stop_scheduler
+    stop_scheduler()
+    stop_daily_scheduler()
+    db.disconnect()
+
+app = FastAPI(title="MarketScout Agent Backend", lifespan=lifespan)
+
+# Security and CORS Middleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+import os
+
+# Allow configurable CORS in production, default to all for local dev
+allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Performance and Timing Middleware
+import time
+from fastapi import Request
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    process_time = time.perf_counter() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    logger.info(f"Path: {request.url.path} | Process Time: {process_time:.4f}s")
+    return response
+
+# Optional: Require allowed hosts in production
+allowed_hosts = os.getenv("ALLOWED_HOSTS", "*").split(",")
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+
+# Include API Routers
+# api_router includes: /competitors, /reports, /scan, /websockets AND NOW /agent (markdown)
+# All under /api/v1 prefix
+app.include_router(api_router)
+
+# Include Auth Router
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+
+@app.get("/")
+def read_root():
+    return {"message": "MarketScout Agent API is running."}
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True, reload_dirs=["app"])

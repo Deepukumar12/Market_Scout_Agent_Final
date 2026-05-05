@@ -1,0 +1,11 @@
+{
+  "name": "market-scout-agent",
+  "version": "1.0.0",
+  "description": "Market Scout Agent Platform",
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "start": "cd backend && source venv/bin/activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+  },
+  "author": "",
+  "license": "ISC"
+}
