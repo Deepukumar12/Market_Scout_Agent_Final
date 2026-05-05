@@ -5,6 +5,7 @@ from typing import List
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.core.config import settings
 from app.core.database import db
 from app.services.delta_engine import FREQUENCY_DEFAULT_HOURS
 from app.core.security import get_current_user

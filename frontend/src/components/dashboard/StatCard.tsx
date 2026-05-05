@@ -27,16 +27,16 @@ const StatCard: React.FC<StatCardProps> = ({
   if (isLoading) {
     return (
       <div className={cn(
-        "bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl p-8 rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple animate-pulse",
+        "bg-card/70 backdrop-blur-xl p-8 rounded-[40px] border border-border shadow-apple animate-pulse",
         className
       )}>
         <div className="flex items-start justify-between">
-          <div className="w-12 h-12 rounded-2xl bg-gray-200 dark:bg-gray-800" />
-          <div className="w-16 h-6 rounded-full bg-gray-100 dark:bg-gray-900" />
+          <div className="w-12 h-12 rounded-2xl bg-muted" />
+          <div className="w-16 h-6 rounded-full bg-muted/50" />
         </div>
         <div className="mt-8">
-          <div className="w-24 h-3 rounded bg-gray-100 dark:bg-gray-900 mb-2" />
-          <div className="w-32 h-10 rounded bg-gray-200 dark:bg-gray-800" />
+          <div className="w-24 h-3 rounded bg-muted/50 mb-2" />
+          <div className="w-32 h-10 rounded bg-muted" />
         </div>
       </div>
     );
@@ -46,17 +46,17 @@ const StatCard: React.FC<StatCardProps> = ({
     <motion.div
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       className={cn(
-        "bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple flex flex-col justify-between h-full",
+        "bg-card/70 backdrop-blur-xl p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-border shadow-apple flex flex-col justify-between h-full",
         className
       )}
     >
       <div className="flex items-start justify-between">
-        <div className="p-3 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white">
+        <div className="p-3 rounded-2xl bg-muted text-foreground">
           <Icon size={22} strokeWidth={2} />
         </div>
         <div className={cn(
           "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold",
-          isPositive ? "bg-[#34C759]/10 text-[#34C759]" : "bg-red-500/10 text-red-500"
+          isPositive ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
         )}>
           {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
           {change}
@@ -64,8 +64,8 @@ const StatCard: React.FC<StatCardProps> = ({
       </div>
       
       <div className="mt-8">
-        <p className="text-[#636366] dark:text-[#A1A1A6] text-[10px] font-black uppercase tracking-[0.2em] mb-1 italic">{title}</p>
-        <h3 className="text-4xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic">{value}</h3>
+        <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] mb-1 italic">{title}</p>
+        <h3 className="text-4xl font-black text-foreground tracking-tighter uppercase italic">{value}</h3>
       </div>
     </motion.div>
   );

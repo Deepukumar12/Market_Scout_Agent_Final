@@ -24,11 +24,12 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/Button';
 import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
+import DeepAnalysisSection from '@/components/dashboard/DeepAnalysisSection';
 
 // @ts-ignore
 const getCategoryStyles = (category: string) => {
   switch (category.toUpperCase()) {
-    case 'API': return { color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-100 dark:border-blue-500/20', icon: <Code size={14} /> };
+    case 'API': return { color: 'text-primary dark:text-blue-400', bg: 'bg-primary/5 dark:bg-primary/50/10', border: 'border-blue-100 dark:border-primary/20', icon: <Code size={14} /> };
     case 'UI': return { color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-500/10', border: 'border-purple-100 dark:border-purple-500/20', icon: <Layers size={14} /> };
     case 'AI': return { color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-500/10', border: 'border-cyan-100 dark:border-cyan-500/20', icon: <Zap size={14} /> };
     case 'INFRASTRUCTURE': return { color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10', border: 'border-orange-100 dark:border-orange-500/20', icon: <Cpu size={14} /> };
@@ -140,17 +141,17 @@ const IntelligenceReportPage = () => {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate(-1)}
-            className="p-3 bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl rounded-full border border-[#E5E5EA] dark:border-white/10 text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white hover:shadow-apple transition-all"
+            className="p-3 bg-card/70 backdrop-blur-xl rounded-full border border-border  text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-white hover:shadow-apple transition-all"
           >
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">{displayName} <span className="text-[#0071E3]">Intelligence</span></h1>
-            <p className="text-[#6E6E73] dark:text-[#A1A1A6] mt-1 font-medium italic">Full competitive analysis and feature release tracking.</p>
+            <h1 className="text-3xl font-black text-foreground  uppercase italic tracking-tighter">{displayName} <span className="text-primary">Intelligence</span></h1>
+            <p className="text-muted-foreground  mt-1 font-medium italic">Full competitive analysis and feature release tracking.</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button className="rounded-full px-6 bg-[#0071E3] text-white hover:bg-[#0077ED] font-black text-[10px] uppercase tracking-widest h-10 shadow-lg shadow-[#0071E3]/20">
+          <Button className="rounded-full px-6 bg-primary text-white hover:bg-[#0077ED] font-black text-[10px] uppercase tracking-widest h-10 shadow-lg shadow-[#0071E3]/20">
             <Activity size={16} className="mr-2" /> LIVE MONITOR
           </Button>
         </div>
@@ -160,10 +161,10 @@ const IntelligenceReportPage = () => {
         {loading || (!scanReport && !error) ? (
           <div className="h-96 flex flex-col items-center justify-center space-y-6">
             <div className="relative">
-              <div className="w-16 h-16 border-4 border-[#0071E3]/20 border-t-[#0071E3] rounded-full animate-spin" />
-              <Search className="absolute inset-0 m-auto text-[#0071E3]" size={24} />
+              <div className="w-16 h-16 border-4 border-primary/20 border-t-[#0071E3] rounded-full animate-spin" />
+              <Search className="absolute inset-0 m-auto text-primary" size={24} />
             </div>
-            <p className="text-lg font-medium text-[#1D1D1F] dark:text-white animate-pulse italic">Analyzing tech signatures...</p>
+            <p className="text-lg font-medium text-foreground  animate-pulse italic">Analyzing tech signatures...</p>
           </div>
         ) : error ? (
           <div className="bg-red-50 p-10 rounded-3xl border border-red-100 text-center">
@@ -175,25 +176,25 @@ const IntelligenceReportPage = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="md:col-span-3 bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl p-8 rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple flex flex-col justify-between">
-                <div className="flex items-center gap-2 text-[#0071E3] font-black text-[10px] uppercase tracking-widest mb-6 italic">
+              <div className="md:col-span-3 bg-card/70 backdrop-blur-xl p-8 rounded-[40px] border border-border  shadow-apple flex flex-col justify-between">
+                <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest mb-6 italic">
                   <TrendingUp size={14} strokeWidth={3} /> Signal Insight
                 </div>
-                <h2 className="text-2xl font-black text-[#1D1D1F] dark:text-white max-w-2xl leading-snug uppercase italic tracking-tighter">
+                <h2 className="text-2xl font-black text-foreground  max-w-2xl leading-snug uppercase italic tracking-tighter">
                   {totalFeaturesToShow > 0 
                     ? `Identified ${totalFeaturesToShow} critical technical updates.`
                     : "No significant feature releases detected in the current monitoring window."}
                 </h2>
                 <div className="flex items-center gap-10 mt-8">
                   <div>
-                    <div className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">Sources Audited</div>
-                    <div className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">
+                    <div className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] mb-1 italic">Sources Audited</div>
+                    <div className="text-3xl font-black text-foreground  uppercase italic tracking-tighter">
                       {scanReport.total_sources_scanned || competitor?.total_sources_scanned_cumulative || 0}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">Conf. Score</div>
-                    <div className="text-3xl font-black text-[#34C759] uppercase italic tracking-tighter">
+                    <div className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] mb-1 italic">Conf. Score</div>
+                    <div className="text-3xl font-black text-green-500 uppercase italic tracking-tighter">
                       {totalFeaturesToShow > 0 
                         ? `${Math.floor(scanReport.features.filter(f => {
                             const date = new Date(f.publish_date).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -205,9 +206,9 @@ const IntelligenceReportPage = () => {
                 </div>
               </div>
 
-              <div className="bg-[#1D1D1F] dark:bg-[#1D1D1F]/80 p-8 rounded-[40px] text-white flex flex-col items-center justify-center text-center shadow-apple border border-white/10">
+              <div className="bg-foreground dark:bg-foreground/80 p-8 rounded-[40px] text-white flex flex-col items-center justify-center text-center shadow-apple border border-white/10">
                 <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-black/20">
-                  <ShieldCheck size={32} className="text-[#34C759]" />
+                  <ShieldCheck size={32} className="text-green-500" />
                 </div>
                 <div className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] mb-2 italic">Threat Level</div>
                 <div className="text-4xl font-black italic tracking-tighter uppercase">
@@ -215,6 +216,9 @@ const IntelligenceReportPage = () => {
                 </div>
               </div>
             </div>
+            
+            {/* Deep Strategic Analysis */}
+            <DeepAnalysisSection report={scanReport} />
 
             {/* Feature Timeline */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -224,9 +228,9 @@ const IntelligenceReportPage = () => {
 
               {/* Sidebar Analytics */}
               <div className="space-y-8">
-                <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl p-8 rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple">
-                  <h3 className="font-black text-[#1D1D1F] dark:text-white mb-6 flex items-center gap-2 uppercase italic tracking-tighter">
-                    <Activity size={18} strokeWidth={3} className="text-[#0071E3]" /> Velocity <span className="text-[#0071E3]">Waves</span>
+                <div className="bg-card/70 backdrop-blur-xl p-8 rounded-[40px] border border-border  shadow-apple">
+                  <h3 className="font-black text-foreground  mb-6 flex items-center gap-2 uppercase italic tracking-tighter">
+                    <Activity size={18} strokeWidth={3} className="text-primary" /> Velocity <span className="text-primary">Waves</span>
                   </h3>
                   <div className="h-48 w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -244,13 +248,13 @@ const IntelligenceReportPage = () => {
                   </div>
                 </div>
 
-                <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl p-8 rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple">
-                  <h3 className="font-black text-[#1D1D1F] dark:text-white mb-6 uppercase text-[10px] tracking-[0.2em] italic">Key Repositories</h3>
+                <div className="bg-card/70 backdrop-blur-xl p-8 rounded-[40px] border border-border  shadow-apple">
+                  <h3 className="font-black text-foreground  mb-6 uppercase text-[10px] tracking-[0.2em] italic">Key Repositories</h3>
                   <div className="space-y-4">
                     {['Technical Docs', 'NPM Registry', 'GitHub Activity', 'Product Blog'].map((src, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-[#F5F5F7] dark:bg-[#1D1D1F]/50 rounded-xl text-sm border border-[#E5E5EA] dark:border-white/5">
-                        <span className="font-medium text-[#1D1D1F] dark:text-white">{src}</span>
-                        <div className="w-2 h-2 rounded-full bg-[#34C759]" />
+                      <div key={i} className="flex items-center justify-between p-3 bg-muted dark:bg-foreground/50 rounded-xl text-sm border border-border ">
+                        <span className="font-medium text-foreground ">{src}</span>
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
                       </div>
                     ))}
                   </div>

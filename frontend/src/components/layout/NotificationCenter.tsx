@@ -37,27 +37,27 @@ const NotificationItem = ({ notification }: { notification: Notification }) => {
       <div className="flex gap-4">
         <div className={cn(
           "w-10 h-10 rounded-xl flex items-center justify-center border",
-          notification.read ? "bg-white/5 border-white/5" : "bg-blue-500/10 border-blue-500/20"
+          notification.read ? "bg-white/5 border-white/5" : "bg-primary/50/10 border-primary/20"
         )}>
           {getIcon()}
         </div>
         <div className="flex-1 space-y-1">
           <div className="flex items-center justify-between">
-            <h4 className={cn("text-xs font-bold uppercase tracking-wider", notification.read ? "text-slate-500" : "text-slate-200")}>
+            <h4 className={cn("text-xs font-bold uppercase tracking-wider", notification.read ? "text-muted-foreground" : "text-slate-200")}>
               {notification.title}
             </h4>
-            <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-mono">
+            <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground font-mono">
               <Clock className="w-3 h-3" />
               {new Date(notification.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed pr-4">
+          <p className="text-xs text-muted-foreground/70 leading-relaxed pr-4">
             {notification.message}
           </p>
         </div>
       </div>
       {!notification.read && (
-        <div className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+        <div className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-primary/50 animate-pulse" />
       )}
     </motion.div>
   );
@@ -86,26 +86,26 @@ const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
           >
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                <div className="w-10 h-10 rounded-xl bg-primary/50/10 flex items-center justify-center border border-primary/20">
                   <Bell className="w-5 h-5 text-blue-400" />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white tracking-tight">Intelligence Alerts</h2>
-                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">{unreadCount} UNREAD SIGNALS</p>
+                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">{unreadCount} UNREAD SIGNALS</p>
                 </div>
               </div>
               <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl hover:bg-white/5">
-                <X className="w-5 h-5 text-slate-400" />
+                <X className="w-5 h-5 text-muted-foreground/70" />
               </Button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-50">
-                  <Bell className="w-12 h-12 text-slate-700" />
+                  <Bell className="w-12 h-12 text-foreground" />
                   <div>
                     <p className="text-sm font-bold text-white">Quiet Horizon</p>
-                    <p className="text-xs text-slate-500">No new surveillance signals detected in this cycle.</p>
+                    <p className="text-xs text-muted-foreground">No new surveillance signals detected in this cycle.</p>
                   </div>
                 </div>
               ) : (
@@ -129,7 +129,7 @@ const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
                 <Button 
                   variant="ghost" 
                   onClick={clearAll}
-                  className="text-slate-500 hover:text-red-400 text-[10px] font-black uppercase tracking-widest"
+                  className="text-muted-foreground hover:text-red-400 text-[10px] font-black uppercase tracking-widest"
                 >
                   Clear Archive
                 </Button>

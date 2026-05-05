@@ -54,14 +54,14 @@ import ThemeToggle from './ThemeToggle';
 const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen, onClose }) => {
   return (
     <aside className={cn(
-      "w-72 h-screen bg-white dark:bg-[#0A0A0B] border-r border-[#E5E5EA] dark:border-white/5 pt-24 pb-12 flex flex-col fixed left-0 top-0 z-40 transition-all duration-300",
+      "w-72 h-screen bg-background border-r border-border pt-24 pb-12 flex flex-col fixed left-0 top-0 z-40 transition-all duration-300",
       isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
     )}>
       <nav className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar relative">
         <LayoutGroup>
           {menuGroups.map((group) => (
             <div key={group.label} className="space-y-2">
-              <h4 className="px-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">
+              <h4 className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] italic">
                 {group.label}
               </h4>
               <div className="space-y-1">
@@ -74,8 +74,8 @@ const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen,
                     className={({ isActive }) => cn(
                       "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group relative",
                       isActive 
-                        ? "bg-[#0071E3]/10 text-[#0071E3] font-bold" 
-                        : "text-[#6E6E73] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-white/5"
+                        ? "bg-primary/10 text-primary font-bold" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                   >
                     {({ isActive }) => (
@@ -83,10 +83,10 @@ const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen,
                         {isActive && (
                           <motion.div 
                             layoutId="active-nav"
-                            className="absolute left-0 w-1 h-5 bg-[#0071E3] rounded-r-full"
+                            className="absolute left-0 w-1 h-5 bg-primary rounded-r-full"
                           />
                         )}
-                        <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={cn(isActive ? "text-[#0071E3]" : "text-current opacity-70")} />
+                        <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={cn(isActive ? "text-primary" : "text-current opacity-70")} />
                         <span className="text-[14px]">{item.text}</span>
                       </>
                     )}
@@ -99,12 +99,12 @@ const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen,
       </nav>
 
       <div className="px-6 mt-auto space-y-4">
-        <div className="p-6 rounded-3xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 flex items-center justify-between">
+        <div className="p-6 rounded-3xl bg-muted border border-border flex items-center justify-between">
            <div>
-             <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">System</p>
+             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 italic">System</p>
              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#34C759] shadow-[0_0_8px_rgba(52,199,89,0.5)]" />
-                <span className="text-sm font-bold text-[#1D1D1F] dark:text-white">Active</span>
+                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                <span className="text-sm font-bold text-foreground">Active</span>
              </div>
            </div>
            <ThemeToggle />

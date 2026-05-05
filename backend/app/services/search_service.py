@@ -54,41 +54,37 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
 
 
 
-    # 1. Tavily — broad web search covering news, blogs, press releases, product pages, etc.
+    # 1. Tavily
     if settings.TAVILY_API_KEY and len(results) < num_results:
-        logger.info(f"Running Tavily search for: {query}")
+        s_start = time.perf_counter()
         url = "https://api.tavily.com/search"
         payload = {
             "api_key": settings.TAVILY_API_KEY,
             "query": query,
-            "search_depth": "advanced",  # deeper to surface blogs/news not just top results
-            "include_answer": False,
-            "include_domains": [],       # open to ALL domains: news, blogs, product sites
-            "exclude_domains": [],
-            "max_results": max(num_results, 10),  # get more per query for diversity
-            "days": time_window_days              # Tavily param: respect requested time window
+            "search_depth": "advanced",
+            "max_results": max(num_results, 10),
+            "days": time_window_days
         }
         try:
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(url, json=payload)
+                duration = time.perf_counter() - s_start
                 if resp.status_code == 200:
                     data = resp.json().get("results", [])
                     for r in data:
                         add_result(r.get("url"), r.get("title"), r.get("content"), "tavily", r.get("published_date"))
+                    logger.info(f"SEARCH HIT  | TAVILY  | {duration:.4f}s | Found {len(data)} items")
                 else:
-                    logger.warning(f"Tavily API returned status {resp.status_code}: {resp.text[:200]}")
+                    logger.warning(f"SEARCH ERR  | TAVILY  | {duration:.4f}s | Status: {resp.status_code}")
         except Exception as e:
-            logger.error(f"Tavily API error: {e}")
+            logger.error(f"SEARCH FAIL | TAVILY  | Error: {e}")
 
-    # 2. Exa AI (Neural Search) — excellent for finding high-quality technical content
+    # 2. Exa AI
     if settings.EXA_API_KEY and len(results) < num_results:
-        logger.info(f"Running Exa AI search for: {query}")
+        s_start = time.perf_counter()
         try:
             exa_url = "https://api.exa.ai/search"
-            headers = {
-                "x-api-key": settings.EXA_API_KEY,
-                "Content-Type": "application/json"
-            }
+            headers = {"x-api-key": settings.EXA_API_KEY, "Content-Type": "application/json"}
             payload = {
                 "query": query,
                 "numResults": 5,
@@ -97,14 +93,16 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
             }
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(exa_url, json=payload, headers=headers)
+                duration = time.perf_counter() - s_start
                 if resp.status_code == 200:
                     data = resp.json().get("results", [])
                     for r in data:
                         add_result(r.get("url"), r.get("title"), r.get("text") or r.get("snippet"), "exa", r.get("publishedDate"))
+                    logger.info(f"SEARCH HIT  | EXA AI  | {duration:.4f}s | Found {len(data)} items")
                 else:
-                    logger.warning(f"Exa API error: {resp.status_code}")
+                    logger.warning(f"SEARCH ERR  | EXA AI  | {duration:.4f}s | Status: {resp.status_code}")
         except Exception as e:
-            logger.error(f"Exa AI error: {e}")
+            logger.error(f"SEARCH FAIL | EXA AI  | Error: {e}")
 
     # 3. Serper.dev (Google Search)
     if settings.SERPER_API_KEY and len(results) < num_results:

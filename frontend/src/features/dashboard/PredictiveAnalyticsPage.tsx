@@ -118,7 +118,7 @@ const PredictiveAnalyticsPage = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-[#AF52DE] animate-pulse" />
                 <span className="text-[10px] font-black text-[#AF52DE] uppercase tracking-widest">Neural Forecast Engine</span>
              </div>
-             <div className="px-3 py-1 rounded-lg bg-[#F5F5F7] border border-[#E5E5EA] text-[10px] font-mono text-[#86868B] dark:text-[#A1A1A6] uppercase">
+             <div className="px-3 py-1 rounded-lg bg-muted border border-border text-[10px] font-mono text-muted-foreground  uppercase">
                 Status: {loading ? "Computing" : "Modeling"}
              </div>
           </div>
@@ -127,7 +127,7 @@ const PredictiveAnalyticsPage = () => {
           <motion.h1 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-5xl lg:text-6xl font-black tracking-tighter text-[#1D1D1F] uppercase italic leading-tight"
+            className="text-5xl lg:text-6xl font-black tracking-tighter text-foreground uppercase italic leading-tight"
           >
             Predictive <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#AF52DE] to-[#5AC8FA]">Futures</span>
           </motion.h1>
@@ -135,10 +135,10 @@ const PredictiveAnalyticsPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-[#6E6E73] dark:text-[#86868B] mt-2 max-w-2xl font-medium leading-relaxed italic"
+            className="text-muted-foreground dark:text-muted-foreground mt-2 max-w-2xl font-medium leading-relaxed italic"
           >
             Leveraging autonomous modeling threads to anticipate competitor pivots and market fluctuations. 
-            Analyzing <span className="text-[#1D1D1F]">{competitors.length} intelligence nodes</span> for high-confidence strategy mapping.
+            Analyzing <span className="text-foreground">{competitors.length} intelligence nodes</span> for high-confidence strategy mapping.
           </motion.p>
         </div>
         
@@ -147,7 +147,7 @@ const PredictiveAnalyticsPage = () => {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="relative w-64 h-40 bg-white/70 border border-[#E5E5EA] rounded-[40px] backdrop-blur-xl flex items-center justify-center overflow-hidden group shadow-apple"
+            className="relative w-64 h-40 bg-card/70 border border-border rounded-[40px] backdrop-blur-xl flex items-center justify-center overflow-hidden group shadow-apple"
         >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent opacity-50" />
             <div className="absolute inset-0 bg-grid-white/[0.02]" />
@@ -169,11 +169,11 @@ const PredictiveAnalyticsPage = () => {
                 <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-20 bg-white/40 dark:bg-black/20 border border-dashed border-[#E5E5EA] rounded-[40px] backdrop-blur-sm"
+                    className="flex flex-col items-center justify-center py-20 bg-white/40 dark:bg-black/20 border border-dashed border-border rounded-[40px] backdrop-blur-sm"
                 >
-                    <Activity className="w-12 h-12 text-[#86868B] mb-4 opacity-20" />
-                    <h3 className="text-xl font-black text-[#1D1D1F] uppercase italic tracking-tighter">No Analysis Available</h3>
-                    <p className="text-[10px] text-[#86868B] font-mono mt-2 uppercase tracking-widest max-w-xs text-center">
+                    <Activity className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
+                    <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter">No Analysis Available</h3>
+                    <p className="text-[10px] text-muted-foreground font-mono mt-2 uppercase tracking-widest max-w-xs text-center">
                         Initialize the pipeline to model futures based on your current intelligence nodes.
                     </p>
                 </motion.div>
@@ -186,12 +186,12 @@ const PredictiveAnalyticsPage = () => {
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-10 overflow-hidden"
                 >
-                    <div className="flex items-center gap-4 py-4 border-b border-[#E5E5EA]">
-                        <h2 className="text-2xl font-black text-[#1D1D1F] uppercase italic tracking-tighter flex items-center gap-3">
+                    <div className="flex items-center gap-4 py-4 border-b border-border">
+                        <h2 className="text-2xl font-black text-foreground uppercase italic tracking-tighter flex items-center gap-3">
                             <Target className="w-6 h-6 text-emerald-500" />
                             Pipeline Output
                         </h2>
-                        <span className="text-[10px] font-mono text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest">
+                        <span className="text-[10px] font-mono text-muted-foreground  uppercase tracking-widest">
                             Generated: {new Date(analysisResult.analysis_timestamp).toLocaleTimeString('en-IN')}
                         </span>
                     </div>
@@ -199,26 +199,26 @@ const PredictiveAnalyticsPage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         
                         {/* Top Performers (High Change Velocity) */}
-                        <div className="bg-white/70 border border-[#E5E5EA] rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-emerald-500/20 transition-all shadow-apple shadow-sm">
+                        <div className="bg-card/70 border border-border rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-emerald-500/20 transition-all shadow-apple shadow-sm">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] rounded-full pointer-events-none" />
                              <div className="flex items-center gap-3 mb-6">
                                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                                     <Trophy className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-[#1D1D1F] uppercase tracking-wider">Top Performers</h3>
-                                    <p className="text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase tracking-widest">High Change Velocity</p>
+                                    <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Top Performers</h3>
+                                    <p className="text-[9px] text-muted-foreground  font-mono uppercase tracking-widest">High Change Velocity</p>
                                 </div>
                              </div>
                              
                              <div className="space-y-4">
                                 {analysisResult.top_performers.map((company, idx) => (
                                     <div key={idx} className="space-y-2">
-                                        <div className="flex justify-between items-center text-xs font-bold text-[#1D1D1F]">
+                                        <div className="flex justify-between items-center text-xs font-bold text-foreground">
                                             <span>{company.name}</span>
                                             <span className="text-emerald-600 font-black">{company.change_velocity_score}%</span>
                                         </div>
-                                        <div className="h-1.5 w-full bg-[#F5F5F7] rounded-full overflow-hidden">
+                                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                                             <motion.div 
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${company.change_velocity_score}%` }}
@@ -226,7 +226,7 @@ const PredictiveAnalyticsPage = () => {
                                                 className="h-full bg-emerald-500"
                                             />
                                         </div>
-                                        <div className="flex justify-between items-center text-[9px] font-mono text-[#86868B] dark:text-[#A1A1A6]">
+                                        <div className="flex justify-between items-center text-[9px] font-mono text-muted-foreground ">
                                             <span>Innovation: {company.innovation_index}</span>
                                             <span className="flex items-center gap-1 text-emerald-600"><ArrowUpRight className="w-2.5 h-2.5" /> High Activity</span>
                                         </div>
@@ -236,38 +236,38 @@ const PredictiveAnalyticsPage = () => {
                         </div>
 
                         {/* Stable Performers (Low Change Velocity) */}
-                         <div className="bg-white/70 border border-[#E5E5EA] rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-[#0071E3]/20 transition-all shadow-apple shadow-sm">
-                             <div className="absolute top-0 right-0 w-32 h-32 bg-[#0071E3]/5 blur-[50px] rounded-full pointer-events-none" />
+                         <div className="bg-card/70 border border-border rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-primary/20 transition-all shadow-apple shadow-sm">
+                             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] rounded-full pointer-events-none" />
                              <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-xl bg-[#0071E3]/10 flex items-center justify-center border border-[#0071E3]/20">
-                                    <BarChart3 className="w-5 h-5 text-[#0071E3]" />
+                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                                    <BarChart3 className="w-5 h-5 text-primary" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-[#1D1D1F] uppercase tracking-wider">Consistent Core</h3>
-                                    <p className="text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase tracking-widest">Steady Execution</p>
+                                    <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Consistent Core</h3>
+                                    <p className="text-[9px] text-muted-foreground  font-mono uppercase tracking-widest">Steady Execution</p>
                                 </div>
                              </div>
                              
                              <div className="space-y-4">
                                 {analysisResult.stable_performers.map((company, idx) => (
                                     <div key={idx} className="space-y-2">
-                                        <div className="flex justify-between items-center text-xs font-bold text-[#1D1D1F]">
+                                        <div className="flex justify-between items-center text-xs font-bold text-foreground">
                                             <span>{company.name}</span>
-                                            <span className="text-[#0071E3] font-black">{company.change_velocity_score}%</span>
+                                            <span className="text-primary font-black">{company.change_velocity_score}%</span>
                                         </div>
-                                        <div className="h-1.5 w-full bg-[#F5F5F7] rounded-full overflow-hidden">
+                                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                                             <motion.div 
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${company.change_velocity_score}%` }}
                                                 transition={{ duration: 1, delay: 0.2 * idx }}
-                                                className="h-full bg-[#0071E3]"
+                                                className="h-full bg-primary"
                                             />
                                         </div>
-                                         <div className="flex justify-between items-center text-[9px] font-mono text-[#86868B] dark:text-[#A1A1A6]">
+                                         <div className="flex justify-between items-center text-[9px] font-mono text-muted-foreground ">
                                              <span>Risk: {company.change_velocity_score > 60 ? "Elevated" : "Low"}</span>
                                              <span className={cn(
                                                 "flex items-center gap-1",
-                                                company.change_velocity_score > 60 ? "text-amber-600" : "text-[#0071E3]"
+                                                company.change_velocity_score > 60 ? "text-amber-600" : "text-primary"
                                              )}>
                                                 {company.change_velocity_score > 60 ? "Dynamic Shift" : "Stable Growth"}
                                              </span>
@@ -278,15 +278,15 @@ const PredictiveAnalyticsPage = () => {
                         </div>
 
                         {/* Trending Predictions */}
-                        <div className="bg-white/70 border border-[#E5E5EA] rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-[#AF52DE]/20 transition-all shadow-apple shadow-sm">
+                        <div className="bg-card/70 border border-border rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-[#AF52DE]/20 transition-all shadow-apple shadow-sm">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-[#AF52DE]/5 blur-[50px] rounded-full pointer-events-none" />
                              <div className="flex items-center gap-3 mb-6">
                                 <div className="w-10 h-10 rounded-xl bg-[#AF52DE]/10 flex items-center justify-center border border-[#AF52DE]/20">
                                     <Zap className="w-5 h-5 text-[#AF52DE]" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-[#1D1D1F] uppercase tracking-wider">Predicted Trending</h3>
-                                    <p className="text-[9px] text-[#86868B] font-mono uppercase tracking-widest">Future Breakouts</p>
+                                    <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Predicted Trending</h3>
+                                    <p className="text-[9px] text-muted-foreground font-mono uppercase tracking-widest">Future Breakouts</p>
                                 </div>
                              </div>
                              
@@ -297,12 +297,12 @@ const PredictiveAnalyticsPage = () => {
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.3 * idx }}
-                                        className="py-3 first:pt-0 last:pb-0 border-b border-[#E5E5EA] last:border-0"
+                                        className="py-3 first:pt-0 last:pb-0 border-b border-border last:border-0"
                                     >
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                 <div className="text-xs font-black text-[#1D1D1F] uppercase italic">{company.name}</div>
-                                                 <div className="text-[9px] text-[#86868B] font-mono mt-0.5">Prob: {(company.trend_probability * 100).toFixed(0)}%</div>
+                                                 <div className="text-xs font-black text-foreground uppercase italic">{company.name}</div>
+                                                 <div className="text-[9px] text-muted-foreground font-mono mt-0.5">Prob: {(company.trend_probability * 100).toFixed(0)}%</div>
                                             </div>
                                             <span className="text-[9px] font-black text-[#AF52DE] bg-[#AF52DE]/10 px-2 py-0.5 rounded border border-[#AF52DE]/20 uppercase tracking-wider">
                                                 {company.market_sentiment}
@@ -326,10 +326,10 @@ const PredictiveAnalyticsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group hover:border-[#AF52DE]/30 transition-all shadow-apple shadow-sm"
+            className="p-10 rounded-[40px] bg-card/70 border border-border backdrop-blur-xl group hover:border-[#AF52DE]/30 transition-all shadow-apple shadow-sm"
         >
             <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-[#1D1D1F] flex items-center gap-3 uppercase italic tracking-tighter">
+                <h3 className="font-black text-foreground flex items-center gap-3 uppercase italic tracking-tighter">
                     <TrendingUp className="w-5 h-5 text-[#AF52DE]" /> Traction Forecast
                 </h3>
                 <span className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-black tracking-widest">
@@ -360,7 +360,7 @@ const PredictiveAnalyticsPage = () => {
                     </LineChart>
                 </ResponsiveContainer>
             </div>
-            <p className="text-[10px] text-[#86868B] font-mono mt-6 uppercase tracking-widest leading-relaxed">
+            <p className="text-[10px] text-muted-foreground font-mono mt-6 uppercase tracking-widest leading-relaxed">
                 Aggregated projection across {competitors.length} active units
             </p>
         </motion.div>
@@ -370,10 +370,10 @@ const PredictiveAnalyticsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group hover:border-[#FF9500]/30 transition-all shadow-apple shadow-sm"
+            className="p-10 rounded-[40px] bg-card/70 border border-border backdrop-blur-xl group hover:border-[#FF9500]/30 transition-all shadow-apple shadow-sm"
         >
             <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-[#1D1D1F] flex items-center gap-3 uppercase italic tracking-tighter">
+                <h3 className="font-black text-foreground flex items-center gap-3 uppercase italic tracking-tighter">
                     <Target className="w-5 h-5 text-[#FF9500]" /> Vector Analysis
                 </h3>
                 <span className={cn(
@@ -406,7 +406,7 @@ const PredictiveAnalyticsPage = () => {
                     </RadarChart>
                 </ResponsiveContainer>
             </div>
-             <p className="text-[10px] text-[#86868B] font-mono mt-6 uppercase tracking-widest leading-relaxed">
+             <p className="text-[10px] text-muted-foreground font-mono mt-6 uppercase tracking-widest leading-relaxed">
                 Neural vector mapping of technical debt shifts
             </p>
         </motion.div>
@@ -416,10 +416,10 @@ const PredictiveAnalyticsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group hover:border-[#5AC8FA]/30 transition-all shadow-apple shadow-sm"
+            className="p-10 rounded-[40px] bg-card/70 border border-border backdrop-blur-xl group hover:border-[#5AC8FA]/30 transition-all shadow-apple shadow-sm"
         >
             <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-[#1D1D1F] flex items-center gap-3 uppercase italic tracking-tighter">
+                <h3 className="font-black text-foreground flex items-center gap-3 uppercase italic tracking-tighter">
                     <Activity className="w-5 h-5 text-[#5AC8FA]" /> Signal Gaps
                 </h3>
                 <span className="text-[10px] px-2.5 py-1 rounded-lg bg-[#5AC8FA]/10 text-[#5AC8FA] border border-[#5AC8FA]/20 font-black tracking-widest">
@@ -439,7 +439,7 @@ const PredictiveAnalyticsPage = () => {
                     </BarChart>
                 </ResponsiveContainer>
             </div>
-             <p className="text-[10px] text-[#86868B] font-mono mt-6 uppercase tracking-widest leading-relaxed">
+             <p className="text-[10px] text-muted-foreground font-mono mt-6 uppercase tracking-widest leading-relaxed">
                 Economic opportunity delta in Q4 timeline
             </p>
         </motion.div>
@@ -462,7 +462,7 @@ const PredictiveAnalyticsPage = () => {
         </Button>
       </div>
 
-      <div className="pt-10 border-t border-white/5 flex flex-wrap justify-center gap-10 text-[9px] text-slate-600 font-mono uppercase tracking-[0.2em] font-black">
+      <div className="pt-10 border-t border-white/5 flex flex-wrap justify-center gap-10 text-[9px] text-muted-foreground font-mono uppercase tracking-[0.2em] font-black">
           <div>Engine: Dynamic Prediction Matrix</div>
           <div>Mode: Real-time Analysis</div>
           <div>Intelligence: Audited Signals Only</div>

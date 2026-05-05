@@ -191,7 +191,7 @@ const Beacon = ({ data, isHovered, onHover }: { data: VisualCompetitor, isHovere
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="pointer-events-none select-none w-72 bg-slate-900/90 backdrop-blur-2xl border border-white/20 rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]"
+                className="pointer-events-none select-none w-72 bg-foreground/90 backdrop-blur-2xl border border-white/20 rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]"
                 style={{
                     boxShadow: `0 0 40px ${color}30, inset 0 0 20px ${color}10`
                 }}
@@ -214,11 +214,11 @@ const Beacon = ({ data, isHovered, onHover }: { data: VisualCompetitor, isHovere
                     
                     <div className="grid grid-cols-2 gap-2 mb-3">
                         <div className="bg-white/5 rounded p-2">
-                             <div className="text-[10px] text-slate-400 uppercase">Share</div>
+                             <div className="text-[10px] text-muted-foreground/70 uppercase">Share</div>
                              <div className="text-lg font-mono text-white">{data.marketShare}%</div>
                         </div>
                         <div className="bg-white/5 rounded p-2">
-                             <div className="text-[10px] text-slate-400 uppercase">Risk</div>
+                             <div className="text-[10px] text-muted-foreground/70 uppercase">Risk</div>
                              <div className="text-lg font-mono text-white flex items-center gap-1">
                                 {data.riskScore}
                                 <span className={clsx("w-2 h-2 rounded-full", data.riskScore > 50 ? "bg-red-500" : "bg-emerald-500")} />
@@ -226,7 +226,7 @@ const Beacon = ({ data, isHovered, onHover }: { data: VisualCompetitor, isHovere
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 text-[10px] text-slate-500 border-t border-white/10 pt-2">
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground border-t border-white/10 pt-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                         ACTIVE MONITORING
                     </div>

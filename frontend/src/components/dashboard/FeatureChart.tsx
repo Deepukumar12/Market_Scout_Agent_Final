@@ -19,11 +19,11 @@ interface FeatureChartProps {
 
 const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
   return (
-    <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl p-8 rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple h-[450px] w-full overflow-hidden">
+    <div className="bg-card/70 backdrop-blur-xl p-8 rounded-[40px] border border-border shadow-apple h-[450px] w-full overflow-hidden">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Feature Release <span className="text-[#0071E3]">Timeline</span></h3>
-          <p className="text-[#6E6E73] dark:text-[#86868B] text-sm font-medium italic">Innovation trends across top competitors</p>
+          <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter">Feature Release <span className="text-primary">Timeline</span></h3>
+          <p className="text-muted-foreground text-sm font-medium italic">Innovation trends across top competitors</p>
         </div>
       </div>
       
@@ -38,13 +38,12 @@ const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
                 </linearGradient>
               ))}
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.1} className="text-[#86868B] dark:text-[#48484A]" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.1} />
             <XAxis 
               dataKey="name" 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'currentColor', fontSize: 9, fontWeight: 700 }}
-              className="text-[#86868B] dark:text-[#A1A1A6]"
+              tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 9, fontWeight: 700 }}
               dy={15}
               angle={-25}
               textAnchor="end"
@@ -53,21 +52,20 @@ const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
             <YAxis 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'currentColor', fontSize: 10, fontWeight: 500 }}
-              className="text-[#86868B] dark:text-[#A1A1A6]"
+              tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10, fontWeight: 500 }}
             />
             <Tooltip 
               contentStyle={{ 
-                backgroundColor: 'rgba(255,255,255,0.9)', 
+                backgroundColor: 'hsl(var(--card))', 
                 backdropFilter: 'blur(12px)',
                 borderRadius: '16px', 
-                border: '1px solid #E5E5EA',
+                border: '1px solid hsl(var(--border))',
                 boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
                 fontSize: '12px',
                 fontWeight: 'bold'
               }}
               itemStyle={{ fontWeight: 'bold' }}
-              labelStyle={{ color: '#86868B', marginBottom: '4px', textTransform: 'uppercase', fontSize: '10px' }}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '4px', textTransform: 'uppercase', fontSize: '10px' }}
             />
             <Legend 
               verticalAlign="top" 

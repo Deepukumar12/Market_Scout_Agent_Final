@@ -8,6 +8,7 @@ interface AnalyzeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAnalyze: (company: string) => Promise<void>;
+  onViewReport: () => void;
   status: 'idle' | 'running' | 'completed' | 'error';
   progressSteps: string[];
   currentStep: number;
@@ -19,6 +20,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
   isOpen, 
   onClose, 
   onAnalyze, 
+  onViewReport,
   status,
   progressSteps,
   currentStep,
@@ -95,14 +97,14 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative w-full max-w-xl bg-white rounded-[32px] shadow-2xl"
+            className="relative w-full max-w-xl bg-card rounded-[32px] shadow-2xl"
           >
             <div className="p-8">
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold text-[#1D1D1F]">Analyze New Company</h2>
+                <h2 className="text-2xl font-bold text-foreground">Analyze New Company</h2>
                 <button 
                   onClick={onClose}
-                  className="p-2 rounded-full hover:bg-[#F5F5F7] text-[#6E6E73] transition-colors"
+                  className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -112,7 +114,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                      <Search size={20} className="text-[#6E6E73] group-focus-within:text-[#0071E3] transition-colors" />
+                      <Search size={20} className="text-muted-foreground group-focus-within:text-primary transition-colors" />
                     </div>
                     <input
                       type="text"
@@ -126,7 +128,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                       onKeyDown={handleKeyDown}
                       onFocus={() => setShowSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                      className="w-full bg-[#F5F5F7] border border-transparent focus:border-[#0071E3] focus:bg-white rounded-2xl py-5 pl-14 pr-6 text-[#1D1D1F] text-lg font-medium outline-none transition-all"
+                      className="w-full bg-muted border border-transparent focus:border-primary focus:bg-card rounded-2xl py-5 pl-14 pr-6 text-foreground text-lg font-medium outline-none transition-all"
                       autoFocus
                     />
                     
@@ -136,7 +138,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute z-10 w-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-64 overflow-y-auto"
+                          className="absolute z-10 w-full mt-2 bg-card rounded-xl shadow-xl border border-border max-h-64 overflow-y-auto"
                         >
                           {filteredSuggestions.map((suggestion, index) => (
                             <button
@@ -148,7 +150,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                                 setShowSuggestions(false);
                                 setFocusedIndex(-1);
                               }}
-                              className={`w-full text-left px-6 py-3 font-medium transition-colors border-b border-gray-50 last:border-0 ${index === focusedIndex ? 'bg-[#F5F5F7] text-[#0071E3]' : 'hover:bg-[#F5F5F7] text-[#1D1D1F]'}`}
+                              className={`w-full text-left px-6 py-3 font-medium transition-colors border-b border-gray-50 last:border-0 ${index === focusedIndex ? 'bg-muted text-primary' : 'hover:bg-muted text-foreground'}`}
                             >
                               {suggestion}
                             </button>
@@ -161,7 +163,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                   <div className="pt-4">
                     <Button 
                       disabled={!company.trim()}
-                      className="w-full h-16 rounded-2xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-lg font-bold shadow-lg shadow-[#0071E3]/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2 group"
+                      className="w-full h-16 rounded-2xl bg-primary hover:bg-[#0077ED] text-white text-lg font-bold shadow-lg shadow-[#0071E3]/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2 group"
                     >
                       Analyze Company
                       <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -170,9 +172,9 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                 </form>
               ) : (
                 <div className="space-y-8 py-4">
-                  <div className="relative h-2 w-full bg-[#F5F5F7] rounded-full overflow-hidden">
+                  <div className="relative h-2 w-full bg-muted rounded-full overflow-hidden">
                     <motion.div 
-                      className="absolute inset-y-0 left-0 bg-[#0071E3]"
+                      className="absolute inset-y-0 left-0 bg-primary"
                       initial={{ width: '0%' }}
                       animate={{ width: status === 'completed' ? '100%' : `${((currentStep + 1) / progressSteps.length) * 100}%` }}
                     />
@@ -188,15 +190,15 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                         )}
                       >
                         {status === 'completed' || index < currentStep ? (
-                          <CheckCircle2 size={24} className="text-[#34C759]" />
+                          <CheckCircle2 size={24} className="text-green-500" />
                         ) : index === currentStep ? (
-                          <Loader2 size={24} className="text-[#0071E3] animate-spin" />
+                          <Loader2 size={24} className="text-primary animate-spin" />
                         ) : (
-                          <div className="w-6 h-6 border-2 border-[#E5E5EA] rounded-full" />
+                          <div className="w-6 h-6 border-2 border-border rounded-full" />
                         )}
                         <span className={cn(
                           "text-base font-semibold",
-                          index === currentStep ? "text-[#1D1D1F]" : "text-[#6E6E73]"
+                          index === currentStep ? "text-foreground" : "text-muted-foreground"
                         )}>
                           {step}
                         </span>
@@ -208,11 +210,11 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                     <motion.div 
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="mt-6 p-4 bg-[#1D1D1F] rounded-2xl font-mono text-[11px] space-y-1.5 overflow-hidden"
+                      className="mt-6 p-4 bg-foreground rounded-2xl font-mono text-[11px] space-y-1.5 overflow-hidden"
                     >
                       {liveLogs.map((log, i) => (
                         <div key={i} className="flex gap-2">
-                          <span className="text-[#34C759] shrink-0">➜</span>
+                          <span className="text-green-500 shrink-0">➜</span>
                           <span className="text-gray-400 break-all">{log}</span>
                         </div>
                       ))}
@@ -226,8 +228,8 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                       className="pt-6"
                     >
                       <Button 
-                        onClick={onClose}
-                        className="w-full h-14 rounded-2xl bg-[#34C759] hover:bg-[#2FB350] text-white font-bold"
+                        onClick={onViewReport}
+                        className="w-full h-14 rounded-2xl bg-green-500 hover:bg-[#2FB350] text-white font-bold"
                       >
                         View Full Report
                       </Button>
@@ -237,8 +239,8 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
               )}
             </div>
             
-            <div className="bg-[#F5F5F7] rounded-b-[32px] p-6 text-center">
-              <p className="text-sm text-[#6E6E73] font-medium">
+            <div className="bg-muted rounded-b-[32px] p-6 text-center">
+              <p className="text-sm text-muted-foreground font-medium">
                 Our AI agents are scanning thousands of technical sources in real-time.
               </p>
             </div>

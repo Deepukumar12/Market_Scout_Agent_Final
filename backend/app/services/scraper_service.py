@@ -39,7 +39,9 @@ REQUIRED_TECHNICAL_KEYWORDS = re.compile(
     r'launch|product|announce|blog|news|press\s*release|report|'
     r'partnership|acquisition|expansion|growth|strategy|roadmap|'
     r'future|upcoming|milestone|capability|improvement|enhancement|'
-    r'tool|service|software|app|application|solution|innovat)\b',
+    r'tool|service|software|app|application|solution|innovat|'
+    r'pricing|plan|tier|subscription|enterprise|business|model|'
+    r'market|cost|billing|checkout|payment)\b',
     re.I,
 )
 
@@ -374,36 +376,76 @@ async def basic_direct_scrape(url: str) -> Optional[Dict[str, Any]]:
 
 async def scrape_url(url: str) -> Optional[Dict[str, Any]]:
     """
-    Main entry point for scraping.
-    Prioritizes Firecrawl, then falls back to Crawl4AI if Firecrawl fails or returns insufficient content.
+    Step 3 – The multi-tier scraping mesh.
+    Now with Redis caching and PARALLEL fallback for sub-15s performance.
     """
-    try:
-        result = await firecrawl_scrape(url)
-        
-        if result and result.get("content") and len(result["content"].strip()) > 300:
-            logger.info(f"Firecrawl success for {url}")
-            return result
-        else:
-            logger.warning(f"Firecrawl returned invalid/empty content for {url}. Triggering fallback.")
+    if not url: return None
+    start_time = time.perf_counter()
+    
+    # 🟢 1. Cache Check
+    from app.services.cache_service import cache
+    cache_key = f"scrape:{url}"
+    cached = await cache.get(cache_key)
+    if cached:
+        duration = time.perf_counter() - start_time
+        logger.info(f"SCRAPE HIT | CACHE    | {duration:.4f}s | URL: {url[:60]}")
+        return cached
+
+    logger.info(f"SCRAPE REQ | START    | URL: {url[:60]}")
+    
+    # 🔵 2. Parallel Fallback Strategy
+    import asyncio
+    tasks = [
+        asyncio.create_task(firecrawl_scrape(url)),
+        asyncio.create_task(crawl4ai_scrape(url))
+    ]
+    
+    p_start = time.perf_counter()
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED, timeout=25)
+    p_duration = time.perf_counter() - p_start
+    
+    result = None
+    provider = "NONE"
+    for t in done:
+        res = t.result()
+        if res and res.get("content") and len(res["content"].strip()) > 300:
+            result = res
+            provider = res.get("source", "unknown").upper()
+            break
             
-    except Exception as e:
-        logger.error(f"Firecrawl failed with exception {e} for {url}. Triggering fallback.")
-        
-    logger.info(f"Firecrawl failed, switching to Crawl4AI for {url}")
-    fallback_result = await crawl4ai_scrape(url)
+    # Cleanup pending tasks
+    for t in pending: t.cancel()
     
-    if fallback_result and fallback_result.get("content") and len(fallback_result["content"].strip()) > 300:
-        logger.info(f"Crawl4AI success for {url}")
-        return fallback_result
-    
-    logger.info(f"Crawl4AI failed, switching to ScrapingBee for {url}")
-    sb_result = await scrapingbee_scrape(url)
-    if sb_result and sb_result.get("content") and len(sb_result["content"].strip()) > 300:
-        logger.info(f"ScrapingBee success for {url}")
-        return sb_result
+    if result:
+        total_duration = time.perf_counter() - start_time
+        logger.info(f"SCRAPE HIT | {provider:<8} | {total_duration:.4f}s | Parallel Step: {p_duration:.4f}s | URL: {url[:60]}")
+    else:
+        # 🟠 3. Last Resort: ScrapingBee or Direct
+        logger.warning(f"SCRAPE ERR | PARALLEL | {p_duration:.4f}s | Parallel failed, trying fallbacks...")
         
-    logger.info(f"ScrapingBee failed, switching to Basic Direct Scrape for {url}")
-    return await basic_direct_scrape(url)
+        s_start = time.perf_counter()
+        result = await scrapingbee_scrape(url)
+        if not result or len(result.get("content", "").strip()) < 300:
+            result = await basic_direct_scrape(url)
+            provider = "DIRECT"
+        else:
+            provider = "SCRAPE_BEE"
+            
+        total_duration = time.perf_counter() - start_time
+        s_duration = time.perf_counter() - s_start
+        
+        if result:
+            logger.info(f"SCRAPE HIT | {provider:<8} | {total_duration:.4f}s | Fallback Step: {s_duration:.4f}s | URL: {url[:60]}")
+        else:
+            logger.error(f"SCRAPE FAIL| ALL      | {total_duration:.4f}s | URL: {url[:60]}")
+
+    if result:
+        # 🟢 4. Set Cache (24 hours)
+        await cache.set(cache_key, result, expire=86400)
+        
+    return result
+
+import time
 
 
 def filter_by_time_and_technical(

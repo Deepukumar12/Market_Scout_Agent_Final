@@ -11,7 +11,7 @@ import re
 # Database Imports
 from app.core.database import db
 
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_current_user_optional
 from app.models.user import User
 from app.core.datetime_utils import get_now_ist
 from bson import ObjectId
@@ -91,6 +91,24 @@ class MonthlyFeature(BaseModel):
     summary: str = ""
     source_type: str = "News"
 
+class GlobalMetrics(BaseModel):
+    total_competitors: int
+    total_reports: int
+    features_found: int
+    articles_processed: int
+    system_latency: float
+    last_update: datetime
+
+class DashboardOverview(BaseModel):
+    global_metrics: GlobalMetrics
+    innovation_trends: Dict[str, Any]
+    market_comparison: List[Dict[str, Any]]
+    signals: List[Dict[str, Any]]
+    history: List[Dict[str, Any]]
+    monthly_releases: List[MonthlyFeature]
+    mission_briefing: Dict[str, Any]
+    activities: List[Dict[str, Any]]
+
 # Strictly database driven - no fallbacks
 
 # --- RESPONSE UTILS ---
@@ -103,13 +121,6 @@ async def get_user_competitor_names(uid_str: str) -> List[str]:
     return names
 
 # --- MODELS ---
-class GlobalMetrics(BaseModel):
-    total_competitors: int
-    total_reports: int
-    features_found: int
-    articles_processed: int
-    system_latency: float
-    last_update: datetime
 
 class HistoricalFeature(BaseModel):
     name: str = Field(..., alias="feature_name")
@@ -154,7 +165,7 @@ class StrategicPlanRequest(BaseModel):
 async def get_intel_stream(
     limit: int = Query(20, ge=1, le=100),
     q: Optional[str] = Query(None),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Returns a unified stream of intelligence signals (summaries + features) from the database.
@@ -163,10 +174,10 @@ async def get_intel_stream(
     signals = []
     try:
         if db.db is None: await db.connect()
-        uid_str = str(current_user.id)
+        uid_str = str(current_user.id) if current_user else "guest"
         
         # 1. Get user's competitor names (or filter by q if provided)
-        comp_query = {"user_id": uid_str}
+        comp_query = {"user_id": uid_str} if current_user else {}
         if q:
             comp_query["name"] = {"$regex": q, "$options": "i"}
             
@@ -385,18 +396,18 @@ async def get_recommendations(current_user: User = Depends(get_current_user)):
         
     return recommendations
 
-_metrics_cache = {} # Use a dict to store user-specific caches
-METRICS_CACHE_TTL = 300 # 5 minutes
+
 
 @router.get("/global-metrics", response_model=GlobalMetrics)
-async def get_global_metrics(current_user: User = Depends(get_current_user)):
+async def get_global_metrics(current_user: Optional[User] = Depends(get_current_user_optional)):
     """
     Returns real aggregated metrics from the database for the current user.
     """
     start_time = time.perf_counter()
-    uid_str = str(current_user.id)
+    uid_str = str(current_user.id) if current_user else "guest"
     
     # 🟢 Cache Check
+    cache_key = f"global_metrics:{uid_str}"
     cached = await cache.get(cache_key)
     if cached:
         logger.info(f"Serving global metrics from cache for user {uid_str}")
@@ -406,17 +417,19 @@ async def get_global_metrics(current_user: User = Depends(get_current_user)):
         if db.db is None:
             await db.connect()
             
-        uid_str = str(current_user.id)
+        uid_str = str(current_user.id) if current_user else "guest"
         
         # 1. Competitors Count
-        comp_count = await db.db["competitors"].count_documents({"user_id": uid_str})
+        # For guest, show global counts (all users)
+        query = {"user_id": uid_str} if current_user else {}
+        comp_count = await db.db["competitors"].count_documents(query)
         
         # 2. Reports Count
-        report_count = await db.db["reports"].count_documents({"user_id": uid_str})
+        report_count = await db.db["reports"].count_documents(query)
         
         # 3. Articles Processed (Article Summaries)
         # First get competitor names to find relevant summaries
-        cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
+        cursor = db.db["competitors"].find(query, {"name": 1})
         comp_names = [c["name"] for c in await cursor.to_list(length=100)]
         
         article_count = 0
@@ -589,6 +602,75 @@ async def run_predictive_pipeline(current_user: User = Depends(get_current_user)
     except Exception as e:
         logger.error(f"Predictive Pipeline Error: {e}")
         return PredictiveAnalysisResult(top_performers=[], stable_performers=[], trending_predictions=[], analysis_timestamp=get_now_ist())
+
+async def get_reports_history(q: Optional[str], current_user: User) -> List[Dict[str, Any]]:
+    """Helper to fetch historical reports for the dashboard."""
+    uid_str = str(current_user.id)
+    query = {"user_id": uid_str}
+    if q:
+        query["company"] = {"$regex": q, "$options": "i"}
+    
+    cursor = db.db["reports"].find(query).sort("created_at", -1).limit(20)
+    reports = []
+    async for doc in cursor:
+        doc["id"] = str(doc.pop("_id"))
+        reports.append(doc)
+    return reports
+
+async def get_reports_list(q: Optional[str], current_user: User) -> List[Dict[str, Any]]:
+    """Alias for get_reports_history to match potential internal references."""
+    return await get_reports_history(q, current_user)
+
+@router.get("/dashboard-overview", response_model=DashboardOverview)
+async def get_dashboard_overview(
+    q: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Consolidated endpoint to fetch all dashboard data in a single request.
+    Optimizes frontend load time and reduces HTTP overhead.
+    """
+    uid_str = str(current_user.id)
+    cache_key = f"dashboard_overview:{uid_str}:{q or 'global'}"
+    
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        # Run all sub-fetches in parallel
+        # Note: We call the underlying logic functions directly to avoid multiple dependency injections
+        tasks = [
+            get_global_metrics(current_user),
+            get_innovation_trends(current_user),
+            get_market_comparison(current_user),
+            get_intel_stream(q, current_user),
+            get_reports_history(q, current_user),
+            get_monthly_releases(current_user),
+            get_mission_briefing(current_user),
+            get_activity_timeline(q, current_user)
+        ]
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Unpack results with error checking
+        dashboard_data = DashboardOverview(
+            global_metrics=results[0] if not isinstance(results[0], Exception) else GlobalMetrics(total_competitors=0, total_reports=0, features_found=0, articles_processed=0, system_latency=0, last_update=get_now_ist()),
+            innovation_trends=results[1] if not isinstance(results[1], Exception) else {},
+            market_comparison=results[2] if not isinstance(results[2], Exception) else [],
+            signals=results[3]["signals"] if not isinstance(results[3], (Exception, list)) and "signals" in results[3] else [],
+            history=results[4] if not isinstance(results[4], Exception) else [],
+            monthly_releases=results[5] if not isinstance(results[5], Exception) else [],
+            mission_briefing=results[6] if not isinstance(results[6], Exception) else {},
+            activities=results[7] if not isinstance(results[7], Exception) else []
+        )
+        
+        await cache.set(cache_key, dashboard_data, expire=300) # 5m cache
+        return dashboard_data
+        
+    except Exception as e:
+        logger.error(f"Dashboard Overview Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to aggregate dashboard data")
 
 
 # --- SENTIMENT ANALYSIS LOGIC (NEW) ---
@@ -773,33 +855,12 @@ async def export_competitors_pdf(
                 }).sort("release_date", -1)
                 features = await features_cursor.to_list(length=50)
 
-                # --- Zero Empty Policy Enforcement ---
+                # --- Database-Only Policy ---
                 if not signals and not features:
-                    logger.info(f"Injecting fallback intelligence for {name} to ensure continuous data availability.")
-                    # Generate meaningful fallback signals
-                    signals = [
-                        {
-                            "article_summary": f"Autonomous surveillance of {name} indicates a 22% increase in technical volatility across primary cloud vectors.",
-                            "sentiment": "Positive",
-                            "scraped_at": datetime.now() - timedelta(days=2),
-                            "url": f"https://{name.lower()}.com/intelligence-pulse"
-                        },
-                        {
-                            "article_summary": f"Predictive analysis suggests {name} is preparing for a major architecture shift in its agentic framework.",
-                            "sentiment": "Neutral",
-                            "scraped_at": datetime.now() - timedelta(days=4),
-                            "url": f"https://{name.lower()}.com/roadmap-audit"
-                        }
-                    ]
-                    features = [
-                        {
-                            "feature_name": "Edge Intelligence Protocol v4.0",
-                            "technical_summary": f"An unannounced upgrade to {name}'s core infrastructure focused on ultra-low latency response cycles.",
-                            "release_date": (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
-                            "category": "Infrastructure",
-                            "hash_id": f"fallback_{name}_1"
-                        }
-                    ]
+                    logger.info(f"No intelligence found for {name} in the surveillance window.")
+                    # Strictly no fallbacks
+                    signals = []
+                    features = []
 
                 # Sentiment
                 pos = len([s for s in signals if s.get("sentiment") == "Positive"])
@@ -1021,7 +1082,8 @@ async def get_signal_analytics(
             active_regions[region] = active_regions.get(region, 0) + 1
             
         if not active_regions:
-            active_regions = {"North America": random.randint(20, 50), "EMEA": random.randint(10, 25), "APAC": random.randint(5, 15)}
+            # Strictly database driven. If no regions found, return empty.
+            active_regions = {}
             
         geo_activity = []
         for r, c in active_regions.items():
@@ -1113,13 +1175,10 @@ async def get_risk_matrix(current_user: User = Depends(get_current_user)):
                 mitigation_strategy="Review internal capabilities against this feature."
             ))
         
-        # Zero Empty Fallback
+        # Database-Only Policy: If no risks found, return empty list
         if not active_risks:
-            active_risks = [
-                RiskFactor(id="r1", category="Market", risk_name="Competitive Price Squeeze", description="Simulated risk based on market trends.", impact_score=8, probability_score=4, status="Active", mitigation_strategy="Optimize cost structure."),
-                RiskFactor(id="r2", category="Technical", risk_name="Legacy Debt Exposure", description="High maintenance overhead detected.", impact_score=6, probability_score=7, status="Monitoring", mitigation_strategy="Plan refactoring cycle.")
-            ]
-            threat_level = 75
+            active_risks = []
+            threat_level = 0
             
     except Exception as e:
         logger.error(f"Risk Matrix Error: {e}")
@@ -1254,7 +1313,7 @@ async def get_sentiment_analysis(
             elif score < 40: label = "Negative"
             
         if not drivers:
-            drivers = ["Market Expansions", "Core Product Updates"]
+            drivers = []
 
         return SentimentAnalysisResponse(
             overall_score=score,
@@ -1909,25 +1968,5 @@ async def generate_strategic_plan(
 
     except Exception as e:
         logger.error(f"Strategic Plan Error: {e}")
-        # Zero Empty Policy: High-Fidelity Strategic Fallback
-        return StrategicPlan(
-            id=f"plan_fallback_{int(datetime.now().timestamp())}",
-            title=f"Autonomous Expansion Strategy for {comp_name}",
-            summary="Strategic pivot targeting identified gaps in cross-platform technical integration and cloud-native scalability.",
-            impact="Transformational",
-            confidence=92,
-            timeToMarket="4-6 Months",
-            estimatedROI="350%",
-            marketTrigger="Technical surveillance indicates a saturation in legacy deployment models.",
-            marketGap="Lack of unified intelligence-driven orchestration in the current ecosystem.",
-            targetAudience="Enterprise-scale technical decision makers.",
-            coreCapabilities=["Agentic Orchestration", "Real-time Vector Analysis", "Edge-Native Deployment"],
-            implementation=[
-                {"step": "Phase 1: Grid Infiltration", "detail": "Deploy monitoring nodes across primary target verticals."},
-                {"step": "Phase 2: Signal Synthesis", "detail": "Execute deep-layer analysis of competitor technical vectors."},
-                {"step": "Phase 3: Market Disruption", "detail": "Launch high-performance alternatives targeting identified weaknesses."}
-            ],
-            risks=["Rapid competitor retaliation", "Regulatory landscape shifts"],
-            tags=["AI", "Enterprise", "Disruption"],
-            financialProjections=[{"month": f"M{i+1}", "value": 100 + i*50, "cost": 50 + i*10} for i in range(12)]
-        )
+        # Strictly return empty or error state
+        raise HTTPException(status_code=500, detail="Failed to synthesize strategic plan.")

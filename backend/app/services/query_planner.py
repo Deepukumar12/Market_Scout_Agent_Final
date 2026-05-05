@@ -29,17 +29,22 @@ def plan_queries(company_name: str, time_window_days: int = 7) -> List[str]:
     current_month_year = today.strftime("%B %Y")
 
     prompt = f"""
-    You are an expert market research analyst.
-    The user wants to track recent news and updates for the company/organization: "{company}".
+    You are an expert market research analyst for the platform "ScoutIQ".
+    The user wants a deep, real-time intelligence audit for: "{company}".
     
-    Step 1: Identify the industry of this organization (e.g., EdTech, SaaS, Healthcare, Automobile).
-    Step 2: Generate exactly 8 highly specific Google search queries to find their latest news, product launches, partnerships, and future plans published strictly between {past_str} and {today_str}.
+    Step 1: Identify the industry and core business model (SaaS, B2B, Consumer, etc.).
+    Step 2: Generate exactly 8 highly specific search queries to uncover:
+    - Latest product releases and feature updates
+    - Current pricing models, plans, or subscription tiers
+    - Recent strategic partnerships or acquisitions
+    - Technical shifts (APIs, documentation updates, tech stack changes)
+    - Market positioning and recent competitive moves
     
-    Make the queries relevant to their specific industry! If it's an EdTech company, ask about courses and batches. If it's a tech company, ask about APIs and software. 
-    It is highly recommended to include the month/year ("{current_month_year}") directly in some of the queries to force search engines to return recent results.
+    Published strictly between {past_str} and {today_str}.
     
-    Return ONLY a valid JSON list of 8 strings. No markdown, no extra text.
-    Example output: ["query 1", "query 2", ...]
+    Include the month/year ("{current_month_year}") in 3 of the queries to force freshness.
+    
+    Return ONLY a valid JSON list of 8 strings.
     """
     
     try:

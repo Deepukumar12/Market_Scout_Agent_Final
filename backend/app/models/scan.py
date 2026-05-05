@@ -14,7 +14,8 @@ class ScanRequest(BaseModel):
     website: Optional[str] = Field(default=None, description="Optional; used to prioritize domain during search")
     company_url: Optional[str] = Field(default=None, description="Optional; full URL for logo/talent fetching")
     stock_symbol: Optional[str] = Field(default=None, description="Optional; ticker symbol for financial data")
-    time_window_days: int = Field(default=7, ge=1, le=7, description="Strict 7-day retention rule. Only include updates within the last 7 days.")
+    deep_analysis: bool = Field(default=True, description="Whether to perform deep competitor discovery and SWOT")
+    time_window_days: int = Field(default=7, ge=1, le=90, description="Scanning window. Defaults to 7.")
 
 
 class ScanFeature(BaseModel):
@@ -47,7 +48,9 @@ class ScanResponse(BaseModel):
     total_sources_scanned: int
     total_valid_updates: int
     features: List[ScanFeature] = Field(default_factory=list)
-    # Optional GitHub data when GITHUB_TOKEN is set; strengthens intelligence
+    # Optional Deep Analysis Data
+    profile: Optional[Dict[str, Any]] = None
+    discovered_competitors: List[Dict[str, Any]] = Field(default_factory=list)
     github: Optional[Dict[str, Any]] = None
     talent_intelligence: Optional[Dict[str, Any]] = None
     financial_data: Optional[Dict[str, Any]] = None

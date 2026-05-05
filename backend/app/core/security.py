@@ -92,3 +92,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 
     return User(**user_data)
 
+async def get_current_user_optional(token: Optional[str] = Depends(OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False))) -> Optional[User]:
+    """
+    Version of get_current_user that returns None if no token is provided,
+    instead of raising an error.
+    """
+    if not token:
+        return None
+    try:
+        return await get_current_user(token)
+    except:
+        return None
+

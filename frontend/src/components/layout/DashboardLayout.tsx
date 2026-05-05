@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
 import Navbar from '@/components/layout/Navbar';
 import NotificationCenter from '@/components/layout/NotificationCenter';
@@ -11,9 +11,13 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { useIntelStore } from '@/store/intelStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { analyzeCompany } from '@/services/api';
+import { useComponentLogger } from '@/hooks/useComponentLogger';
+import { logger } from '@/lib/logger';
 
 const DashboardLayout = () => {
+  useComponentLogger('DashboardLayout');
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const { refreshAllData } = useIntelStore();
   const { fetchCompetitors } = useCompetitorStore();
   const { fetchNotifications } = useNotificationStore();
@@ -53,29 +57,41 @@ const DashboardLayout = () => {
     fetchCompetitors();
   }, [location.pathname, fetchCompetitors]);
 
+  const [lastReportId, setLastReportId] = useState<string | null>(null);
+
   const handleAnalyze = async (company: string) => {
     setAnalyzeStatus('running');
     setCurrentStep(0);
     setLiveLogs([]);
+    setLastReportId(null);
     
     // 🌐 WebSocket Connection for real-time intelligence feed
     const token = localStorage.getItem('scoutiq_token');
     const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1/ws/logs?token=${token}`);
     
+    logger.info(`WS | CONNECTING | ${company}`, { event: 'WEBSOCKET_CONNECT' });
+
+    ws.onopen = () => logger.info(`WS | CONNECTED | ${company}`, { event: 'WEBSOCKET_OPEN' });
+    ws.onclose = () => logger.info(`WS | DISCONNECTED | ${company}`, { event: 'WEBSOCKET_CLOSE' });
+    ws.onerror = (err) => logger.error(`WS | ERROR | ${company}`, err, { event: 'WEBSOCKET_ERROR' });
+
     ws.onmessage = (event) => {
       const message = event.data;
+      logger.debug(`WS | MSG | ${message}`, { event: 'WEBSOCKET_MESSAGE' });
       setLiveLogs(prev => [...prev, message].slice(-5)); // Keep last 5 logs for cleaner UI
       
       // Map message categories to progress steps
-      if (message.includes('Phase 1')) setCurrentStep(0);
-      else if (message.includes('Phase 2')) setCurrentStep(1);
-      else if (message.includes('Phase 3')) setCurrentStep(2);
-      else if (message.includes('Phase 4')) setCurrentStep(3);
+      if (message.includes('Phase 0')) setCurrentStep(0);
+      else if (message.includes('Phase 1')) setCurrentStep(1);
+      else if (message.includes('Phase 2')) setCurrentStep(2);
+      else if (message.includes('Phase 3')) setCurrentStep(3);
+      else if (message.includes('Phase 4')) setCurrentStep(4);
       else if (message.includes('operation successful')) setCurrentStep(4);
     };
 
     try {
-      await analyzeCompany(company);
+      const data = await analyzeCompany(company);
+      setLastReportId(data.report_id);
       ws.close();
       setCurrentStep(progressSteps.length - 1);
       setAnalyzeStatus('completed');
@@ -86,17 +102,25 @@ const DashboardLayout = () => {
     }
   };
 
+  const handleViewReport = () => {
+    if (lastReportId) {
+      navigate(`/dashboard/reports/${lastReportId}`);
+      handleCloseModal();
+    }
+  };
+
   const handleCloseModal = () => {
     setIsAnalyzeModalOpen(false);
     setTimeout(() => {
       setAnalyzeStatus('idle');
       setCurrentStep(0);
       setLiveLogs([]);
+      setLastReportId(null);
     }, 300);
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-background text-[#1D1D1F] dark:text-foreground font-sans selection:bg-[#0071E3]/20 overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 overflow-x-hidden">
       <Navbar 
         user={user} 
         onAnalyzeClick={() => setIsAnalyzeModalOpen(true)}
@@ -142,6 +166,7 @@ const DashboardLayout = () => {
         isOpen={isAnalyzeModalOpen}
         onClose={handleCloseModal}
         onAnalyze={handleAnalyze}
+        onViewReport={handleViewReport}
         status={analyzeStatus}
         progressSteps={progressSteps}
         currentStep={currentStep}

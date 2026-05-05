@@ -1,5 +1,6 @@
 
 import axios from 'axios';
+import { logger } from '@/lib/logger';
 
 const api = axios.create({
     baseURL: '/api/v1',
@@ -13,15 +14,50 @@ api.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add start time for performance tracking
+    (config as any)._startTime = performance.now();
+    
+    logger.debug(`API_REQ | ${config.method?.toUpperCase()} | ${config.url}`, {
+        event: 'NETWORK_REQUEST',
+        metadata: {
+            params: config.params,
+            data: config.data
+        }
+    });
+    
     return config;
 });
 
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        const duration = performance.now() - (response.config as any)._startTime;
+        logger.perf(`API_RES | ${response.config.method?.toUpperCase()} | ${response.config.url}`, duration, {
+            event: 'NETWORK_RESPONSE',
+            metadata: {
+                status: response.status,
+                data: response.data
+            }
+        });
+        return response;
+    },
     (error) => {
-        if (error.response?.status === 401) {
-            const isAuthEndpoint = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
-            if (!isAuthEndpoint) {
+        const duration = performance.now() - (error.config?._startTime || performance.now());
+        const status = error.response?.status;
+        const url = error.config?.url;
+        
+        logger.error(`API_ERR | ${status || 'TIMEOUT'} | ${url}`, error, {
+            event: 'NETWORK_ERROR',
+            duration,
+            metadata: {
+                response: error.response?.data
+            }
+        });
+
+        if (status === 401) {
+            const isAuthEndpoint = url?.includes('/auth/login') || url?.includes('/auth/register');
+            const isPublicPage = window.location.pathname === '/';
+            if (!isAuthEndpoint && !isPublicPage) {
                 localStorage.removeItem('scoutiq_token');
                 delete api.defaults.headers.common['Authorization'];
                 window.location.href = '/login';
@@ -71,7 +107,7 @@ export const runScan = async (payload: {
 export const analyzeCompany = async (company: string) => {
     // This calls the /analyze endpoint (now under /api/v1 prefix) 
     const response = await api.post('/analyze', { company });
-    return response.data.report;
+    return response.data; // Returns { report_id, report }
 };
 
 export const login = async (email: string, password: string) => {
@@ -194,6 +230,13 @@ export const getMarketComparison = async () => {
 
 export const getMonthlyReleases = async () => {
     const response = await api.get('/intelligence/monthly-releases');
+    return response.data;
+};
+
+export const getDashboardOverview = async (q?: string) => {
+    const response = await api.get('/intelligence/dashboard-overview', {
+        params: q ? { q } : {}
+    });
     return response.data;
 };
 

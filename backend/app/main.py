@@ -1,47 +1,41 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import logging
+import time
+import os
+
+# Structured Logging Setup
+from app.core.logging_config import setup_logging, LogColors
+setup_logging()
+logger = logging.getLogger("app.main")
 
 from app.core.database import db
 from app.api.api import api_router
 from app.api.auth import router as auth_router
-# from app.agent import run_agent # Removed as moved to router
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
+from app.api.telemetry import router as telemetry_router
 from app.core.config import settings
-import sentry_sdk
-
-if settings.SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
-    )
-    logger.info("Sentry initialized for error tracking.")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Connect to DB and Cache
+    logger.info("🦅 MarketScout Agent System Starting Up...")
     await db.connect()
     from app.services.cache_service import cache
     await cache.connect()
     
-    from app.core.config import settings
     from app.services.scheduler_service import start_scheduler as start_old_scheduler
     from app.scheduler.scheduler import init_scheduler, stop_scheduler as stop_daily_scheduler
-    logger.info(f"GEMINI_API_KEY configured: {bool(settings.GEMINI_API_KEY)}")
-    logger.info(f"GROQ_API_KEY configured: {bool(settings.GROQ_API_KEY)} (Llama 3)")
-    logger.info(f"OLLAMA_MODEL configured: {settings.OLLAMA_MODEL} (Local Fallback)")
-    logger.info(f"GITHUB_TOKEN configured: {bool(settings.GITHUB_TOKEN)}")
+    
+    logger.info(f"AI CONFIG | Gemini: {LogColors.GREEN if settings.GEMINI_API_KEY else LogColors.FAIL}{bool(settings.GEMINI_API_KEY)}{LogColors.ENDC}")
+    logger.info(f"AI CONFIG | Groq:   {LogColors.GREEN if settings.GROQ_API_KEY else LogColors.FAIL}{bool(settings.GROQ_API_KEY)}{LogColors.ENDC}")
+    logger.info(f"AI CONFIG | Local:  {LogColors.CYAN}{settings.OLLAMA_MODEL}{LogColors.ENDC}")
+    
     start_old_scheduler()
     await init_scheduler()
+    logger.info("🚀 System Ready for Surveillance.")
     yield
-    # Shutdown: Stop scheduler, disconnect DB
+    logger.info("🛑 System Shutting Down...")
     from app.services.scheduler_service import stop_scheduler
     stop_scheduler()
     stop_daily_scheduler()
@@ -49,13 +43,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="MarketScout Agent Backend", lifespan=lifespan)
 
-# Security and CORS Middleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-import os
-
-# Allow configurable CORS in production, default to all for local dev
+# CORS
 allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -64,30 +53,47 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Performance and Timing Middleware
-import time
-from fastapi import Request
-
+# Advanced Logging & Performance Middleware
 @app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
+async def observability_middleware(request: Request, call_next):
     start_time = time.perf_counter()
-    response = await call_next(request)
-    process_time = time.perf_counter() - start_time
-    response.headers["X-Process-Time"] = str(process_time)
-    logger.info(f"Path: {request.url.path} | Process Time: {process_time:.4f}s")
-    return response
+    method = request.method
+    path = request.url.path
+    
+    # Skip noisy health checks or telemetry logs themselves if needed, 
+    # but here we keep them for "Full Observability"
+    
+    try:
+        response: Response = await call_next(request)
+        duration = time.perf_counter() - start_time
+        status_code = response.status_code
+        
+        # Colorize status
+        status_color = LogColors.GREEN
+        if status_code >= 400: status_color = LogColors.WARNING
+        if status_code >= 500: status_color = LogColors.FAIL
+        
+        # Performance flagging
+        perf_tag = ""
+        if duration > 2.0:
+            perf_tag = f" | {LogColors.FAIL}{LogColors.BOLD}SLOW_API{LogColors.ENDC}"
+        
+        logger.info(
+            f"{method:<7} | {status_color}{status_code}{LogColors.ENDC} | {duration:.4f}s | {path}{perf_tag}"
+        )
+        
+        response.headers["X-Process-Time"] = str(duration)
+        return response
+    except Exception as e:
+        duration = time.perf_counter() - start_time
+        logger.error(f"CRASH   | {LogColors.FAIL}500{LogColors.ENDC} | {duration:.4f}s | {path} | ERROR: {str(e)}")
+        # In a real app, we might re-raise or return a JSON response
+        raise
 
-# Optional: Require allowed hosts in production
-allowed_hosts = os.getenv("ALLOWED_HOSTS", "*").split(",")
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
-
-# Include API Routers
-# api_router includes: /competitors, /reports, /scan, /websockets AND NOW /agent (markdown)
-# All under /api/v1 prefix
+# API Routers
 app.include_router(api_router)
-
-# Include Auth Router
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(telemetry_router, prefix="/api/v1/telemetry", tags=["telemetry"])
 
 @app.get("/")
 def read_root():

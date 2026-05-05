@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import json
+import time
 from typing import Any, Dict, List, Optional
 try:
     from json_repair import repair_json
@@ -140,14 +141,25 @@ Return only the JSON object. No additional text, no markdown blocks.
             "response_format": {"type": "json_object"}
         }
 
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(url, headers=headers, json=body)
-            if resp.status_code >= 400:
-                raise GroqClientError(
-                    f"Groq API error {resp.status_code}: {resp.text[:500]}"
-                )
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+        start_time = time.perf_counter()
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.post(url, headers=headers, json=body)
+                duration = time.perf_counter() - start_time
+                
+                if resp.status_code >= 400:
+                    logger.error(f"AI ERR   | GROQ    | {duration:.4f}s | Status: {resp.status_code} | {resp.text[:200]}")
+                    raise GroqClientError(
+                        f"Groq API error {resp.status_code}: {resp.text[:500]}"
+                    )
+                
+                logger.info(f"AI HIT   | GROQ    | {duration:.4f}s | Model: {self._model}")
+                data = resp.json()
+                return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            duration = time.perf_counter() - start_time
+            logger.error(f"AI FAIL  | GROQ    | {duration:.4f}s | Error: {str(e)}")
+            raise
 
     def _extract_json(self, text: str) -> Dict[str, Any]:
         text = text.strip()

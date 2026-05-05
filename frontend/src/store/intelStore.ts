@@ -81,6 +81,24 @@ export interface ScanReport {
   total_sources_scanned: number;
   total_valid_updates: number;
   features: ScanFeature[];
+  profile?: {
+    business_model: string;
+    market_position: string;
+    core_products: string[];
+    target_audience: string;
+    swot: {
+      strengths: string[];
+      weaknesses: string[];
+      opportunities: string[];
+      threats: string[];
+    };
+  };
+  discovered_competitors: {
+    name: string;
+    url: string;
+    industry: string;
+    difference: string;
+  }[];
 }
 
 interface IntelState {
@@ -117,6 +135,7 @@ interface IntelState {
   runMarketScan: (payload: { company_name: string; website?: string | null; time_window_days?: number }) => Promise<void>;
   analyzeCompany: (company: string) => Promise<void>;
   deleteReport: (reportId: string) => Promise<void>;
+  fetchDashboardOverview: (query?: string) => Promise<void>;
   refreshAllData: (query?: string) => Promise<void>;
   clear: () => void;
 }
@@ -378,6 +397,29 @@ export const useIntelStore = create<IntelState>((set) => ({
         set({ competitors: data });
     } catch(err) {
         console.error("Failed to fetch competitors:", err);
+    }
+  },
+
+  fetchDashboardOverview: async (query?: string) => {
+    set({ loading: true });
+    try {
+      const { getDashboardOverview } = await import('@/services/api');
+      const data = await getDashboardOverview(query);
+      
+      set({
+        globalMetrics: data.global_metrics,
+        innovationTrends: data.innovation_trends,
+        comparisonMatrix: data.market_comparison,
+        signals: data.signals,
+        history: data.history,
+        monthlyReleases: data.monthly_releases,
+        missionBriefing: data.mission_briefing,
+        activities: data.activities,
+        loading: false
+      });
+    } catch (err) {
+      console.error("Failed to fetch dashboard overview:", err);
+      set({ loading: false });
     }
   },
 

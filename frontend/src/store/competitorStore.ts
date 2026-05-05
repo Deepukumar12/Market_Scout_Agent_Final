@@ -48,7 +48,7 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
         try {
             const newOne = await createCompetitor({
                 name,
-                url,
+                url: url || undefined,
                 monitoring_enabled: true,
                 scan_frequency: 'Daily',
             });

@@ -43,14 +43,33 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, onClick, id, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+    
+    // Auto-telemetry for buttons
+    // Auto-observability for buttons
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      const label = typeof children === 'string' ? children : (props as any)["aria-label"] || id || "button";
+      
+      const { logger } = require("@/lib/logger");
+      logger.info(`CLICK | ${label}`, {
+        event: 'USER_INTERACTION',
+        metadata: { id, type: 'button_click' }
+      });
+
+      if (onClick) onClick(e);
+    };
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        onClick={handleClick}
+        id={id}
         {...props}
-      />
+      >
+        {children}
+      </Comp>
     )
   }
 )

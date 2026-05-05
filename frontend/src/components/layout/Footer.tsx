@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-black pt-16 pb-8 relative overflow-hidden">
+    <footer className="border-t border-border bg-card pt-16 pb-8 relative overflow-hidden">
       {/* Background Glow */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-cyan-500/10 blur-[100px] rounded-full pointer-events-none"></div>
 
@@ -17,8 +17,8 @@ export function Footer() {
               <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.5)]">
                 <Zap className="w-5 h-5 text-cyan-400" />
               </div>
-              <span className="text-xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                SCOUT<span className="text-cyan-400">IQ</span>
+              <span className="text-xl font-bold tracking-tighter text-foreground">
+                SCOUT<span className="text-primary">IQ</span>
               </span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
@@ -34,7 +34,7 @@ export function Footer() {
 
           {/* Links Column 1 */}
           <div>
-            <h4 className="font-bold text-white mb-6">Product</h4>
+            <h4 className="font-bold text-foreground mb-6">Product</h4>
             <ul className="space-y-4 text-sm text-gray-400">
               <FooterLink>Features</FooterLink>
               <FooterLink>Integrations</FooterLink>
@@ -46,7 +46,7 @@ export function Footer() {
 
           {/* Links Column 2 */}
           <div>
-            <h4 className="font-bold text-white mb-6">Company</h4>
+            <h4 className="font-bold text-foreground mb-6">Company</h4>
             <ul className="space-y-4 text-sm text-gray-400">
               <FooterLink>About Us</FooterLink>
               <FooterLink>Careers</FooterLink>
@@ -57,9 +57,9 @@ export function Footer() {
           </div>
 
           {/* Founder Column */}
-          <div className="md:col-span-1 border-l border-white/10 pl-8">
-            <h4 className="font-black text-white mb-6 uppercase tracking-[0.2em] text-[10px] italic flex items-center gap-2">
-              <Zap className="w-3 h-3 text-cyan-400" /> Pioneering the <span className="text-cyan-400">Scout IQ</span> Era
+          <div className="md:col-span-1 border-l border-border pl-8">
+            <h4 className="font-black text-foreground mb-6 uppercase tracking-[0.2em] text-[10px] italic flex items-center gap-2">
+              <Zap className="w-3 h-3 text-primary" /> Pioneering the <span className="text-primary">Scout IQ</span> Era
             </h4>
             <div className="space-y-4">
               <p className="text-gray-400 text-xs leading-relaxed italic font-medium">
@@ -70,8 +70,8 @@ export function Footer() {
                   DK
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-white font-black uppercase italic tracking-tighter text-sm">Deepu Kumar</span>
-                  <span className="text-cyan-400 text-[9px] font-bold uppercase tracking-widest leading-none">Architect & Founder</span>
+                  <span className="text-foreground font-black uppercase italic tracking-tighter text-sm">Deepu Kumar</span>
+                  <span className="text-primary text-[9px] font-bold uppercase tracking-widest leading-none">Architect & Founder</span>
                 </div>
               </div>
               <div className="pt-4 space-y-2 border-t border-white/5">
@@ -87,19 +87,19 @@ export function Footer() {
 
           {/* Stay Ahead Column */}
           <div>
-            <h4 className="font-bold text-white mb-6">Connect</h4>
+            <h4 className="font-bold text-foreground mb-6">Connect</h4>
             <div className="flex gap-4 mb-8">
               <SocialIcon href="https://x.com/Deepukumar24" icon={<Twitter className="w-4 h-4" />} />
               <SocialIcon href="https://github.com/Deepukumar12" icon={<Github className="w-4 h-4" />} />
               <SocialIcon href="https://www.linkedin.com/in/deepu-kumar-393564289/" icon={<Linkedin className="w-4 h-4" />} />
               <SocialIcon href="mailto:deeputhakur0986@gmail.com" icon={<Mail className="w-4 h-4" />} />
             </div>
-            <h4 className="font-bold text-white mb-6">Stay Ahead</h4>
+            <h4 className="font-bold text-foreground mb-6">Stay Ahead</h4>
             <div className="flex gap-2">
               <input 
                 type="email" 
                 placeholder="Intelligence Stream" 
-                className="bg-white/5 border border-white/10 rounded-md px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 w-full transition-colors"
+                className="bg-muted border border-border rounded-md px-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 w-full transition-colors"
               />
               <Button variant="neon" size="icon" className="shrink-0">
                 <ArrowRight className="w-4 h-4" />
@@ -110,7 +110,7 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
+        <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
           <p>© 2026 ScoutIQ Inc. & Deepu Kumar. All rights reserved.</p>
           <div className="flex gap-8">
             <a href="#" className="hover:text-cyan-400 transition-colors">Neural Sovereignty</a>

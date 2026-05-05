@@ -1,6 +1,7 @@
 
 import { create } from 'zustand';
 import api, { login, register, getCurrentUser } from '../services/api';
+import { logger } from '@/lib/logger';
 
 interface AuthState {
     user: any | null;
@@ -54,6 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const token = localStorage.getItem('scoutiq_token');
         if (token) {
             if (isTokenExpired(token)) {
+                logger.warn('SESSION | EXPIRED', { event: 'AUTH_SESSION' });
                 localStorage.removeItem('scoutiq_token');
                 set({ token: null, user: null });
                 return;
@@ -67,7 +69,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
                 // Fetch fresh user data from backend
                 get().fetchUser();
+                logger.info(`SESSION | RESTORED | ${decoded.sub || decoded.email}`, { event: 'AUTH_SESSION' });
             } catch (e) {
+                logger.error('SESSION | CORRUPT_TOKEN', e, { event: 'AUTH_SESSION' });
                 localStorage.removeItem('scoutiq_token');
                 set({ token: null, user: null });
             }
@@ -99,8 +103,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             const decoded = parseJwt(token);
             set({ user: decoded, token, loading: false });
+            logger.info(`LOGIN | SUCCESS | ${email}`, { 
+                event: 'AUTH_LOGIN',
+                metadata: { userId: decoded.sub } 
+            });
         } catch (err: any) {
-            console.error("Login error:", err);
+            logger.error(`LOGIN | FAILED | ${email}`, err, { event: 'AUTH_LOGIN' });
             let errorMessage = 'Authentication failed';
             if (err.response && err.response.data && err.response.data.detail) {
                 if (typeof err.response.data.detail === 'string') {
@@ -155,6 +163,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     logout: () => {
+        logger.info('LOGOUT | INITIATED', { event: 'AUTH_LOGOUT' });
         localStorage.removeItem('scoutiq_token');
         delete api.defaults.headers.common['Authorization'];
         set({ user: null, token: null });

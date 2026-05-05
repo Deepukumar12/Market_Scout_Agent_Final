@@ -19,47 +19,47 @@ interface ReportTableProps {
 
 const ReportTable: React.FC<ReportTableProps> = ({ reports, onRowClick }) => {
   return (
-    <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple overflow-hidden">
-      <div className="p-8 border-b border-[#E5E5EA] dark:border-white/10">
-        <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">SURVEILLANCE <span className="text-[#0071E3]">LOGS</span></h3>
+    <div className="bg-card/70 backdrop-blur-xl rounded-[40px] border border-border shadow-apple overflow-hidden">
+      <div className="p-8 border-b border-border">
+        <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter">SURVEILLANCE <span className="text-primary">LOGS</span></h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="bg-[#F5F5F7]/50 dark:bg-white/5">
-              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">ENTITY IDENTIFIER</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">VECTOR COUNT</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">TELEMETRY SOURCES</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">LAST SIGNAL</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]">STATUS</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[#52525B] dark:text-[#A1A1A6] uppercase tracking-[0.2em]"></th>
+            <tr className="bg-muted/50">
+              <th className="px-8 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">ENTITY IDENTIFIER</th>
+              <th className="px-8 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">VECTOR COUNT</th>
+              <th className="px-8 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">TELEMETRY SOURCES</th>
+              <th className="px-8 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">LAST SIGNAL</th>
+              <th className="px-8 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">STATUS</th>
+              <th className="px-8 py-4 text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em]"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E5E5EA] dark:divide-white/5">
+          <tbody className="divide-y divide-border/50">
             {reports.map((report) => (
               <motion.tr 
                 key={report.id}
-                whileHover={{ backgroundColor: 'rgba(245, 245, 247, 0.5)' }}
+                whileHover={{ backgroundColor: 'hsl(var(--muted) / 0.5)' }}
                 onClick={() => onRowClick(report.id)}
-                className="cursor-pointer transition-colors border-b border-[#E5E5EA]/50 last:border-0"
+                className="cursor-pointer transition-colors border-b border-border/50 last:border-0"
               >
                 <td className="px-8 py-5">
-                  <span className="font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">{report.company}</span>
+                  <span className="font-black text-foreground uppercase italic tracking-tighter">{report.company}</span>
                 </td>
-                <td className="px-8 py-5 text-[#4D4D54] dark:text-[#D1D1D6] font-medium italic">{report.featuresFound} VECTORS</td>
-                <td className="px-8 py-5 text-[#4D4D54] dark:text-[#D1D1D6] font-medium italic">{report.sources} SIGNALS</td>
-                <td className="px-8 py-5 text-[#4D4D54] dark:text-[#D1D1D6] font-medium italic text-xs">{report.time}</td>
+                <td className="px-8 py-5 text-muted-foreground font-medium italic">{report.featuresFound} VECTORS</td>
+                <td className="px-8 py-5 text-muted-foreground font-medium italic">{report.sources} SIGNALS</td>
+                <td className="px-8 py-5 text-muted-foreground font-medium italic text-xs">{report.time}</td>
                 <td className="px-8 py-5">
                   <span className={cn(
                     "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                    report.status === 'Completed' ? "border-[#34C759]/20 text-[#34C759] bg-[#34C759]/5" : 
-                    report.status === 'Processing' ? "border-[#0071E3]/20 text-[#0071E3] bg-[#0071E3]/5" : "border-red-500/20 text-red-500 bg-red-500/5"
+                    report.status === 'Completed' ? "border-green-500/20 text-green-500 bg-green-500/5" : 
+                    report.status === 'Processing' ? "border-primary/20 text-primary bg-primary/5" : "border-red-500/20 text-red-500 bg-red-500/5"
                   )}>
                     {report.status}
                   </span>
                 </td>
                 <td className="px-8 py-5 text-right">
-                  <ChevronRight size={18} className="text-[#E5E5EA] inline group-hover:text-[#0071E3] transition-colors" />
+                  <ChevronRight size={18} className="text-muted-foreground/30 inline group-hover:text-primary transition-colors" />
                 </td>
               </motion.tr>
             ))}

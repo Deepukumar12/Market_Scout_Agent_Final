@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom';
 import './index.css';
+import { logger } from '@/lib/logger';
 import LandingPage from './features/landing/LandingPage';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import DashboardPage from '@/features/dashboard/DashboardPage';
@@ -22,6 +23,22 @@ import { LoginForm } from '@/features/auth/LoginForm';
 import { RegisterForm } from '@/features/auth/RegisterForm';
 import { useAuthStore } from '@/store/authStore';
 
+import { TelemetryProvider } from '@/context/TelemetryContext';
+import { useLocation } from 'react-router-dom';
+
+const RouteLogger = () => {
+  const location = useLocation();
+  
+  useEffect(() => {
+    logger.info(`NAV | GOTO | ${location.pathname}`, {
+      event: 'NAVIGATION',
+      metadata: { search: location.search }
+    });
+  }, [location]);
+
+  return null;
+};
+
 const App = () => {
   const initialize = useAuthStore((state) => state.initialize);
 
@@ -29,7 +46,12 @@ const App = () => {
     initialize();
   }, [initialize]);
 
-  return <Outlet />;
+  return (
+    <TelemetryProvider>
+      <RouteLogger />
+      <Outlet />
+    </TelemetryProvider>
+  );
 };
 
 const ProtectedDashboard = () => {
@@ -37,8 +59,8 @@ const ProtectedDashboard = () => {
   
   if (loading) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#F5F5F7] text-[#1D1D1F]">
-        <div className="w-12 h-12 border-4 border-[#0071E3]/20 border-t-[#0071E3] rounded-full animate-spin mb-4" />
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-background text-foreground">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
         <p className="text-[10px] font-black uppercase tracking-widest italic opacity-50">Calibrating Console...</p>
       </div>
     );

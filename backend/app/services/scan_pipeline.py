@@ -25,6 +25,7 @@ from app.services.github_client import fetch_company_github_data, GitHubClientEr
 from app.services.proxycurl_client import proxycurl_client
 from app.services.financial_service import financial_service
 from app.services.notification_service import notification_service
+from app.services.competitor_analysis_service import discover_competitors, analyze_company_profile
 from app.api.websockets import manager as ws_manager
 from app.core.config import settings
 from app.core.logger import agent_logger
@@ -142,12 +143,19 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     scraped_raw = await asyncio.gather(*tasks)
     scraped = [s for s in scraped_raw if s is not None]
 
-    filtered_by_date = filter_by_time_and_technical(scraped, time_window_days)
-    logger.info(
-        "scoutiq_db step=scrape company=%s scraped=%d after_date_filter=%d",
-        company, len(scraped), len(filtered_by_date),
-    )
-    await agent_logger.log(f"Data extraction successful. {len(filtered_by_date)} valid technical updates isolated.", "DATA")
+    # For Deep Analysis, we relax the date filter to capture static pages (pricing, products, docs)
+    # that might not have a visible publish date but are critical for the profile.
+    if request.deep_analysis:
+        filtered_by_date = [s for s in scraped if s.get("content") and len(s["content"].strip()) > 500]
+        logger.info(f"Deep Analysis mode: Bypassing date filter for {company}. Scraped: {len(scraped)}, Kept: {len(filtered_by_date)}")
+        await agent_logger.log(f"Deep analysis mode enabled. Retaining all {len(filtered_by_date)} high-fidelity content nodes.", "DATA")
+    else:
+        filtered_by_date = filter_by_time_and_technical(scraped, time_window_days)
+        logger.info(
+            "scoutiq_db step=scrape company=%s scraped=%d after_date_filter=%d",
+            company, len(scraped), len(filtered_by_date),
+        )
+        await agent_logger.log(f"Data extraction successful. {len(filtered_by_date)} valid technical updates isolated.", "DATA")
 
     # Generate dynamic filter patterns based on industry
     req_regex, blk_regex = generate_filter_patterns(company)
@@ -177,56 +185,65 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         )
 
     # -------------------------------------------------------------------------
-    # STEP 5 – LLM Analysis (HEAVY TOKENS - Local Ollama)
+    # STEP 5 – LLM Analysis (Optimized for Latency)
     # -------------------------------------------------------------------------
     # Token Safeguard: Prevent LLM quota errors (429) by limiting massive payloads.
-    # Free tier limits input tokens. We truncate each article and limit to top 15.
     safe_filtered = filtered[:15]
     for item in safe_filtered:
         if "content" in item and item["content"]:
             item["content"] = item["content"][:3000] + "... [TRUNCATED]"
 
-    await agent_logger.log("Phase 4: Synthesis - Running deep-layer competitive analysis locally (Ollama)...", "SYNTHESIS")
-    # Initiate GitHub and Proxycurl enrichment concurrently with the heavy LLM analysis
-    await agent_logger.log(f"Phase 4.5: Synchronizing technical velocity and talent signals for {company}...", "SEARCH")
+    await agent_logger.log("Phase 4: Synthesis - Running deep-layer competitive analysis...", "SYNTHESIS")
+    
+    # Start metadata tasks in parallel with synthesis
     github_task = asyncio.create_task(fetch_company_github_data(company, max_repos=15, time_window_days=time_window_days))
     
-    # Proxycurl Talent Intel
     talent_task = None
     if settings.PROXYCURL_API_KEY:
         try:
             from urllib.parse import urlparse
             domain = ""
-            if request.company_url:
-                 domain = urlparse(str(request.company_url)).netloc
-            elif request.website:
-                 domain = urlparse(str(request.website)).netloc
-            
-            if domain:
-                 talent_task = asyncio.create_task(proxycurl_client.get_talent_intelligence(domain))
-        except Exception:
-            pass
+            if request.company_url: domain = urlparse(str(request.company_url)).netloc
+            elif request.website: domain = urlparse(str(request.website)).netloc
+            if domain: talent_task = asyncio.create_task(proxycurl_client.get_talent_intelligence(domain))
+        except Exception: pass
 
-    # Financial Intelligence
     financial_task = None
     if request.stock_symbol and (settings.ALPHA_VANTAGE_API_KEY or settings.FINNHUB_API_KEY):
         financial_task = asyncio.create_task(financial_service.get_stock_quote(request.stock_symbol))
 
+    # Parallel Deep Analysis Tasks
+    profile_task = None
+    competitors_task = None
+    if request.deep_analysis:
+        profile_task = asyncio.create_task(analyze_company_profile(company, request.website or ""))
+        competitors_task = asyncio.create_task(discover_competitors(company))
+
+    # Perform Synthesis using the PRIMARY client first (fastest/most capable)
+    # Then fallback to others if needed.
+    out = None
     try:
-        heavy_client = OllamaClient()
-        out = await heavy_client.generate_scan_report(
+        # Use primary client (Gemini/Groq/etc.)
+        out = await client.generate_scan_report(
             competitor_name=company,
             time_window_days=time_window_days,
             scraped_items=safe_filtered,
             scan_date_iso=scan_date_iso,
         )
-        await agent_logger.log("Intelligence report generated locally. Finalizing data integrity checks...", "SYNTHESIS")
+        await agent_logger.log("Intelligence report generated. Finalizing data integrity checks...", "SYNTHESIS")
     except Exception as e:
-        logger.error(f"scoutiq_db step=ollama_heavy_analysis failed: {e}")
-        
-        # Try Groq as first fallback if it's not already the primary client
-        if not isinstance(client, GroqClient):
-            logger.info("Falling back to GROQ for analysis...")
+        logger.error(f"Primary LLM synthesis failed: {e}. Falling back to Ollama/Groq...")
+        try:
+            # Fallback to Ollama (Local)
+            heavy_client = OllamaClient()
+            out = await heavy_client.generate_scan_report(
+                competitor_name=company,
+                time_window_days=time_window_days,
+                scraped_items=safe_filtered,
+                scan_date_iso=scan_date_iso,
+            )
+        except Exception as ollama_e:
+            logger.error(f"Ollama fallback also failed: {ollama_e}. Trying Groq...")
             try:
                 groq_fallback = GroqClient()
                 out = await groq_fallback.generate_scan_report(
@@ -235,39 +252,12 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
                     scraped_items=safe_filtered,
                     scan_date_iso=scan_date_iso,
                 )
-                logger.info("Fallback GROQ analysis succeeded")
-            except Exception as groq_e:
-                logger.error(f"Fallback GROQ analysis also failed: {groq_e}")
-                # Last resort: Gemini
-                logger.info("Falling back to GEMINI for analysis...")
-                try:
-                    out = await client.generate_scan_report(
-                        competitor_name=company,
-                        time_window_days=time_window_days,
-                        scraped_items=safe_filtered,
-                        scan_date_iso=scan_date_iso,
-                    )
-                    logger.info("Fallback GEMINI analysis succeeded")
-                except Exception as fallback_e:
-                    logger.error(f"Fallback GEMINI analysis also failed: {fallback_e}")
-                    github_task.cancel()
-                    return None
-        else:
-            # If Groq was already the client and failed, try Gemini
-            logger.info("Falling back to GEMINI for analysis...")
-            try:
-                gemini_fallback = GeminiClient()
-                out = await gemini_fallback.generate_scan_report(
-                    competitor_name=company,
-                    time_window_days=time_window_days,
-                    scraped_items=safe_filtered,
-                    scan_date_iso=scan_date_iso,
-                )
-                logger.info("Fallback GEMINI analysis succeeded")
-            except Exception as fallback_e:
-                logger.error(f"Fallback GEMINI analysis also failed: {fallback_e}")
-                github_task.cancel()
+            except Exception:
+                logger.critical("All LLM analysis layers failed.")
                 return None
+        except Exception as fallback_e:
+            logger.error(f"Fallback synthesis failed: {fallback_e}")
+            return None
 
     source_map = {item["url"]: item for item in filtered}
     
@@ -378,6 +368,20 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         except Exception as e:
             logger.warning(f"Financial data skipped: {e}")
 
+    profile_data = None
+    if profile_task:
+        try:
+            profile_data = await profile_task
+        except Exception as e:
+            logger.warning(f"Profile synthesis failed: {e}")
+
+    discovered_comps = []
+    if competitors_task:
+        try:
+            discovered_comps = await competitors_task
+        except Exception as e:
+            logger.warning(f"Competitor discovery failed: {e}")
+
     await agent_logger.log("Market Scout operation successful. Results synchronized.", "SYSTEM")
     
     # --- ENTERPRISE BROADCAST ---
@@ -404,6 +408,8 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         total_sources_scanned=total_sources_scanned,
         total_valid_updates=len(fixed_features),
         features=fixed_features,
+        profile=profile_data,
+        discovered_competitors=discovered_comps,
         github=github_data,
         talent_intelligence=talent_data,
         financial_data=financial_data,

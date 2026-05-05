@@ -23,34 +23,35 @@ async def analyze_company(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Triggers the MarketScout agent to analyze a company. Requires authentication.
-    Saves the company as a Competitor if not already tracked.
-    Returns a Markdown report.
+    Triggers the MarketScout agent to perform a deep, real-time analysis of a company.
+    Uses the full intelligence pipeline (Phase 0-4) with deep discovery enabled.
     """
+    print(f"DEBUG: /analyze endpoint hit by {current_user.email} for {request.company}")
+    logger.info(f"DEBUG: /analyze endpoint hit by {current_user.email} for {request.company}")
     try:
         company_name = request.company.strip()
         if not company_name:
             raise HTTPException(status_code=400, detail="Company name is required")
             
-        logger.info(f"User {current_user.email} trigger analysis for: {company_name}")
+        logger.info(f"User {current_user.email} triggering DEEP analysis for: {company_name}")
+        await agent_logger.log(f"Phase 0: Initializing deep intelligence probe for {company_name}...", "SYSTEM")
 
-        # 1. Save/Update Competitor in DB
+        # 1. Ensure Competitor exists in DB
         database = await get_database()
         collection = database["competitors"]
         
-        # Check if already exists for this user (Case-insensitive)
         existing = await collection.find_one({
             "name": {"$regex": f"^{re.escape(company_name)}$", "$options": "i"}, 
             "user_id": str(current_user.id)
         })
         
+        comp_id = None
         if not existing:
-            # Create new competitor
             new_comp = {
-                "name": company_name, # Use the casing provided by user or title case? user provided better for now.
+                "name": company_name,
                 "url": None, 
                 "user_id": str(current_user.id),
-                "status": CompetitorStatus.SCANNING.value, # Store as string
+                "status": CompetitorStatus.SCANNING.value,
                 "monitoring_enabled": True,
                 "scan_frequency": "Daily",
                 "created_at": datetime.utcnow(),
@@ -59,43 +60,63 @@ async def analyze_company(
                 "risk_score": 0.0,
                 "confidence_score": 0.0
             }
-            await collection.insert_one(new_comp)
+            res = await collection.insert_one(new_comp)
+            comp_id = res.inserted_id
             logger.info(f"Created new competitor record for {company_name}")
         else:
-            # Update existing
+            comp_id = existing["_id"]
             await collection.update_one(
-                {"_id": existing["_id"]},
+                {"_id": comp_id},
                 {"$set": {
                     "last_scan": datetime.utcnow(),
                     "status": CompetitorStatus.SCANNING.value
                 }}
             )
 
-        # 2. Run agent asynchronously via modern pipeline
-        scan_req = ScanRequest(company_name=company_name, time_window_days=7)
-        await run_scan(scan_req)
-        report = f"Intelligence scan for {company_name} complete."
-        
-        # 3. Update status to Active and perhaps save the report snippet if we had a field
-        await collection.update_one(
-            # Update by ID to be safe since we searched by regex
-            {"_id": existing["_id"] if existing else (await collection.find_one({"name": company_name, "user_id": str(current_user.id)}))["_id"]},
-            {"$set": {"status": CompetitorStatus.ACTIVE.value}}
+        # 2. Run the full intelligence pipeline with DEEP ANALYSIS
+        # We use a 30-day window for initial analysis to get more historical context
+        scan_req = ScanRequest(
+            company_name=company_name, 
+            time_window_days=30,
+            deep_analysis=True
         )
         
-        return {"report": report}
+        report = await run_scan(scan_req)
+        
+        if not report:
+            raise Exception("Intelligence pipeline returned no results.")
+
+        # 3. Save the report to the reports collection (Persistence)
+        # We also update the competitor status to ACTIVE
+        report_data = report.model_dump()
+        report_data["user_id"] = str(current_user.id)
+        report_data["competitor_id"] = str(comp_id)
+        report_data["timestamp"] = datetime.utcnow()
+        
+        await database["reports"].insert_one(report_data)
+        
+        await collection.update_one(
+            {"_id": comp_id},
+            {"$set": {
+                "status": CompetitorStatus.ACTIVE.value,
+                "last_scan": datetime.utcnow()
+            }}
+        )
+        
+        await agent_logger.log(f"Deep analysis for {company_name} finalized and persisted.", "SYSTEM")
+        
+        return {
+            "report_id": str(report_id),
+            "report": report
+        }
         
     except Exception as e:
         logger.error(f"Error analyzing company: {e}")
-        # Try to set status to Failed if possible
         try:
              database = await get_database()
-             # We need to find the ID again if we don't have 'existing' or if we just inserted it. 
-             # Simplification: Try update by name/user_id
              await database["competitors"].update_one(
                 {"name": request.company.strip(), "user_id": str(current_user.id)},
                 {"$set": {"status": CompetitorStatus.FAILED.value}}
              )
-        except:
-            pass
+        except: pass
         raise HTTPException(status_code=500, detail=str(e))

@@ -158,16 +158,16 @@ const SettingsPage = () => {
    return (
       <div className="relative max-w-5xl mx-auto space-y-8 pb-20 p-6">
          {/* Background Decor */}
-         <div className="pointer-events-none absolute -top-40 left-0 w-96 h-96 bg-[#0071E3]/5 dark:bg-[#0071E3]/10 blur-[100px]" />
+         <div className="pointer-events-none absolute -top-40 left-0 w-96 h-96 bg-primary/5 dark:bg-primary/10 blur-[100px]" />
 
          {/* Header */}
          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-               <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white tracking-tight mb-2 flex items-center gap-3 uppercase italic leading-tight">
-                  <Settings className="w-8 h-8 text-[#0071E3]" />
+               <h1 className="text-3xl font-black text-foreground  tracking-tight mb-2 flex items-center gap-3 uppercase italic leading-tight">
+                  <Settings className="w-8 h-8 text-primary" />
                   Console <span className="text-[#AF52DE]">Settings</span>
                </h1>
-               <p className="text-[#6E6E73] dark:text-[#86868B] text-lg font-medium italic">
+               <p className="text-muted-foreground dark:text-muted-foreground text-lg font-medium italic">
                   Configure your autonomous surveillance parameters and security.
                </p>
             </div>
@@ -178,7 +178,7 @@ const SettingsPage = () => {
                   disabled={loading}
                   className={cn(
                      "font-black uppercase tracking-widest text-[10px] h-12 px-8 transition-all rounded-[20px] shadow-2xl backdrop-blur-md",
-                     success ? "bg-emerald-500/90 hover:bg-emerald-600 text-white shadow-emerald-500/30" : "bg-[#0071E3]/90 hover:bg-[#0077ED] text-white shadow-[#0071E3]/40"
+                     success ? "bg-emerald-500/90 hover:bg-emerald-600 text-white shadow-emerald-500/30" : "bg-primary/90 hover:bg-[#0077ED] text-white shadow-[#0071E3]/40"
                   )}
                >
                   {loading ? (
@@ -205,17 +205,17 @@ const SettingsPage = () => {
 
             {/* Profile Column */}
             <div className="lg:col-span-1 space-y-6">
-               <SectionCard title="Profile Information" icon={<User className="w-5 h-5 text-[#0071E3]" />}>
+               <SectionCard title="Profile Information" icon={<User className="w-5 h-5 text-primary" />}>
                   <div className="flex flex-col items-center py-6 text-center space-y-4">
-                     <div className="w-24 h-24 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 flex items-center justify-center text-3xl font-black text-[#0071E3] shadow-inner uppercase italic">
+                     <div className="w-24 h-24 rounded-full bg-muted dark:bg-muted/50 border border-border  flex items-center justify-center text-3xl font-black text-primary shadow-inner uppercase italic">
                         {user?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
                      </div>
                      <div>
-                        <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">{user?.full_name || 'User'}</h3>
-                        <p className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase tracking-[0.2em]">{user?.email}</p>
+                        <h3 className="text-xl font-black text-foreground  uppercase italic tracking-tighter">{user?.full_name || 'User'}</h3>
+                        <p className="text-[10px] text-muted-foreground  font-mono uppercase tracking-[0.2em]">{user?.email}</p>
                      </div>
                      <div className="flex gap-2 pt-2">
-                        <span className="px-3 py-1 rounded-full bg-[#0071E3]/10 border border-[#0071E3]/20 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
+                        <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black text-primary uppercase tracking-wider">
                            {user?.role || 'Intelligence Plan'}
                         </span>
                         <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center gap-1">
@@ -224,7 +224,7 @@ const SettingsPage = () => {
                      </div>
                   </div>
 
-                  <div className="pt-6 border-t border-[#E5E5EA] dark:border-white/10 w-full space-y-4">
+                  <div className="pt-6 border-t border-border  w-full space-y-4">
                      <Button variant="outline" onClick={logout} className="w-full border-rose-500/30 text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl">
                         <LogOut className="w-4 h-4 mr-2" />
                         Sign Out
@@ -236,7 +236,7 @@ const SettingsPage = () => {
                <SectionCard title="Surveillance Ops" icon={<Sparkles className="w-5 h-5 text-[#AF52DE]" />}>
                   <div className="space-y-6">
                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Scan Window</label>
+                        <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Scan Window</label>
                         <div className="grid grid-cols-3 gap-2">
                            {[7, 30, 90].map(days => (
                               <button
@@ -245,8 +245,8 @@ const SettingsPage = () => {
                                  className={cn(
                                     "py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
                                     preferences.scanWindow === days
-                                       ? "bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] border-transparent shadow-apple"
-                                       : "bg-transparent border-[#E5E5EA] dark:border-white/10 text-[#6E6E73] hover:text-[#1D1D1F] dark:hover:text-white"
+                                       ? "bg-foreground dark:bg-white text-white dark:text-foreground border-transparent shadow-apple"
+                                       : "bg-transparent border-border  text-muted-foreground hover:text-foreground dark:hover:text-white"
                                  )}
                               >
                                  {days} Days
@@ -268,69 +268,69 @@ const SettingsPage = () => {
             <div className="lg:col-span-2 space-y-6">
 
                {/* User Profile Update */}
-               <SectionCard title="Update Profile" icon={<User className="w-5 h-5 text-[#0071E3]" />}>
+               <SectionCard title="Update Profile" icon={<User className="w-5 h-5 text-primary" />}>
                   <form onSubmit={handleProfileUpdate} className="space-y-6">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Full Name</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Full Name</label>
                            <input
                               type="text"
                               value={profileForm.full_name}
                               onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-bold text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                               placeholder="Your full name"
                            />
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Email Address</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Email Address</label>
                            <input
                               type="email"
                               value={profileForm.email}
                               onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-bold text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                               placeholder="Your email"
                            />
                         </div>
                      </div>
-                     <Button type="submit" disabled={loading} className="w-fit bg-[#0071E3] hover:bg-[#0077ED] text-white font-black uppercase tracking-widest text-[10px] h-10 px-8 rounded-xl">
+                     <Button type="submit" disabled={loading} className="w-fit bg-primary hover:bg-[#0077ED] text-white font-black uppercase tracking-widest text-[10px] h-10 px-8 rounded-xl">
                         Update Profile
                      </Button>
                   </form>
                </SectionCard>
 
                {/* Password Change */}
-               <SectionCard title="Change Password" icon={<ShieldCheck className="w-5 h-5 text-[#FF3B30]" />}>
+               <SectionCard title="Change Password" icon={<ShieldCheck className="w-5 h-5 text-red-500" />}>
                   <form onSubmit={handlePasswordChange} className="space-y-6">
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Current Password</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Current Password</label>
                            <input
                               type="password"
                               value={passwordForm.current_password}
                               onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-bold text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                               placeholder="••••••••"
                               autoComplete="current-password"
                            />
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">New Password</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">New Password</label>
                            <input
                               type="password"
                               value={passwordForm.new_password}
                               onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-bold text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                               placeholder="••••••••"
                               autoComplete="new-password"
                            />
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Confirm New Password</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Confirm New Password</label>
                            <input
                               type="password"
                               value={passwordForm.confirm_password}
                               onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-bold text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                               placeholder="••••••••"
                               autoComplete="new-password"
                            />
@@ -348,21 +348,21 @@ const SettingsPage = () => {
                   <div className="space-y-6">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Refresh Interval</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Refresh Interval</label>
                            <input
                               type="number"
                               min="1"
                               value={schedulerConfig.interval_value}
                               onChange={(e) => setSchedulerConfig({ ...schedulerConfig, interval_value: parseInt(e.target.value) || 1 })}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-bold text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                            />
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Time Unit</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Time Unit</label>
                            <select
                               value={schedulerConfig.interval_unit}
                               onChange={(e) => setSchedulerConfig({ ...schedulerConfig, interval_unit: e.target.value })}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-bold text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                            >
                               <option value="minutes">Minutes</option>
                               <option value="hours">Hours</option>
@@ -370,22 +370,22 @@ const SettingsPage = () => {
                            </select>
                         </div>
                      </div>
-                     <p className="text-[10px] text-[#6E6E73] dark:text-[#86868B] italic leading-relaxed">
+                     <p className="text-[10px] text-muted-foreground dark:text-muted-foreground italic leading-relaxed">
                         Set how often the autonomous Market Scout agent should scan for updates. Changes are applied dynamically to the background APScheduler.
                      </p>
                   </div>
                </SectionCard>
 
                {/* New Section: Scout AI Core */}
-               <SectionCard title="Scout AI Core" icon={<Settings className="w-5 h-5 text-[#0071E3]" />}>
+               <SectionCard title="Scout AI Core" icon={<Settings className="w-5 h-5 text-primary" />}>
                   <div className="space-y-8">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Model Intelligence</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Model Intelligence</label>
                            <select
                               value={preferences.llmProvider}
                               onChange={(e) => handleSelect('llmProvider', e.target.value)}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-bold text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                            >
                               <option value="ollama">Ollama (Llama-3 Local)</option>
                               <option value="groq">Groq (Ultra Speed)</option>
@@ -393,8 +393,8 @@ const SettingsPage = () => {
                            </select>
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Technical Depth</label>
-                           <div className="flex bg-[#F5F5F7] dark:bg-[#2C2C2E] p-1 rounded-xl">
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Technical Depth</label>
+                           <div className="flex bg-muted dark:bg-muted/50 p-1 rounded-xl">
                               {['low', 'medium', 'high'].map((level) => (
                                  <button
                                     key={level}
@@ -402,8 +402,8 @@ const SettingsPage = () => {
                                     className={cn(
                                        "flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
                                        preferences.scoutDepth === level
-                                          ? "bg-white dark:bg-[#1D1D1F] text-[#0071E3] shadow-apple-sm"
-                                          : "text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white"
+                                          ? "bg-card text-primary shadow-apple-sm"
+                                          : "text-muted-foreground hover:text-foreground dark:hover:text-white"
                                     )}
                                  >
                                     {level}
@@ -413,7 +413,7 @@ const SettingsPage = () => {
                         </div>
                      </div>
 
-                     <div className="p-4 rounded-2xl bg-[#0071E3]/5 border border-[#0071E3]/10 text-xs font-medium italic text-[#0071E3] leading-relaxed">
+                     <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 text-xs font-medium italic text-primary leading-relaxed">
                         Note: Higher intelligence levels consume more processing tokens and increase scan latency by approximately 45%.
                      </div>
                   </div>
@@ -466,28 +466,28 @@ const SettingsPage = () => {
                   <form onSubmit={(e) => { e.preventDefault(); saveSettings(); }} className="space-y-6">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Gemini API Key</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Gemini API Key</label>
                            <input
                               type="password"
                               value={apiConfig.geminiKey}
                               onChange={(e) => setApiConfig({ ...apiConfig, geminiKey: e.target.value })}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-mono text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                               autoComplete="off"
                            />
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Groq API Key</label>
+                           <label className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] italic">Groq API Key</label>
                            <input
                               type="password"
                               value={apiConfig.groqKey}
                               onChange={(e) => setApiConfig({ ...apiConfig, groqKey: e.target.value })}
-                              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                              className="w-full bg-muted dark:bg-muted/50 border border-border  rounded-xl px-4 py-3 text-sm font-mono text-foreground  outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                               autoComplete="off"
                            />
                         </div>
                      </div>
                      <div className="flex justify-between items-center">
-                        <p className="text-[10px] text-[#6E6E73] dark:text-[#86868B] italic leading-relaxed">
+                        <p className="text-[10px] text-muted-foreground dark:text-muted-foreground italic leading-relaxed">
                            API keys are encrypted at rest and never exposed in the browser console. Masked for your security.
                         </p>
                         <Button type="submit" disabled={loading} className="w-fit bg-[#AF52DE] hover:bg-[#9F42CE] text-white font-black uppercase tracking-widest text-[10px] h-10 px-8 rounded-xl">
@@ -498,11 +498,11 @@ const SettingsPage = () => {
                </SectionCard>
 
                {/* Danger Zone */}
-               <SectionCard title="Danger Zone" icon={<AlertTriangle className="w-5 h-5 text-[#FF3B30]" />}>
+               <SectionCard title="Danger Zone" icon={<AlertTriangle className="w-5 h-5 text-red-500" />}>
                   <div className="p-6 rounded-[32px] bg-rose-500/5 border border-rose-500/10 flex flex-col md:flex-row items-center justify-between gap-6">
                      <div className="space-y-1 text-center md:text-left">
-                        <h3 className="text-sm font-black text-[#FF3B30] uppercase italic tracking-tighter">Deactivate Sentinel Account</h3>
-                        <p className="text-xs text-[#6E6E73] dark:text-[#86868B] max-w-sm leading-relaxed font-medium italic">
+                        <h3 className="text-sm font-black text-red-500 uppercase italic tracking-tighter">Deactivate Sentinel Account</h3>
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground max-w-sm leading-relaxed font-medium italic">
                            Permanently delete your profile and all intelligence archives. This action is irreversible.
                         </p>
                      </div>
@@ -516,15 +516,15 @@ const SettingsPage = () => {
                </SectionCard>
 
                {/* Session Data */}
-               <div className="rounded-[40px] border border-[#E5E5EA] dark:border-white/10 bg-white/60 dark:bg-[#1D1D1F]/60 p-10 flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-xl shadow-apple shadow-sm">
+               <div className="rounded-[40px] border border-border  bg-card/60 p-10 flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-xl shadow-apple shadow-sm">
                   <div>
-                     <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1">Session Protocol ID</p>
-                     <p className="text-sm text-[#1D1D1F] dark:text-white font-mono break-all font-bold tracking-tighter">
+                     <p className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] mb-1">Session Protocol ID</p>
+                     <p className="text-sm text-foreground  font-mono break-all font-bold tracking-tighter">
                         {user?.id || 'ANONYMOUS-SESSION'}
                      </p>
                   </div>
                   <div className="text-right">
-                     <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1">Last Protocol Pulse</p>
+                     <p className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] mb-1">Last Protocol Pulse</p>
                      <p className="text-xl text-emerald-600 dark:text-emerald-400 font-black italic tracking-tighter">
                         {currentTime}
                      </p>
@@ -548,7 +548,7 @@ const SettingsPage = () => {
                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
                      animate={{ opacity: 1, scale: 1, y: 0 }}
                      exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                     className="relative w-full max-w-md bg-white dark:bg-[#1D1D1F] rounded-[40px] p-12 border border-white/10 shadow-2xl overflow-hidden"
+                     className="relative w-full max-w-md bg-card rounded-[40px] p-12 border border-white/10 shadow-2xl overflow-hidden"
                   >
                      <div className="absolute -top-24 -right-24 w-64 h-64 bg-rose-500/10 blur-[80px]" />
                      <div className="space-y-8 text-center">
@@ -556,8 +556,8 @@ const SettingsPage = () => {
                            <AlertTriangle className="w-10 h-10 text-rose-500" />
                         </div>
                         <div className="space-y-4">
-                           <h2 className="text-2xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Confirm Deletion</h2>
-                           <p className="text-sm text-[#6E6E73] dark:text-[#86868B] leading-relaxed font-medium italic">
+                           <h2 className="text-2xl font-black text-foreground  uppercase italic tracking-tighter">Confirm Deletion</h2>
+                           <p className="text-sm text-muted-foreground dark:text-muted-foreground leading-relaxed font-medium italic">
                               Are you absolutely certain? This will wipe your entire competitive intelligence history, saved targets, and analytical reports.
                            </p>
                         </div>
@@ -591,13 +591,13 @@ const SectionCard = ({ title, icon, children }: { title: string, icon: any, chil
       initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="p-10 rounded-[40px] border border-[#E5E5EA] dark:border-white/10 bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl space-y-6 shadow-apple shadow-sm"
+      className="p-10 rounded-[40px] border border-border  bg-card/70 backdrop-blur-xl space-y-6 shadow-apple shadow-sm"
    >
-      <div className="flex items-center gap-3 pb-4 border-b border-[#F5F5F7] dark:border-white/5">
-         <div className="p-2 rounded-lg bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10">
+      <div className="flex items-center gap-3 pb-4 border-b border-muted ">
+         <div className="p-2 rounded-lg bg-muted dark:bg-muted/50 border border-border ">
             {icon}
          </div>
-         <h2 className="text-lg font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">{title}</h2>
+         <h2 className="text-lg font-black text-foreground  uppercase italic tracking-tighter">{title}</h2>
       </div>
       {children}
    </motion.div>
@@ -606,10 +606,10 @@ const SectionCard = ({ title, icon, children }: { title: string, icon: any, chil
 const SettingRow = ({ label, description, checked, onToggle }: { label: string, description: string, checked: boolean, onToggle: () => void }) => (
    <div className="flex items-start justify-between gap-4 py-1">
       <div className="space-y-1">
-         <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">{label}</h3>
-         <p className="text-xs text-[#6E6E73] dark:text-[#86868B] max-w-sm leading-relaxed font-medium italic">{description}</p>
+         <h3 className="text-sm font-black text-foreground  uppercase italic tracking-tighter">{label}</h3>
+         <p className="text-xs text-muted-foreground dark:text-muted-foreground max-w-sm leading-relaxed font-medium italic">{description}</p>
       </div>
-      <Switch checked={checked} onCheckedChange={onToggle} className="data-[state=checked]:bg-[#0071E3]" />
+      <Switch checked={checked} onCheckedChange={onToggle} className="data-[state=checked]:bg-primary" />
    </div>
 );
 

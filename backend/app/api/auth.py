@@ -88,18 +88,16 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         query_end = time.perf_counter()
 
         logger.info(
-            f"LOGIN: user={form_data.username}, "
-            f"db_connect_ms={(db_end - db_start)*1000:.1f}, "
-            f"query_ms={(query_end - query_start)*1000:.1f}, "
-            f"found={user is not None}"
+            f"AUTH REQ   | LOGIN   | {form_data.username} | "
+            f"db_ms={(db_end - db_start)*1000:.1f} | "
+            f"query_ms={(query_end - query_start)*1000:.1f}"
         )
 
         verify_start = time.perf_counter()
         if not user or not verify_password(form_data.password, user["hashed_password"]):
             verify_end = time.perf_counter()
             logger.warning(
-                f"LOGIN FAILED: user={form_data.username}, "
-                f"password_check_ms={(verify_end - verify_start)*1000:.1f}"
+                f"AUTH FAIL  | LOGIN   | {form_data.username} | Invalid credentials"
             )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -123,9 +121,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
         total_ms = (time.perf_counter() - start) * 1000
         logger.info(
-            f"LOGIN SUCCESS: user={user['email']}, "
-            f"password_check_ms={(verify_end - verify_start)*1000:.1f}, "
-            f"total_ms={total_ms:.1f}"
+            f"AUTH HIT   | LOGIN   | {user['email']} | total_ms={total_ms:.1f}"
         )
 
         return {"access_token": access_token, "token_type": "bearer"}

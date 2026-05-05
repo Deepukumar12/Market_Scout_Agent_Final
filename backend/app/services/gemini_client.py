@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import json
+import time
 from typing import Any, Dict, List, Optional
 try:
     from json_repair import repair_json
@@ -374,14 +375,25 @@ Return only the JSON object. No additional text or explanation.
         Call the official Gemini Generative Language API via generateContent.
         """
         url = f"{self._base_url}/models/{self._model}:generateContent?key={self._api_key}"
+        start_time = time.perf_counter()
 
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(url, json=body)
-            if resp.status_code >= 400:
-                raise GeminiClientError(
-                    f"Gemini API error {resp.status_code}: {resp.text[:500]}"
-                )
-            return resp.json()
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.post(url, json=body)
+                duration = time.perf_counter() - start_time
+                
+                if resp.status_code >= 400:
+                    logger.error(f"AI ERR   | GEMINI  | {duration:.4f}s | Status: {resp.status_code} | {resp.text[:200]}")
+                    raise GeminiClientError(
+                        f"Gemini API error {resp.status_code}: {resp.text[:500]}"
+                    )
+                
+                logger.info(f"AI HIT   | GEMINI  | {duration:.4f}s | Model: {self._model}")
+                return resp.json()
+        except Exception as e:
+            duration = time.perf_counter() - start_time
+            logger.error(f"AI FAIL  | GEMINI  | {duration:.4f}s | Error: {str(e)}")
+            raise
 
     def _extract_json_from_response(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         """
