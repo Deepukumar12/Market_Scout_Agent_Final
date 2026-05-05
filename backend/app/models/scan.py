@@ -14,7 +14,7 @@ class ScanRequest(BaseModel):
     website: Optional[str] = Field(default=None, description="Optional; used to prioritize domain during search")
     company_url: Optional[str] = Field(default=None, description="Optional; full URL for logo/talent fetching")
     stock_symbol: Optional[str] = Field(default=None, description="Optional; ticker symbol for financial data")
-    time_window_days: int = Field(default=7, ge=1, le=30, description="Only include updates within this many days")
+    time_window_days: int = Field(default=7, ge=1, le=7, description="Strict 7-day retention rule. Only include updates within the last 7 days.")
 
 
 class ScanFeature(BaseModel):

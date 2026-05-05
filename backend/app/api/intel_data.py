@@ -176,8 +176,12 @@ async def get_intel_stream(
         comp_names = list(comp_map.keys())
         
         if comp_names:
+            seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
             # 2. Fetch from article_summaries (Raw Signals)
-            summary_query = {"query_tag": {"$in": comp_names}}
+            summary_query = {
+                "query_tag": {"$in": comp_names},
+                "scraped_at": {"$gte": seven_days_ago}
+            }
             summaries_cursor = db.db["article_summaries"].find(summary_query).sort("created_at", -1).limit(limit)
             async for s in summaries_cursor:
                 sent = s.get("sentiment", "Neutral")
@@ -208,7 +212,10 @@ async def get_intel_stream(
 
             # 3. Fetch from feature_updates (Refined technical updates)
             # These are generated during every scan and are high-quality
-            feature_query = {"company_name": {"$in": comp_names}}
+            feature_query = {
+                "company_name": {"$in": comp_names},
+                "created_at": {"$gte": seven_days_ago}
+            }
             features_cursor = db.db["feature_updates"].find(feature_query).sort("created_at", -1).limit(limit)
             async for f in features_cursor:
                 full_url = f.get("source_url", "https://scoutiq.ai")
