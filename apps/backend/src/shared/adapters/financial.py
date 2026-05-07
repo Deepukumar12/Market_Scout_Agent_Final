@@ -97,3 +97,34 @@ class FinnhubAdapter(BaseAdapter):
             "open": raw.get("o"),
             "previous_close": raw.get("pc")
         }
+
+class FMPAdapter(BaseAdapter):
+    """
+    Adapter for Financial Modeling Prep (Deep financial statements).
+    """
+    def __init__(self):
+        super().__init__("FinancialModelingPrep", settings.FMP_API_KEY)
+
+    async def fetch(self, symbol: str, **kwargs) -> Optional[Dict[str, Any]]:
+        # Default to profile for basic company health
+        url = f"https://financialmodelingprep.com/api/v3/profile/{symbol}?apikey={self.api_key}"
+        response = await self.client.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            return data[0] if isinstance(data, list) and data else None
+        return None
+
+    def normalize(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "mkt_cap": raw.get("mktCap"),
+            "price": raw.get("price"),
+            "beta": raw.get("beta"),
+            "last_div": raw.get("lastDiv"),
+            "range": raw.get("range"),
+            "changes": raw.get("changes"),
+            "company_name": raw.get("companyName"),
+            "currency": raw.get("currency"),
+            "exchange": raw.get("exchange"),
+            "sector": raw.get("sector")
+        }
+

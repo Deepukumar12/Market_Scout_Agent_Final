@@ -38,17 +38,33 @@ class CompanyAdapter(BaseAdapter):
             "location": f"{raw.get('geo', {}).get('city')}, {raw.get('geo', {}).get('country')}",
             "metrics": {
                 "employees": raw.get("metrics", {}).get("employees"),
-                "market_cap": raw.get("metrics", {}).get("marketCap"),
                 "raised": raw.get("metrics", {}).get("raised"),
-                "estimated_annual_revenue": raw.get("metrics", {}).get("estimatedAnnualRevenue"),
-            },
-            "social": {
-                "linkedin": raw.get("linkedin", {}).get("handle"),
-                "twitter": raw.get("twitter", {}).get("handle"),
-            },
-            "tags": raw.get("tags", []),
-            "logo": raw.get("logo"),
-            "industry": raw.get("category", {}).get("industry"),
+            }
+        }
+
+class PDLAdapter(BaseAdapter):
+    """
+    Adapter for People Data Labs (Workforce and Hiring intelligence).
+    """
+    def __init__(self):
+        super().__init__("PeopleDataLabs", settings.PEOPLE_DATA_LABS_API_KEY)
+
+    async def fetch(self, company_domain: str, **kwargs) -> Optional[Dict[str, Any]]:
+        url = f"https://api.peopledatalabs.com/v5/company/enrich?website={company_domain}"
+        response = await self.client.get(url, headers={"X-Api-Key": self.api_key})
+        if response.status_code == 200:
+            return response.json()
+        return None
+
+    def normalize(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        data = raw.get("data", {})
+        return {
+            "employee_count": data.get("employee_count"),
+            "hiring_status": data.get("hiring_status"),
+            "employee_growth": data.get("employee_growth"),
+            "top_skills": data.get("top_skills", [])[:5],
+            "average_tenure": data.get("average_tenure")
+        }
         }
 
 class CrunchbaseAdapter(BaseAdapter):

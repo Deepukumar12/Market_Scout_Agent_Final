@@ -44,6 +44,33 @@ class SerpAdapter(BaseAdapter):
         return {
             "organic": normalized_results,
             "ad_count": len(ads),
-            "related_queries": [q.get("query") for q in raw.get("related_searches", [])],
-            "total_results": raw.get("search_information", {}).get("total_results"),
+            "related_queries": [q.get("query") for q in raw.get("related_queries", [])],
+            "ad_count": len(raw.get("ads", []))
+        }
+
+class GoogleSearchAdapter(BaseAdapter):
+    """
+    Adapter for Google Custom Search JSON API.
+    """
+    def __init__(self):
+        super().__init__("GoogleSearch", settings.GOOGLE_SEARCH_API_KEY)
+        self.cx = settings.GOOGLE_SEARCH_CX
+
+    async def fetch(self, query: str, **kwargs) -> Optional[Dict[str, Any]]:
+        url = f"https://www.googleapis.com/customsearch/v1?q={query}&key={self.api_key}&cx={self.cx}"
+        response = await self.client.get(url)
+        if response.status_code == 200:
+            return response.json()
+        return None
+
+    def normalize(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        info = raw.get("searchInformation", {})
+        return {
+            "total_results": info.get("totalResults"),
+            "time_taken": info.get("searchTime"),
+            "items": [{
+                "title": i.get("title"),
+                "link": i.get("link"),
+                "snippet": i.get("snippet")
+            } for i in raw.get("items", [])[:5]]
         }

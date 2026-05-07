@@ -156,7 +156,7 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
                 <div className="space-y-2">
                   <div className="text-[10px] font-black text-[#86868B] uppercase italic tracking-widest">Total Visibility</div>
                   <div className="text-2xl font-black text-[#1D1D1F] dark:text-white">
-                    {report.search_visibility?.total_results ? (parseInt(report.search_visibility.total_results) / 1000000).toFixed(1) + 'M' : '---'}
+                    {report.search_visibility?.total_results ? (parseInt(report.search_visibility.total_results.toString().replace(/,/g, '')) / 1000000).toFixed(1) + 'M' : '---'}
                   </div>
                   <div className="flex flex-wrap gap-1 pt-2">
                     {report.search_visibility?.related_queries?.slice(0, 3).map((q: string, i: number) => (

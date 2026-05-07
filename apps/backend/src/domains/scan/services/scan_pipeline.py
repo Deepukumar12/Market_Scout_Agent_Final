@@ -21,10 +21,10 @@ from src.core.config import settings
 from src.core.logger import agent_logger
 
 # Import Adapters
-from src.shared.adapters.company import CompanyAdapter
-from src.shared.adapters.financial import AlphaVantageAdapter, FinnhubAdapter
-from src.shared.adapters.news import NewsAdapter
-from src.shared.adapters.search import SerpAdapter
+from src.shared.adapters.company import CompanyAdapter, PDLAdapter
+from src.shared.adapters.financial import AlphaVantageAdapter, FinnhubAdapter, FMPAdapter
+from src.shared.adapters.news import NewsAdapter, GNewsAdapter
+from src.shared.adapters.search import SerpAdapter, GoogleSearchAdapter
 from src.shared.adapters.social import RedditAdapter, YouTubeAdapter
 
 logger = logging.getLogger(__name__)
@@ -159,9 +159,13 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     alpha_adapter = AlphaVantageAdapter()
     finnhub_adapter = FinnhubAdapter()
     news_adapter = NewsAdapter()
+    gnews_adapter = GNewsAdapter()
     serp_adapter = SerpAdapter()
+    google_adapter = GoogleSearchAdapter()
     reddit_adapter = RedditAdapter()
     youtube_adapter = YouTubeAdapter()
+    pdl_adapter = PDLAdapter()
+    fmp_adapter = FMPAdapter()
 
     # 5.2 Create Concurrent Intelligence Tasks
     github_task = asyncio.create_task(fetch_company_github_data(company, max_repos=15))
@@ -171,20 +175,28 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     async def _fetch_financials():
         symbol = await alpha_adapter.resolve_symbol(company)
         if symbol:
-            alpha_data, finnhub_data = await asyncio.gather(
+            alpha_data, finnhub_data, fmp_data = await asyncio.gather(
                 alpha_adapter.get_data(symbol),
-                finnhub_adapter.get_data(symbol)
+                finnhub_adapter.get_data(symbol),
+                fmp_adapter.get_data(symbol)
             )
-            return {**(alpha_data or {}), **(finnhub_data or {})}
+            return {**(alpha_data or {}), **(finnhub_data or {}), **(fmp_data or {})}
         return None
 
     financial_task = asyncio.create_task(_fetch_financials())
-    news_task = asyncio.create_task(news_adapter.get_data(company))
-    serp_task = asyncio.create_task(serp_adapter.get_data(company))
+    news_task = asyncio.create_task(asyncio.gather(
+        news_adapter.get_data(company),
+        gnews_adapter.get_data(company)
+    ))
+    serp_task = asyncio.create_task(asyncio.gather(
+        serp_adapter.get_data(company),
+        google_adapter.get_data(company)
+    ))
     social_tasks = asyncio.create_task(asyncio.gather(
         reddit_adapter.get_data(company),
         youtube_adapter.get_data(company)
     ))
+    pdl_task = asyncio.create_task(pdl_adapter.get_data(company))
 
     await agent_logger.log(f"Phase 5: Synthesizing final intelligence report via {provider.upper()}...", "SYSTEM")
     try:
@@ -256,17 +268,23 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         pass
 
     # Await other intelligence domains
-    company_intel, financial_data, news_intel, serp_intel, social_intel = await asyncio.gather(
-        company_task, financial_task, news_task, serp_task, social_tasks,
+    company_intel, financial_data, news_results, serp_results, social_intel, pdl_intel = await asyncio.gather(
+        company_task, financial_task, news_task, serp_task, social_tasks, pdl_task,
         return_exceptions=True
     )
+
+    # Flatten nested gathers
+    news_intel = (news_results[0] or []) + (news_results[1] or []) if not isinstance(news_results, Exception) else []
+    search_intel = {**(serp_results[0] or {}), **(serp_results[1] or {})} if not isinstance(serp_results, Exception) else None
 
     # Note: financial_data is already merged in the sub-task
 
     # Final cleanup of adapters
     await asyncio.gather(
         company_adapter.close(), alpha_adapter.close(), finnhub_adapter.close(),
-        news_adapter.close(), serp_adapter.close(), reddit_adapter.close(), youtube_adapter.close()
+        news_adapter.close(), gnews_adapter.close(), serp_adapter.close(), 
+        google_adapter.close(), reddit_adapter.close(), youtube_adapter.close(),
+        pdl_adapter.close(), fmp_adapter.close()
     )
 
     return ScanResponse(
@@ -277,9 +295,9 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         total_valid_updates=len(fixed_features),
         features=fixed_features,
         github=github_data,
-        company=company_intel if not isinstance(company_intel, Exception) else None,
+        company={**(company_intel or {}), **(pdl_intel or {})} if not isinstance(company_intel, Exception) else (pdl_intel if not isinstance(pdl_intel, Exception) else None),
         financials=financial_data,
-        news=news_intel if not isinstance(news_intel, Exception) and news_intel else [],
-        search_visibility=serp_intel if not isinstance(serp_intel, Exception) else None,
+        news=news_intel,
+        search_visibility=search_intel,
         social=(social_intel[0] or []) + (social_intel[1] or []) if not isinstance(social_intel, Exception) else [],
     )

@@ -36,3 +36,27 @@ class NewsAdapter(BaseAdapter):
                 "image_url": art.get("urlToImage"),
             })
         return normalized
+
+class GNewsAdapter(BaseAdapter):
+    """
+    Adapter for GNews (Global news coverage).
+    """
+    def __init__(self):
+        super().__init__("GNews", settings.GNEWS_API_KEY)
+
+    async def fetch(self, query: str, **kwargs) -> Optional[Dict[str, Any]]:
+        url = f"https://gnews.io/api/v4/search?q={query}&token={self.api_key}&lang=en&max=5"
+        response = await self.client.get(url)
+        if response.status_code == 200:
+            return response.json()
+        return None
+
+    def normalize(self, raw: Dict[str, Any]) -> list[Dict[str, Any]]:
+        articles = raw.get("articles", [])
+        return [{
+            "title": a.get("title"),
+            "description": a.get("description"),
+            "source": a.get("source", {}).get("name"),
+            "url": a.get("url"),
+            "published_at": a.get("publishedAt")
+        } for a in articles]
