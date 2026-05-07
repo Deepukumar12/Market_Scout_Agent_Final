@@ -80,13 +80,6 @@ class IntelResponse(BaseModel):
     signals: List[IntelSignal]
     total_count: int
 
-class MonthlyFeature(BaseModel):
-    company_name: str
-    feature_name: str
-    category: str
-    release_date: str
-    source_url: Optional[str]
-    hash_id: str
 
 @router.get("/stream", response_model=IntelResponse)
 async def get_intel_stream(
@@ -201,62 +194,6 @@ async def get_intel_stream(
         print(f"Stream Error: {e}")
         return IntelResponse(signals=[], total_count=0)
 
-@router.get("/last-seven-days", response_model=List[MonthlyFeature])
-async def get_last_seven_days_releases(
-    response: Response, 
-    competitor: Optional[str] = Query(None),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Returns all technical features detected within the last 7 calendar days, excluding today.
-    """
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    uid_str = str(current_user.id)
-    features = []
-    try:
-        now = get_now_ist()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_date = today_start - timedelta(days=6)
-        end_of_today = today_start + timedelta(days=1)
-        
-        if db.db is None: await db.connect()
-        
-        user_comp_names = []
-        if competitor and competitor.strip():
-            user_comp_names = [competitor.strip()]
-        else:
-            cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-            user_comp_names = [c["name"] for c in await cursor.to_list(length=100)]
-        if user_comp_names:
-            cursor = db.db["feature_updates"].find({
-                "company_name": {"$in": user_comp_names},
-                "created_at": {"$gte": start_date, "$lt": end_of_today}
-            }).sort("created_at", -1)
-            async for doc in cursor:
-                if len(features) >= 20: break
-                
-                s_url = doc.get("source_url", "")
-                s_type = "News"
-                if s_url and ("press-release" in s_url.lower() or "pr" in s_url.lower()):
-                    s_type = "Press Release"
-                elif s_url and "blog" in s_url.lower():
-                    s_type = "Blog"
-                    
-                features.append(MonthlyFeature(
-                    company_name=doc["company_name"],
-                    feature_name=doc["feature_name"],
-                    category=doc["category"],
-                    release_date=doc["release_date"] if doc.get("release_date") else doc["created_at"].strftime("%Y-%m-%d"),
-                    source_url=s_url if s_url else None,
-                    hash_id=doc["hash_id"],
-                    summary=doc.get("technical_summary", ""),
-                    source_type=s_type
-                ))
-    except Exception as e:
-        print(f"Last 7 Days Error: {e}")
-    return features[:20]
 
 class Recommendation(BaseModel):
     id: str
@@ -1499,55 +1436,7 @@ async def get_market_comparison(current_user: User = Depends(get_current_user)):
         
     return comparison
 
-class MonthlyFeature(BaseModel):
-    company_name: str
-    feature_name: str
-    category: str
-    release_date: str
-    source_url: Optional[str] = None
-    hash_id: str
-    summary: Optional[str] = None
-    source_type: str = "News"
 
-@router.get("/monthly-releases", response_model=List[MonthlyFeature])
-async def get_monthly_releases(current_user: User = Depends(get_current_user)):
-    """
-    Returns all technical features detected within the current month.
-    """
-    uid_str = str(current_user.id)
-    features = []
-    
-    try:
-        now = get_now_ist()
-        first_day_of_month = datetime(now.year, now.month, 1)
-        
-        if db.db is None: await db.connect()
-    
-        # Get user's competitor names to filter
-        cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-        user_comp_names = [c["name"] for c in await cursor.to_list(length=100)]
-        
-        if user_comp_names:
-            # Fetch from feature_updates
-            cursor = db.db["feature_updates"].find({
-                "company_name": {"$in": user_comp_names},
-                "created_at": {"$gte": first_day_of_month}
-            }).sort("created_at", -1)
-            
-            async for doc in cursor:
-                features.append(MonthlyFeature(
-                    company_name=doc["company_name"],
-                    feature_name=doc["feature_name"],
-                    category=doc["category"],
-                    release_date=doc["release_date"] if doc.get("release_date") else doc["created_at"].strftime("%Y-%m-%d"),
-                    source_url=doc.get("source_url"),
-                    hash_id=doc["hash_id"]
-                ))
-                
-    except Exception as e:
-        print(f"Monthly Releases Error: {e}")
-        
-    return features
 
 class MissionBriefing(BaseModel):
     executive_summary: str

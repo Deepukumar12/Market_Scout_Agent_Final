@@ -18,7 +18,6 @@ import FeatureChart from '@/components/dashboard/FeatureChart';
 import SourceCard from '@/components/dashboard/SourceCard';
 import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
 import MarketComparison from '@/components/dashboard/MarketComparison';
-import MonthlyFeatures from '@/components/dashboard/MonthlyFeatures';
 import MissionBriefing from '@/components/dashboard/MissionBriefing';
 import IntelligenceHub from '@/components/dashboard/IntelligenceHub';
 
@@ -34,7 +33,6 @@ const DashboardPage = () => {
     innovationTrends, 
     globalMetrics,
     comparisonMatrix,
-    monthlyReleases,
     missionBriefing,
     scanReport,
     fetchHistory, 
@@ -43,7 +41,6 @@ const DashboardPage = () => {
     fetchInnovationTrends,
     fetchGlobalMetrics,
     fetchMarketComparison,
-    fetchMonthlyReleases,
     fetchMissionBriefing
   } = useIntelStore();
   const navigate = useNavigate();
@@ -63,9 +60,8 @@ const DashboardPage = () => {
     fetchInnovationTrends();
     fetchGlobalMetrics();
     fetchMarketComparison();
-    fetchMonthlyReleases();
     fetchMissionBriefing();
-  }, [fetchCompetitors, fetchHistory, fetchSignals, fetchActivityTimeline, fetchInnovationTrends, fetchGlobalMetrics, fetchMarketComparison, fetchMonthlyReleases, fetchMissionBriefing, searchQuery]);
+  }, [fetchCompetitors, fetchHistory, fetchSignals, fetchActivityTimeline, fetchInnovationTrends, fetchGlobalMetrics, fetchMarketComparison, fetchMissionBriefing, searchQuery]);
 
   // Polling for real-time updates every 15 seconds
   useEffect(() => {
@@ -199,12 +195,6 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Monthly Features Releases Section */}
-      <MonthlyFeatures 
-        features={monthlyReleases} 
-        title="Monthly Innovation Surface" 
-        subtitle="Last 30 Days Technical Updates"
-      />
 
       {/* 7-Day Operations Pulse Unified Section */}
       <section className="mt-14 space-y-8">
