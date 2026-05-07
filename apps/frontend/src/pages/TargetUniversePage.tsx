@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
     Activity, Globe, Zap, Search,
@@ -40,10 +40,9 @@ const TargetUniversePage = () => {
     const { token } = useAuthStore();
     const navigate = useNavigate();
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            // @ts-ignore
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
             const resSignals = await fetch(`${apiUrl}/api/v1/intelligence/stream?limit=50`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -61,13 +60,13 @@ const TargetUniversePage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         fetchData();
         const interval = setInterval(fetchData, 30000); // Auto-refresh every 30s
         return () => clearInterval(interval);
-    }, [token]);
+    }, [fetchData]);
 
     const handleExportPDF = () => {
         const doc = new jsPDF();
@@ -117,32 +116,32 @@ const TargetUniversePage = () => {
         setIsPdfModalOpen(false);
     };
 
-    const getSentimentColor = (sentiment: string) => {
-        switch(sentiment) {
-            case 'Positive': return 'text-emerald-400';
-            case 'Use Caution': return 'text-amber-400';
-            default: return 'text-slate-400';
-        }
-    };
+const getSentimentColor = (sentiment: string) => {
+    switch(sentiment) {
+        case 'Positive': return 'text-emerald-400';
+        case 'Use Caution': return 'text-amber-400';
+        default: return 'text-slate-400';
+    }
+};
 
-    const getSectorIcon = (sector: string) => {
-        if (sector.includes('University') || sector.includes('Education')) return <Globe className="w-4 h-4 text-pink-400" />;
-        if (sector === 'IT' || sector === 'Tech') return <Terminal className="w-4 h-4 text-blue-400" />;
-        return <Layers className="w-4 h-4 text-purple-400" />;
-    };
+const getSectorIcon = (sector: string) => {
+    if (sector.includes('University') || sector.includes('Education')) return <Globe className="w-4 h-4 text-pink-400" />;
+    if (sector === 'IT' || sector === 'Tech') return <Terminal className="w-4 h-4 text-blue-400" />;
+    return <Layers className="w-4 h-4 text-purple-400" />;
+};
 
-    const sectorCounts = signals.reduce((acc: any, signal) => {
-        acc[signal.sector] = (acc[signal.sector] || 0) + 1;
-        return acc;
-    }, {});
-    
-    // Mock fallbacks removed to ensure 100% project accuracy
-
-    const chartData = Object.keys(sectorCounts).map(key => ({ 
-        subject: key, 
-        A: sectorCounts[key], 
-        fullMark: 100 
-    }));
+    const chartData = useMemo(() => {
+        const counts = signals.reduce((acc: any, signal) => {
+            acc[signal.sector] = (acc[signal.sector] || 0) + 1;
+            return acc;
+        }, {});
+        
+        return Object.keys(counts).map(key => ({ 
+            subject: key, 
+            A: counts[key], 
+            fullMark: 100 
+        }));
+    }, [signals]);
 
     return (
         <div className="space-y-6 min-h-screen">
@@ -275,7 +274,7 @@ const TargetUniversePage = () => {
                         </h2>
                         
                         <div className="space-y-3 relative z-10">
-                            {recommendations.map((rec) => (
+                            {Array.isArray(recommendations) && recommendations.map((rec) => (
                                 <motion.div 
                                     key={rec.id}
                                     whileHover={{ scale: 1.02 }}
