@@ -1,295 +1,382 @@
 <div align="center">
   <h1>🦅 Market Scout Agent (ScoutIQ)</h1>
-  <p><strong>Autonomous Competitive Intelligence Platform (v1.0.0-Stable)</strong></p>
+  <p><strong>Enterprise-Grade Autonomous Competitive Intelligence Platform</strong></p>
   <p>
-    <img src="https://img.shields.io/badge/Python-3.10+-blue.svg" alt="Python Version" />
-    <img src="https://img.shields.io/badge/Next.js-14+-black.svg" alt="Next.js Version" />
+    <img src="https://img.shields.io/badge/Python-3.9+-blue.svg" alt="Python Version" />
+    <img src="https://img.shields.io/badge/React-18+-61DAFB.svg" alt="React Version" />
     <img src="https://img.shields.io/badge/FastAPI-0.100+-00a393.svg" alt="FastAPI" />
     <img src="https://img.shields.io/badge/Database-MongoDB-47A248.svg" alt="MongoDB" />
-    <img src="https://img.shields.io/badge/AI-Gemini_|_Ollama_|_Groq-FF9F0A.svg" alt="AI Models" />
+    <img src="https://img.shields.io/badge/AI-Gemini_|_Groq_|_Ollama-FF9F0A.svg" alt="AI Models" />
   </p>
 </div>
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 
-1. [🌟 Project Overview & Mission](#-project-overview--mission)
-2. [🏗 System Architecture](#-system-architecture)
-3. [🧠 The 6-Step Autonomous Agent Workflow](#-the-6-step-autonomous-agent-workflow)
-4. [✨ Core Features & Dashboard](#-core-features--dashboard)
-5. [🛠 Complete Technology Stack](#-complete-technology-stack)
-6. [🤖 Dual LLM & Fallback Mechanism](#-dual-llm--fallback-mechanism)
-7. [⏱️ Dynamic Auto-Update Scheduler](#️-dynamic-auto-update-scheduler)
-8. [📂 Project Directory Structure](#-project-directory-structure)
-9. [🚀 Setup & Installation Guide](#-setup--installation-guide)
-10. [⚙️ Environment Configuration](#️-environment-configuration)
-11. [📡 API & WebSocket Architecture](#-api--websocket-architecture)
-12. [🛡 Data Integrity & Zero Mock Policy](#-data-integrity--zero-mock-policy)
-13. [🗺 Roadmap & Milestones](#-roadmap--milestones)
-14. [🤝 Author & License](#-author--license)
-
----
-
-## 🌟 Project Overview & Mission
-
-**Market Scout Agent (ScoutIQ)** is a state-of-the-art AI-driven market intelligence platform designed for the modern enterprise. It empowers organizations to monitor competitors, track technical releases, and synthesize strategic intelligence with surgical precision. 
-
-By leveraging an autonomous agentic architecture, ScoutIQ eliminates LLM hallucinations and delivers 100% verified, data-driven insights sourced directly from the open web, GitHub repositories, technical blogs, and press releases. 
-
-### 💎 CORE MISSION: Total Data Integrity
-ScoutIQ has been rigorously engineered to eliminate "mock data" or "synthetic fallbacks." Every metric, timeline event, and intelligence report is derived from **real database records** and **dynamic technical scans**.
-- **100% Real Activity Timeline**: No mock events; every entry is a persisted technical discovery or scan report.
-- **Deterministic Analytics**: Metrics such as system latency and risk scores are calculated in real-time based on your specific intelligence footprint.
-- **Mandatory Persistence**: Every ad-hoc scan is automatically saved to the enterprise knowledge base, ensuring zero data loss during research sessions.
+1. [Project Title and Description](#1-project-title-and-description)
+2. [Product Overview](#2-product-overview)
+3. [Core Features](#3-core-features)
+4. [System Architecture](#4-system-architecture)
+5. [Tech Stack](#5-tech-stack)
+6. [📂 Project Directory Structure](#6--project-directory-structure)
+7. [Local Development Setup](#7-local-development-setup)
+8. [Docker Setup](#8-docker-setup)
+9. [API Documentation](#9-api-documentation)
+10. [Security Best Practices](#10-security-best-practices)
+11. [Testing Instructions](#11-testing-instructions)
+12. [Deployment Guide](#12-deployment-guide)
+13. [Monitoring and Logging](#13-monitoring-and-logging)
+14. [CI/CD Pipeline](#14-cicd-pipeline)
+15. [Contribution Guide](#15-contribution-guide)
+16. [License](#16-license)
+17. [Maintainer Information](#17-maintainer-information)
+18. [Contact Information](#18-contact-information)
 
 ---
 
-## 🏗 System Architecture
+## 1. Project Title and Description
 
-The platform is split into a **React/Next.js Frontend** (for sleek visualization) and a **FastAPI Backend** (the heavy-lifting AI engine). They communicate via REST APIs and real-time WebSockets.
+**Market Scout Agent (ScoutIQ)**
+
+**The Business Problem:** Modern enterprises and strategic teams struggle to synthesize the overwhelming volume of unstructured market data, technical product updates, and competitor intelligence. Manual tracking leads to delayed strategic decisions, and standard LLMs often hallucinate facts without grounded data.
+**Product Value:** ScoutIQ automates the entire intelligence lifecycle. It actively orchestrates background web sweeps, scrapes technical blogs, and analyzes GitHub repositories. By mapping raw noise into deterministic, hallucination-free insights, it delivers verified, actionable intelligence.
+**Real-World Use Cases:**
+- **Product Managers:** Dynamically monitoring competitor feature rollouts and release velocity.
+- **Strategy Teams:** Evaluating market disruption threats and predicting competitor roadmaps.
+- **Data Analysts:** Replacing manual web scraping with autonomous AI agents that generate PDF dossiers directly from live intelligence.
+
+---
+
+## 2. Product Overview
+
+Market Scout Agent is an autonomous competitive intelligence SaaS platform.
+- **What it does:** It tracks designated enterprise competitors using scheduled search pipelines, headless scrapers, and multi-tier AI models to synthesize product updates, pricing changes, and infrastructure shifts.
+- **Who uses it:** Enterprise strategy officers, product managers, venture capital analysts, and technical researchers.
+- **Why it matters:** It operates on a strict "Zero Mock Data" policy, ensuring every metric, timeline event, and threat score is rooted in live, traceable source URLs, thus eliminating AI hallucination risks.
+
+---
+
+## 3. Core Features
+
+- **Authentication and Authorization:** Secure JWT token-based authentication protecting API endpoints and user dashboards.
+- **Competitor Analysis:** Real-time tracking of added competitors, automatically categorizing updates by domain (API, UI, Infrastructure, Security, Platform).
+- **Market Intelligence:** Synthesis of news, PR, and technical blogs into structured data points.
+- **AI Insights:** Automated extraction of feature updates, publication dates, and confidence scores.
+- **Predictive Analytics:** Velocity mapping of competitor updates over 7, 30, and 90-day windows.
+- **Risk Analysis:** Calculation of competitive threat levels based on deployment momentum.
+- **Dashboard Analytics:** Interactive React/Recharts visualizations mapping historical competitor activity.
+- **Scheduler Automation:** Background tasks powered by `APScheduler` for autonomous, interval-based intelligence gathering.
+- **WebSocket Live Updates:** Real-time pipeline execution logs streamed directly to the dashboard via `/ws/logs`.
+- **Notification System:** SMTP-based email service for intelligence report delivery.
+- **PDF Report Generation:** Automated compilation of competitor intelligence into formatted PDF dossiers.
+- **GitHub Integrations:** Dynamic fetching of competitor open-source repository statistics, languages, and stargazer momentum.
+- **Search Pipelines:** Broad web traversal utilizing the Tavily Search API.
+- **Scraping Pipelines:** Headless raw markdown extraction via Firecrawl and custom scrapers.
+- **Cache Services:** High-speed vector caching with ChromaDB and Redis.
+- **Telemetry and Logging:** Sentry DSN integration and centralized standard logging.
+
+---
+
+## 4. System Architecture
+
+The application is built on an enterprise domain-driven design (DDD) monorepo architecture orchestrated by Turborepo.
+
+### Architecture Flow Diagram
 
 ```mermaid
 graph TD
-    %% Colors
     classDef client fill:#0A84FF,stroke:#fff,stroke-width:2px,color:#fff,rx:8px,ry:8px;
     classDef processing fill:#1D1D1F,stroke:#fff,stroke-width:2px,color:#fff,rx:8px,ry:8px;
     classDef ai fill:#30D158,stroke:#fff,stroke-width:2px,color:#fff,rx:8px,ry:8px;
     classDef db fill:#FF9F0A,stroke:#fff,stroke-width:2px,color:#fff,rx:8px,ry:8px;
 
-    User([User at Browser]) -->|View Dashboard| UI[Next.js Frontend]:::client
-    UI -->|Trigger Scan| Gateway{FastAPI Backend}:::processing
-    UI <-->|Stream Logs| Websockets[Websocket Notifications]:::processing
+    User([User at Browser]) -->|Actions & Analytics| UI[Frontend React/Vite]:::client
+    UI -->|REST / JWT Auth| API[FastAPI Gateway]:::processing
+    UI <-->|WebSocket Logs| WS[Telemetry Service]:::processing
 
-    Gateway --> Planner[Strategic Query Planner]:::processing
-    Planner --> Search[Tavily News/Web Search]:::ai
-    Search --> Scraper[Multi-Scraper: Firecrawl/Crawl4AI]:::ai
+    API -->|Triggers Scan| BusinessLogic[Domain Services]:::processing
+    BusinessLogic -->|Query Building| Planner[AI Query Planner]:::ai
     
-    Scraper --> Clean[LSA Compressor & Regex]:::processing
-    Clean --> Chroma[(ChromaDB Cache)]:::db
+    Planner -->|Keywords| DataPipe[Search & Scraping Pipeline]:::processing
+    DataPipe -->|Web Content| Compress[ChromaDB Cache]:::db
     
-    Chroma --> LLM[Local Ollama / Gemini / Groq]:::ai
-    LLM --> Delta[Delta Deduplication Engine]:::processing
-    Delta --> MongoDB[(MongoDB Permanent)]:::db
+    Compress -->|RAG Context| LLM[Gemini / Groq / Ollama]:::ai
+    LLM -->|JSON Extraction| Intel[Intelligence Synthesis]:::processing
     
-    MongoDB --> UI
+    Intel -->|Save Novel Data| DB[(MongoDB)]:::db
+    DB -->|Read Aggregations| API
 ```
 
----
+### Frontend Layer
+- **Core:** React + TypeScript + Vite.
+- **UI Components:** Modular glassmorphic designs using Tailwind CSS and Framer Motion.
+- **State Management:** Global state handled via Zustand.
+- **Context Providers:** AuthContext for session propagation.
+- **Hooks:** Custom hooks for API communication and WebSocket subscriptions.
+- **Dashboard Pages:** Comprehensive overviews of monitored competitors.
+- **Analytics Pages:** Predictive analytics charts and risk matrices.
+- **Authentication Flows:** Login, registration, and JWT interceptors.
+- **API Communication:** Axios instances with automatic token injection.
 
-## 🧠 The 6-Step Autonomous Agent Workflow
+### Backend Layer
+- **Core:** FastAPI architecture running on Uvicorn.
+- **REST APIs:** Typed endpoints utilizing Pydantic v2 schemas.
+- **Authentication Services:** Bcrypt hashing and stateless JWT validation.
+- **Domain Services:** Strictly separated logic (`auth`, `competitors`, `users`, `scan`, `notifications`, `intelligence`, `reports`).
+- **Business Logic:** Centralized handling of data normalization and UI projection.
+- **Scheduler Jobs:** Background asynchronous tasks running autonomous intelligence scans.
+- **WebSocket Services:** Broadcasting live terminal execution logs to the frontend.
+- **Notification Services:** Email delivery pipelines.
+- **PDF Generation:** Asynchronous report building pipelines.
+- **GitHub Integrations:** Authenticated API requests to map repository metrics.
 
-When a scan is triggered (manually via the dashboard or automatically via the scheduler), the backend initiates a massive, real-time intelligence gathering sequence:
+### AI Intelligence Layer
+- **Agent Orchestration:** Complex workflow management routing tasks from Query Planners to Synthesizers.
+- **Prompt Engineering:** Strict system instructions enforcing structured JSON outputs.
+- **Gemini Integration:** Primary LLM (Gemini 1.5 Pro/Flash) for deep strategic synthesis and complex extraction.
+- **Groq Integration:** Speed-optimized inference for structural operations like sentiment bucketing.
+- **OpenAI Integration:** Foundation configurations established in `config.py` for GPT-4o extensibility.
+- **Anthropic Integration:** Architecture mapped for future Claude 3.5 Sonnet support for advanced reasoning.
+- *(Note: The system fails over gracefully to a local **Ollama** model during cloud outages)*
+- **Competitive Intelligence Generation:** LSA compression and AI extraction of technical signals.
+- **Report Generation:** LLM-driven executive summary creation.
 
-1. **Query Planning (Broad Intelligence Generation)**: The AI decomposes the target objective (e.g., a competitor name) into 5-10 surgical search queries. It targets a broad range of sources: news, blogs, press releases, and product launches, not just technical changelogs.
-2. **Search Discovery**: High-speed retrieval using the **Tavily API**, orchestrating concurrent sweeps across the web to identify the most relevant URLs for the generated queries.
-3. **Headless Scraping & Extraction**: The backend bypasses bot protections using **Firecrawl** and **Crawl4Ai** to fetch pure Text/Markdown from the discovered domains. It utilizes robust Regex-based publication date extraction and dynamic YouTube video metadata parsing.
-4. **Data Compression & Signal Filtering**: Text is scanned and filtered. AI-driven logic removes generic clutter (hiring, basic marketing) while retaining broad market intelligence (news, product announcements). **LSA Compression** shrinks the remaining data, which is cached in a local **ChromaDB**.
-5. **AI Synthesis**: The massive block of compressed evidence is passed to the configured LLM (**Ollama**, **Gemini 1.5 Pro**, or **Groq**). The AI performs a multi-point extraction (Feature, Date, URL, Summary) with 100% source attribution, outputting strict JSON formats.
-6. **Delta Verification**: The backend hashes the newly built JSON data and compares it against **MongoDB**. If the update is novel, it is logged into the database and permanently pushed to the UI, ensuring no duplicate intel is recorded.
+### Data Processing Layer
+- **Scraping Pipelines:** Traversing target domains to extract raw Text/Markdown.
+- **Search Pipelines:** Querying broad news and PR sources.
+- **Data Normalization:** Regex cleaning, deduplication, and source verification.
+- **Cache Services:** Local ChromaDB for rapid RAG operations.
+- **Analytics Pipelines:** Aggregation of temporal data to build velocity metrics.
 
----
+### Infrastructure Layer
+- **Docker Containers:** Foundational `docker-compose.yml` for unified service orchestration.
+- **CI/CD Pipelines:** Ready for automated lint/test/build validation via Turborepo caching.
+- **Deployment Configs:** Standardized `.env` loaders and production scripts.
+- **Logging:** Centralized Python loggers and WebSocket emitters.
+- **Monitoring:** Prepared for external APM tracking.
 
-## ✨ Core Features & Dashboard
+### Security Layer
+- **Authentication:** Secure token generation and rotation.
+- **Token Validation:** API Gateway enforcement of Bearer tokens.
+- **Environment Isolation:** Zero hardcoded secrets; strict `.env` segregation.
+- **API Protection:** CORS restriction and type-safe payloads.
 
-### 📊 High-Performance Glassmorphic UI
-- Ultra-premium, dark-mode focused interface built with modern web technologies for high interaction fidelity.
-- **Live Agent Logs**: Watch the AI execute queries, scrape web pages, and analyze data in real-time via authenticated WebSockets.
-- Graceful degradation: The UI naturally handles empty states natively without crashing or showing fake data.
-
-### 🛡 Predictive Analytics & Risk Matrix
-- **Global Threat Level**: Real-time calculation of market disruption risk based on recent competitor technical releases and product announcements.
-- **Innovation Velocity**: Tracks the speed and frequency of competitor deployments.
-- **Target Universe**: Side-by-side technical velocity analysis and comparison for your entire monitored market landscape.
-
-### 🎭 Sentiment Pulse Tracking
-- Historical sentiment tracking across technical documentation, news articles, and public signals.
-- Evaluates the broader market reaction to competitor moves.
-
-### 📄 Intelligence Dossier & Reports
-- **Full Spectrum Audit**: Generate comprehensive multi-page master reports covering all monitored competitors.
-- **Professional Exports**: High-fidelity PDF generation with clean branding and structured layouts directly from the browser.
-
----
-
-## 🛠 Complete Technology Stack
-
-| Layer | Technologies |
-| :--- | :--- |
-| **Frontend UI** | React 18, Next.js / Vite, TypeScript, TailwindCSS |
-| **Frontend State & Anim** | Zustand (Global State), Framer Motion, Recharts, jsPDF (Exports) |
-| **Backend Core** | Python 3.10+, FastAPI (Async), Pydantic v2 |
-| **Databases** | MongoDB (Permanent via Motor Async Driver), ChromaDB (Vector Search), Redis (Optional Cache) |
-| **AI Models (Brain)** | Gemini 1.5 Pro (Primary Strategy), Groq / Llama-3 (Rapid Synthesis), Ollama (Local Fallback) |
-| **Scraping & Search** | Tavily API, Firecrawl, Crawl4AI, Trafilatura, BeautifulSoup |
-| **Real-time Comms** | Authenticated WebSockets (`app/api/websockets.py`) |
-| **Job Scheduling** | APScheduler / AsyncIOScheduler |
-
----
-
-## 🤖 Dual LLM & Fallback Mechanism
-
-ScoutIQ is designed to be highly resilient against API outages. It utilizes a configurable, multi-tiered LLM routing system.
-
-- **Primary Layer (Gemini 1.5 Pro)**: Handles deep strategic synthesis and complex extraction.
-- **Speed Layer (Groq / Llama 3)**: Fast, structural operations like Sentiment bucketing and Risk classification.
-- **Local Fallback (Ollama)**: In the event that cloud providers are rate-limited or offline, the system seamlessly fails over to a local instance of Ollama (running models like `llama3:8b`). This ensures continuous, uninterrupted intelligence gathering without exposing sensitive queries to the cloud.
+### Architecture Flow
+`User → Frontend (React) → API Layer (FastAPI) → Business Services → AI Services (Gemini/Groq/Ollama) & Data Pipelines (Tavily/Firecrawl) → Cache (ChromaDB) / Database (MongoDB) → Response`
 
 ---
 
-## ⏱️ Dynamic Auto-Update Scheduler
+## 5. Tech Stack
 
-ScoutIQ operates not just on manual triggers, but as a continuous surveillance engine.
+**Frontend:**
+- React (18+)
+- TypeScript
+- Vite
+- Tailwind CSS
 
-- **Integration**: The backend utilizes `AsyncIOScheduler` to run recurring intelligence sweeps (`run_auto_scan`).
-- **Dynamic Configuration**: Scan intervals (e.g., 1 minute, 1 hour, 24 hours) are fetched directly from the `system_settings` collection in MongoDB. If a user updates the interval on the frontend Settings Page, the backend scheduler dynamically re-adjusts its execution frequency without requiring a server restart.
-- **Adaptive Scan Logic**: The delta engine tracks competitor activity volume. The system can theoretically accelerate scan frequency when a competitor is "active" and slow down during quiet periods to optimize API resources.
+**Backend:**
+- FastAPI
+- Python (3.9+)
+
+**AI:**
+- Gemini
+- Groq
+- Ollama
+- OpenAI (Configuration Layer)
+- Anthropic (Architecture Mapped)
+
+**Infrastructure:**
+- Docker
+- Turborepo
+- GitHub Actions (Pipeline Ready)
 
 ---
 
-## 📂 Project Directory Structure
+## 6. 📂 Project Directory Structure
 
 ```text
 Market_Scout_Agent_Final/
-├── backend/
-│   ├── app/
-│   │   ├── api/             # REST Endpoints & WebSockets (scan.py, intel_data.py)
-│   │   ├── services/        # Core Logic (scan_pipeline.py, scraper_service.py)
-│   │   ├── scheduler/       # APScheduler setup (scheduler.py)
-│   │   ├── core/            # Config (.env loaders), DB connections, Security
-│   │   ├── models/          # Strict Pydantic schemas (Ensures JSON integrity)
-│   │   └── main.py          # FastAPI application entry point
-│   ├── requirements.txt     # Python dependencies
-│   ├── .env                 # Secret configurations
-│   └── run_backend.sh       # Production-ready startup script
-│
-├── frontend/
-│   ├── src/
-│   │   ├── features/        # Dashboards (SettingsPage.tsx, Analytics.tsx)
-│   │   ├── components/      # Reusable UI (AnalyzeModal.tsx, Charts, Cards)
-│   │   ├── store/           # Zustand state management
-│   │   └── services/        # API clients & WebSocket managers
-│   ├── package.json         # Node.js dependencies
-│   └── vite.config.ts       # Build configuration
-│
-└── docs/                    # Additional architectural documentation
+├── apps/
+│   ├── backend/                     # Python FastAPI Backend
+│   │   ├── src/
+│   │   │   ├── core/                # Database connections, Security, Configs
+│   │   │   ├── domains/             # Domain-Driven Submodules
+│   │   │   │   ├── auth/            # JWT Token management
+│   │   │   │   ├── competitors/     # CRUD & logic for target competitors
+│   │   │   │   ├── intelligence/    # Intelligence routing and endpoints
+│   │   │   │   ├── notifications/   # SMTP email alerts
+│   │   │   │   ├── reports/         # PDF generation services
+│   │   │   │   ├── scan/            # Pipeline execution & validation models
+│   │   │   │   └── users/           # User management
+│   │   │   ├── shared/              # Cross-domain logic
+│   │   │   │   └── websockets.py    # Live telemetry broadcast
+│   │   │   └── main.py              # Application Gateway entry
+│   │   ├── .env                     # Secret variables
+│   │   ├── requirements.txt         # Pip dependencies
+│   │   └── package.json             # Turborepo scripts for backend
+│   └── frontend/                    # React / TypeScript / Vite UI
+│       ├── src/
+│       │   ├── components/          # Reusable UI, Charts (Recharts), Modals
+│       │   ├── features/            # Complex views (LogConsole, Reports)
+│       │   ├── pages/               # Dashboard, RiskPage, PredictiveAnalytics
+│       │   ├── store/               # Zustand state files
+│       │   └── index.css            # Tailwind directives
+│       ├── tailwind.config.js
+│       ├── vite.config.ts
+│       └── package.json             # NPM dependencies
+├── packages/                        # Shared internal workspace libs
+│   ├── config/
+│   ├── constants/
+│   ├── sdk/
+│   ├── types/
+│   ├── ui/
+│   └── utils/
+├── services/                        # Global AI & Data scraping services
+│   ├── ai/                          # LLM agents, prompts, Gemini/Groq/Ollama clients
+│   └── data/                        # Tavily & Firecrawl scraper pipelines
+├── docs/                            # Internal architectural diagrams & specs
+├── infrastructure/                  # Terraform / cloud deployment templates
+├── scripts/                         # Shared bash/automation scripts
+├── docker-compose.yml               # Unified container orchestrator
+├── package.json                     # Root monorepo workspace configurations
+└── turbo.json                       # Turborepo build & caching pipelines
 ```
 
 ---
 
-## 🚀 Setup & Installation Guide
+## 7. Local Development Setup
 
-### 1. System Prerequisites
-- **Python:** 3.10 or higher.
-- **Node.js:** 18.x or higher (with `npm` or `yarn`).
-- **Database:** MongoDB (Local instance or MongoDB Atlas cluster).
-- **Ollama (Optional but Recommended):** Installed locally for the offline fallback LLM to work.
+### Prerequisites
+- Node.js (v18+)
+- Python (v3.9+)
+- MongoDB (Running locally on `mongodb://localhost:27017`)
+- (Optional) Local Ollama instance.
 
-### 2. Backend Initialization
-
+### Install Commands
+Initialize the monorepo:
 ```bash
-# Navigate to the backend directory
-cd Market_Scout_Agent_Final/backend
-
-# Create a virtual environment
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the FastAPI Server
-# Option 1: Development Mode
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# Option 2: Using the provided shell script
-bash run_backend.sh
+npm install
+npm run setup
 ```
 
-### 3. Frontend Initialization
+### ⚙️ Environment Configuration
+Create an `.env` file in `apps/backend/` using the `.env.example` template:
+```env
+MONGODB_URL=mongodb://localhost:27017
+DATABASE_NAME=scoutiq_db
+SECRET_KEY=your_secure_jwt_secret
+GEMINI_API_KEY=your_api_key
+GROQ_API_KEY=your_api_key
+OLLAMA_HOST=http://localhost:11434
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+```
 
+### Backend Setup
 ```bash
-# Navigate to the frontend directory
-cd Market_Scout_Agent_Final/frontend
+cd apps/backend
+npm run start
+```
+*Backend runs on `http://localhost:8000`. Swagger available at `/docs`.*
 
-# Install dependencies
-npm install
-
-# Start the development server
+### Frontend Setup
+```bash
+cd apps/frontend
 npm run dev
 ```
-
-*The frontend will typically be accessible at `http://localhost:5173`.*
-
----
-
-## ⚙️ Environment Configuration
-
-You must configure the `.env` file located in the `backend/` directory before running the system. Below is a comprehensive list of all required environment variables:
-
-| Variable | Description |
-| :--- | :--- |
-| `PROJECT_NAME` | Name of the project (e.g., `SCOUTIQ`). |
-| `API_V1_STR` | Base API path (e.g., `/api/v1`). |
-| `SECRET_KEY` | JWT/Auth encryption key. |
-| `MONGODB_URL` | Full connection string to your MongoDB cluster. |
-| `DATABASE_NAME` | Name of the database (e.g., `scoutiq_db`). |
-| `LLM_PROVIDER` | Active LLM layer. Options: `ollama`, `groq`, `gemini`. |
-| `OLLAMA_HOST` | URL to local Ollama instance (default: `http://localhost:11434`). |
-| `OLLAMA_MODEL` | Local model to use (e.g., `llama3:8b-q4`). |
-| `GEMINI_API_KEY` | Your Google AI Studio API key. |
-| `GROQ_API_KEY` | Your Groq Cloud API key. |
-| `TAVILY_API_KEY` | API Key for the Tavily Search Engine. |
-| `FIRECRAWL_API_KEY` | API Key for Firecrawl (Web page extraction). |
-| `GITHUB_TOKEN` | GitHub Personal Access Token (for scraping repo data). |
-| `MOCK_MODE` | Set to `True` for testing UI without expending real API credits. |
+*Frontend runs on `http://localhost:5173`.*
 
 ---
 
-## 📡 API & WebSocket Architecture
+## 8. Docker Setup
 
-ScoutIQ features a highly responsive communication layer.
-
-- **RESTful API**: Standard endpoints (`/api/v1/scan`, `/api/v1/intel`) handle state requests, settings updates, and manual scan triggers. Pydantic guarantees that responses are perfectly typed.
-- **WebSocket Telemetry (`/ws/logs`)**: When the intelligence pipeline is active, the backend broadcasts real-time execution logs (e.g., "Initializing search...", "Extracting 15 links from Tavily...", "Summarizing with Gemini..."). The frontend `AnalyzeModal` subscribes to this socket, providing users with a live "terminal-like" view of the AI agent's internal thought process.
-
----
-
-## 🛡 Data Integrity & Zero Mock Policy
-
-A core tenet of this project is **Zero Mock Data in Production**.
-- If an API fails, the system throws an HTTP 503 error or fails over to a local LLM rather than inventing data.
-- If a competitor has no news in the last 7 days, the dashboard renders "Operational Silence Detected" rather than fabricating a timeline event.
-- All frontend charts (`Recharts`) and analytics modules strictly map over the data fetched directly from MongoDB aggregates.
+A foundational `docker-compose.yml` is provided at the repository root. Once container images are defined, run:
+```bash
+docker-compose up --build -d
+```
 
 ---
 
-## 🗺 Roadmap & Milestones
+## 9. API Documentation
 
-- [x] **100% Data Authenticity**: All metrics are strictly MongoDB-driven via complex aggregation pipelines.
-- [x] **Live WebSocket Telemetry**: Authenticated real-time agent activity logs.
-- [x] **Dynamic Settings API**: Full control over scheduler intervals via UI.
-- [x] **Ollama Fallback Architecture**: Zero-downtime execution even without internet.
-- [x] **Strategic PDF Suite**: Multi-page intelligence reports with source attribution.
-- [ ] **Multi-Agent Debate Protocol**: Implementing agentic debate for deeper strategic confidence scoring.
-- [ ] **Slack/Teams Integration**: Push intelligence alerts directly to corporate communication channels.
+Interactive API documentation is generated automatically by FastAPI. Access it via:
+- **Swagger UI:** `http://localhost:8000/docs`
+- **ReDoc:** `http://localhost:8000/redoc`
 
 ---
 
-## 🤝 Contributing
+## 10. Security Best Practices
 
-We welcome contributions from analysts, developers, and AI researchers. 
+- **Zero Exposure:** Hardcoded secrets are explicitly banned.
+- **Pydantic Validation:** All API endpoints strictly validate ingress and egress data.
+- **Stateless Auth:** JWT tokens are utilized for scalable, stateless security.
+- **Rate Limiting:** Guardrails are placed to protect against LLM API exhaustion.
+
+---
+
+## 11. Testing Instructions
+
+Backend tests run via `pytest`:
+```bash
+cd apps/backend
+source venv/bin/activate
+pytest tests/
+```
+
+Frontend builds are verified via Vite:
+```bash
+cd apps/frontend
+npm run build
+```
+
+---
+
+## 12. Deployment Guide
+
+- **Frontend:** Target the `apps/frontend` directory for Vercel, Netlify, or AWS Amplify deployments. Ensure the build command is `npm run build`.
+- **Backend:** Target `apps/backend` for AWS ECS, Render, or Railway. Ensure all `.env` variables are securely injected into the provider's secrets manager.
+
+---
+
+## 13. Monitoring and Logging
+
+- **Sentry:** Supported via `SENTRY_DSN` configuration.
+- **Real-Time Logs:** Administrators can view pipeline execution via the `/ws/logs` WebSocket connection directly in the UI.
+
+---
+
+## 14. CI/CD Pipeline
+
+The monorepo leverages **Turborepo** to aggressively cache tasks. A typical CI workflow will run `turbo run build test lint` to concurrently validate the frontend and backend without repeating unchanged work.
+
+---
+
+## 15. Contribution Guide
+
 1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/amazing-feature`).
-3. Commit your changes (`git commit -m 'Add amazing feature'`).
-4. Push to the branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
+2. Create your feature branch (`git checkout -b feature/NewAnalytics`).
+3. Commit your changes using clean, descriptive human language.
+4. Push to the branch (`git push origin feature/NewAnalytics`).
+5. Open a Pull Request for review.
 
 ---
 
-## 📜 License & Author
+## 16. License
 
-**Market Scout Agent (ScoutIQ)** is an exclusive, proprietary intelligence platform.
+This platform is Proprietary software. All rights reserved. 
+*(If applicable for future open-source, an Apache 2.0 or MIT license will be appended).*
 
-Developed with ❤️ by **Deepu Kumar** at **SingularSolution**.  
-**ScoutIQ v1.0.0-Stable** — *Surveillance you can trust.*
+---
+
+## 17. Maintainer Information
+
+**Deepu Kumar**  
+Lead Architect & Developer  
+Market Scout Agent Platform
+
+---
+
+## 18. Contact Information
+
+For enterprise deployments, architectural discussions, or API inquiries, please reach out via internal engineering communication channels or the designated project repository issues page.
