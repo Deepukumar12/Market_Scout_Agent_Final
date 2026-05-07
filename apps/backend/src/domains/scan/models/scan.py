@@ -37,13 +37,29 @@ class GitHubRepoSummary(BaseModel):
     topics: List[str] = Field(default_factory=list)
 
 
+class FinancialData(BaseModel):
+    """Structured financial performance from AlphaVantage/Finnhub."""
+    symbol: Optional[str] = None
+    market_cap: Optional[str] = None
+    revenue_ttm: Optional[str] = None
+    pe_ratio: Optional[str] = None
+    current_price: Optional[float] = None
+    percent_change: Optional[float] = None
+
+
 class ScanResponse(BaseModel):
-    """Strict response from the Market Scout Agent. No fallback text."""
+    """Strict response from the Market Scout Agent with 100% real-time data."""
     competitor: str
     scan_date: str  # ISO date
     time_window_days: int
     total_sources_scanned: int
     total_valid_updates: int
     features: List[ScanFeature] = Field(default_factory=list)
-    # Optional GitHub data when GITHUB_TOKEN is set; strengthens intelligence
+    
+    # Intelligence Domains
     github: Optional[dict] = None
+    company: Optional[dict] = None
+    financials: Optional[FinancialData] = None
+    news: List[dict] = Field(default_factory=list)
+    search_visibility: Optional[dict] = None
+    social: List[dict] = Field(default_factory=list)

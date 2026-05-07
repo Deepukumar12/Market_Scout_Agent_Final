@@ -20,6 +20,7 @@ import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
 import MarketComparison from '@/components/dashboard/MarketComparison';
 import MonthlyFeatures from '@/components/dashboard/MonthlyFeatures';
 import MissionBriefing from '@/components/dashboard/MissionBriefing';
+import IntelligenceHub from '@/components/dashboard/IntelligenceHub';
 
 
 import { useOutletContext } from 'react-router-dom';
@@ -35,6 +36,7 @@ const DashboardPage = () => {
     comparisonMatrix,
     monthlyReleases,
     missionBriefing,
+    scanReport,
     fetchHistory, 
     fetchSignals, 
     fetchActivityTimeline, 
@@ -99,6 +101,19 @@ const DashboardPage = () => {
     <div className="space-y-14 pb-20">
       {/* Strategic Mission Briefing Section */}
       <MissionBriefing data={missionBriefing} />
+
+      {/* 0. Intelligence Hub (Real-Time Production Data) */}
+      {scanReport && (
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter flex items-center gap-4">
+              Real-Time <span className="text-[#0071E3]">Intelligence Hub</span>
+              <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[8px] text-emerald-500 animate-pulse">LIVE PRODUCTION LINK</span>
+            </h1>
+          </div>
+          <IntelligenceHub report={scanReport} />
+        </section>
+      )}
 
       {/* Platform Statistics */}
       <section>

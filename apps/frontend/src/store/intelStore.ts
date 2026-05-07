@@ -10,6 +10,15 @@ function getScanErrorMessage(res: any): string {
   return err || 'Scan failed.';
 }
 
+export interface FinancialData {
+  symbol?: string;
+  market_cap?: string;
+  revenue_ttm?: string;
+  pe_ratio?: string;
+  current_price?: number;
+  percent_change?: number;
+}
+
 export interface ScanFeature {
   feature_title: string;
   technical_summary: string;
@@ -18,6 +27,21 @@ export interface ScanFeature {
   source_domain: string;
   category: 'API' | 'UI' | 'Infrastructure' | 'Security' | 'Platform' | 'AI' | 'SDK';
   confidence_score: number;
+}
+
+export interface ScanReport {
+  competitor: string;
+  scan_date: string;
+  time_window_days: number;
+  total_sources_scanned: number;
+  total_valid_updates: number;
+  features: ScanFeature[];
+  github?: any;
+  company?: any;
+  financials?: FinancialData;
+  news: any[];
+  search_visibility?: any;
+  social: any[];
 }
 
 export interface GlobalMetrics {
@@ -88,6 +112,7 @@ interface IntelState {
   missionBriefing: MissionBriefingData | null;
   strategicPlan: StrategicPlan | null;
   competitors: any[];
+  scanReport: ScanReport | null;
   loading: boolean;
   error: string | null;
   runScan: (competitorId: string) => Promise<void>;

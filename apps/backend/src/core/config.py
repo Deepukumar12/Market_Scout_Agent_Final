@@ -99,11 +99,52 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o"
 
+    # ---------------------------------------------------
+    # ANTHROPIC (Optional / Future Support)
+    # ---------------------------------------------------
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20240620"
+
 
     # ---------------------------------------------------
     # SEARCH APIs
     # ---------------------------------------------------
     TAVILY_API_KEY: str = ""
+    SERPAPI_API_KEY: str = ""
+    GOOGLE_SEARCH_API_KEY: str = ""
+    GOOGLE_SEARCH_CX: str = ""
+
+
+    # ---------------------------------------------------
+    # COMPANY INTELLIGENCE APIs
+    # ---------------------------------------------------
+    CRUNCHBASE_API_KEY: str = ""
+    CLEARBIT_API_KEY: str = ""
+    PEOPLE_DATA_LABS_API_KEY: str = ""
+
+
+    # ---------------------------------------------------
+    # FINANCIAL APIs
+    # ---------------------------------------------------
+    ALPHA_VANTAGE_API_KEY: str = ""
+    FINNHUB_API_KEY: str = ""
+    FMP_API_KEY: str = ""  # Financial Modeling Prep
+
+
+    # ---------------------------------------------------
+    # NEWS APIs
+    # ---------------------------------------------------
+    NEWSAPI_API_KEY: str = ""
+    GNEWS_API_KEY: str = ""
+
+
+    # ---------------------------------------------------
+    # COMMUNITY & SOCIAL APIs
+    # ---------------------------------------------------
+    REDDIT_CLIENT_ID: str = ""
+    REDDIT_CLIENT_SECRET: str = ""
+    REDDIT_USER_AGENT: str = "ScoutIQ/1.0"
+    YOUTUBE_API_KEY: str = ""
 
 
     # ---------------------------------------------------

@@ -20,6 +20,13 @@ from src.domains.github.services.github_client import fetch_company_github_data,
 from src.core.config import settings
 from src.core.logger import agent_logger
 
+# Import Adapters
+from src.shared.adapters.company import CompanyAdapter
+from src.shared.adapters.financial import AlphaVantageAdapter, FinnhubAdapter
+from src.shared.adapters.news import NewsAdapter
+from src.shared.adapters.search import SerpAdapter
+from src.shared.adapters.social import RedditAdapter, YouTubeAdapter
+
 logger = logging.getLogger(__name__)
 
 
@@ -145,10 +152,28 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         )
 
     # -------------------------------------------------------------------------
-    # STEP 5 – LLM Analysis (Ollama/Gemini)
+    # STEP 5 – LLM Analysis & Parallel Intelligence Gathering
     # -------------------------------------------------------------------------
-    # Initiate GitHub fetch concurrently with the heavy LLM analysis
+    # 5.1 Initialize Adapters
+    company_adapter = CompanyAdapter()
+    alpha_adapter = AlphaVantageAdapter()
+    finnhub_adapter = FinnhubAdapter()
+    news_adapter = NewsAdapter()
+    serp_adapter = SerpAdapter()
+    reddit_adapter = RedditAdapter()
+    youtube_adapter = YouTubeAdapter()
+
+    # 5.2 Create Concurrent Intelligence Tasks
     github_task = asyncio.create_task(fetch_company_github_data(company, max_repos=15))
+    company_task = asyncio.create_task(company_adapter.get_data(company))
+    financial_task = asyncio.create_task(alpha_adapter.get_data(company)) # AlphaVantage often maps by company name too
+    finnhub_task = asyncio.create_task(finnhub_adapter.get_data(company))
+    news_task = asyncio.create_task(news_adapter.get_data(company))
+    serp_task = asyncio.create_task(serp_adapter.get_data(company))
+    social_tasks = asyncio.create_task(asyncio.gather(
+        reddit_adapter.get_data(company),
+        youtube_adapter.get_data(company)
+    ))
 
     await agent_logger.log(f"Phase 5: Synthesizing final intelligence report via {provider.upper()}...", "SYSTEM")
     try:
@@ -208,15 +233,35 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
 
         fixed_features.append(ScanFeature(**{**f.model_dump(), "publish_date": true_pub}))
         
+    # -------------------------------------------------------------------------
+    # FINAL STEP – Intelligence Fusion
+    # -------------------------------------------------------------------------
     github_data = None
     try:
         github_result = await github_task
         if not github_result.get("error"):
             github_data = github_result
-    except GitHubClientError as e:
-        logger.debug("GitHub data skipped for %s: %s", company, e)
-    except asyncio.CancelledError:
-        logger.debug("GitHub fetch was cancelled")
+    except Exception:
+        pass
+
+    # Await other intelligence domains
+    company_intel, fin_alpha, fin_quote, news_intel, serp_intel, social_intel = await asyncio.gather(
+        company_task, financial_task, finnhub_task, news_task, serp_task, social_tasks,
+        return_exceptions=True
+    )
+
+    # Normalize Financials (Merge AlphaVantage & Finnhub)
+    financial_data = None
+    if not isinstance(fin_alpha, Exception) and fin_alpha:
+        financial_data = {**fin_alpha}
+        if not isinstance(fin_quote, Exception) and fin_quote:
+            financial_data.update(fin_quote)
+
+    # Final cleanup of adapters
+    await asyncio.gather(
+        company_adapter.close(), alpha_adapter.close(), finnhub_adapter.close(),
+        news_adapter.close(), serp_adapter.close(), reddit_adapter.close(), youtube_adapter.close()
+    )
 
     return ScanResponse(
         competitor=report.competitor,
@@ -226,4 +271,9 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         total_valid_updates=len(fixed_features),
         features=fixed_features,
         github=github_data,
+        company=company_intel if not isinstance(company_intel, Exception) else None,
+        financials=financial_data,
+        news=news_intel if not isinstance(news_intel, Exception) and news_intel else [],
+        search_visibility=serp_intel if not isinstance(serp_intel, Exception) else None,
+        social=(social_intel[0] or []) + (social_intel[1] or []) if not isinstance(social_intel, Exception) else [],
     )

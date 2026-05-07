@@ -17,10 +17,6 @@ from bson import ObjectId
 
 router = APIRouter()
 
-# --- CONSTANTS ---
-COMPANY_PREFIXES = ["Quantum", "Neo", "Cloud", "Apex", "Nova", "Cyber", "Global", "Deep", "Flux", "Core"]
-COMPANY_SUFFIXES = ["Systems", "Dynamics", "Labs", "Flow", "Logic", "Base", "Mind", "Pulse", "Scale", "Grid"]
-
 # --- MODELS ---
 class GlobalMetrics(BaseModel):
     total_competitors: int
@@ -760,7 +756,6 @@ async def get_signal_analytics(
     """
     try:
         import time
-        import random
         start_time = time.perf_counter()
         
         if db.db is None: await db.connect()
@@ -821,8 +816,7 @@ async def get_signal_analytics(
         ]
         agg = await db.db["article_summaries"].aggregate(pipeline).to_list(length=10)
         total_cat = sum(item["count"] for item in agg)
-        else:
-            dist = [CategoryDistribution(category=item["_id"] or "General", count=item["count"], percentage=int((item["count"] / total_cat * 100)) if total_cat > 0 else 0) for item in agg]
+        dist = [CategoryDistribution(category=item["_id"] or "General", count=item["count"], percentage=int((item["count"] / total_cat * 100)) if total_cat > 0 else 0) for item in agg]
 
         # 4. Top Sources
         s_pipeline = [
