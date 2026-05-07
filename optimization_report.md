@@ -3,8 +3,8 @@
 ## 1. Frontend Optimizations Applied
 
 ### Rendering Performance & Memory Management
-- **Memoization Added**: Wrapped heavy data reduction logic (such as sector counts and chart aggregations) in `useMemo` hooks. This ensures that the UI only recalculates complex charting datasets when the raw signal inputs change, eliminating CPU overhead during standard re-renders.
-- **Callback Preservation**: Wrapped network requests like `fetchData` in `useCallback` with explicit dependency arrays. This prevents React from allocating new function references during every render cycle, ensuring `useEffect` dependency safety.
+- **Memoization Added**: Wrapped heavy data reduction logic in `useMemo` hooks across both `TargetUniversePage.tsx` and the core `DashboardPage.tsx`. This ensures that the UI only recalculates complex charting datasets (like the innovation surface matrix and competitor vectors) when the raw signal inputs change, eliminating CPU overhead during standard re-renders.
+- **Callback Preservation**: Wrapped network requests and heavy PDF generation routines (e.g., `handleExportGlobalPDF`) in `useCallback` with explicit dependency arrays. This prevents React from allocating new function references during every render cycle.
 - **Pure Function Extraction**: Moved utility helpers (e.g., `getSectorIcon`, `getSentimentColor`) outside of the React component's execution scope. This prevents standard JS engine garbage collection overhead from continuously creating and destroying functional references on every render.
 - **API Guardrails**: Added defensive structural checks (`Array.isArray`) before executing mapping logic across network-delivered payloads. This directly eliminates fatal UI crashes (`recommendations.map is not a function`) when the backend throws unexpected API validation errors.
 

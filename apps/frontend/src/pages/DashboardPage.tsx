@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { 
   Users, 
   FileText, 
@@ -25,7 +25,6 @@ import MissionBriefing from '@/components/dashboard/MissionBriefing';
 
 import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 import { jsPDF } from 'jspdf';
-import { useState } from 'react';
 import { generateMasterDossier } from '@/services/masterReportService';
 import { useOutletContext } from 'react-router-dom';
 
@@ -79,7 +78,7 @@ const DashboardPage = () => {
     return () => clearInterval(interval);
   }, [fetchActivityTimeline, searchQuery]);
 
-  const handleExportGlobalPDF = () => {
+  const handleExportGlobalPDF = useCallback(() => {
     const doc = new jsPDF();
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -305,9 +304,9 @@ const DashboardPage = () => {
 
     doc.save(`SCOUTIQ_GLOBAL_INTEL_${dateStr.replace(/\s+/g, '_')}.pdf`);
     setIsPdfModalOpen(false);
-  };
+  }, [globalMetrics, comparisonMatrix, activities, monthlyReleases]);
 
-  const handleExport7DayReport = () => {
+  const handleExport7DayReport = useCallback(() => {
     const doc = new jsPDF();
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
@@ -426,9 +425,9 @@ const DashboardPage = () => {
     }
 
     doc.save(`7_Day_Operations_Report_${todayStr}.pdf`);
-  };
+  }, [activities]);
 
-  const handleExportMasterPDF = () => {
+  const handleExportMasterPDF = useCallback(() => {
     generateMasterDossier({
       metrics: globalMetrics,
       activities: activities,
@@ -446,31 +445,30 @@ const DashboardPage = () => {
       }
     });
     setIsMasterModalOpen(false);
-  };
+  }, [globalMetrics, activities, comparisonMatrix, signals, missionBriefing, monthlyReleases]);
 
-  const chartData = innovationTrends?.timeline || [];
-  const chartCompetitors = chartData.length > 0 ? Object.keys(chartData[0].releases) : [];
-  const formattedChartData = chartData.map((d: any) => ({
+  const chartData = useMemo(() => innovationTrends?.timeline || [], [innovationTrends]);
+  const chartCompetitors = useMemo(() => chartData.length > 0 ? Object.keys(chartData[0].releases) : [], [chartData]);
+  const formattedChartData = useMemo(() => chartData.map((d: any) => ({
     name: d.date,
     ...d.releases
-  }));
+  })), [chartData]);
 
-
-  const dashboardReports = history.slice(0, 7).map(r => ({
+  const dashboardReports = useMemo(() => history.slice(0, 7).map(r => ({
     id: r.id || r._id,
     company: r.company || r.competitor || 'Unknown',
     featuresFound: r.features?.length || 0,
     sources: r.total_sources_scanned || 1,
     time: r.generated_at || r.scan_date,
     status: 'Completed' as const
-  }));
+  })), [history]);
 
-  const dashboardSources = signals.slice(0, 3).map(s => ({
+  const dashboardSources = useMemo(() => signals.slice(0, 3).map(s => ({
     title: s.summary,
     source: s.source,
     date: new Date(s.timestamp).toLocaleDateString('en-IN'),
     url: s.url || "#"
-  }));
+  })), [signals]);
 
   return (
     <div className="space-y-14 pb-20">
