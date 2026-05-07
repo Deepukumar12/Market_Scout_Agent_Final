@@ -36,5 +36,4 @@ trafilatura
 dateparser
 urllib3<2.0.0
 json-repair
-fpdf2
 crawl4ai

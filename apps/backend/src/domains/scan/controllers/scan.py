@@ -18,8 +18,6 @@ import os
 from datetime import datetime, timezone
 from src.core.database import db
 from src.domains.notifications.controllers.notifications import create_notification, NotificationType
-from src.domains.notifications.services.email_service import send_email_report
-from src.domains.reports.services.pdf_service import generate_user_pdf_report
 from services.data.delta_engine import get_cached_features, store_new_features
 from src.domains.scan.models.scan import ScanFeature
 
@@ -46,16 +44,12 @@ async def post_scan(
             content={"error": "Gemini API unavailable"},
         )
 
-    # Persist findings for Activity Timeline consistency
+    # Persistence logic remains intact for UI consistency
     try:
         if db.db is None: await db.connect()
-        
-        # 1. Store new features in feature_updates (delta detection)
         await store_new_features(body.company_name, result.features)
         
         now = datetime.now(timezone.utc)
-
-        # 2. Update Competitor Profile with fresh intelligence (Logo, Employees, Industry)
         if result.company:
             update_data = {
                 "last_scan": now,
@@ -73,7 +67,6 @@ async def post_scan(
                 {"$set": update_data}
             )
 
-        # 3. Persist full report to reports collection
         report_doc = result.model_dump()
         report_doc.update({
             "user_id": str(current_user.id),
@@ -85,45 +78,5 @@ async def post_scan(
         await db.db["reports"].insert_one(report_doc)
     except Exception as e:
         logger.error(f"Failed to persist ad-hoc scan: {e}")
-
-    # 3. Trigger Email Report for immediate feedback
-    try:
-        # Fetch last 7 days of features for this specific scanning cycle's context
-        historical_raw = await get_cached_features(body.company_name, limit=20, days=7)
-        features = []
-        for h in historical_raw:
-            features.append(ScanFeature(
-                feature_title=h.get("feature_name", "Unknown"),
-                technical_summary=h.get("technical_summary", ""),
-                publish_date=h.get("release_date", ""),
-                source_url=h.get("source_url", ""),
-                source_domain=h.get("source_domain", "archived"),
-                category=h.get("category", "Platform"),
-                confidence_score=int(h.get("confidence_score") or 70)
-            ))
-            
-        if features:
-            user_reports = [{"company": body.company_name, "features": features}]
-            pdf_filename = f"Market_Scout_Report_{body.company_name}_{now.strftime('%H%M')}.pdf"
-            pdf_path = f"/tmp/{pdf_filename}"
-            
-            generate_user_pdf_report(current_user.email, user_reports, pdf_path)
-            
-            subject = f"Market Scout AI: Manual Scan Report - {body.company_name}"
-            content = f"Your manual intelligence scan for {body.company_name} is complete. Attached is the technical report."
-            
-            send_email_report(
-                to_email=current_user.email,
-                subject=subject,
-                content=content,
-                attachment_path=pdf_path
-            )
-            
-            if os.path.exists(pdf_path):
-                os.remove(pdf_path)
-            logger.info(f"📧 Manual scan email sent to {current_user.email}")
-            
-    except Exception as e:
-        logger.error(f"Failed to trigger manual scan email: {e}")
 
     return result
