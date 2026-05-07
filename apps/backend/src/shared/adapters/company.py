@@ -59,12 +59,13 @@ class PDLAdapter(BaseAdapter):
     def normalize(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         data = raw.get("data", {})
         return {
-            "employee_count": data.get("employee_count"),
-            "hiring_status": data.get("hiring_status"),
-            "employee_growth": data.get("employee_growth"),
-            "top_skills": data.get("top_skills", [])[:5],
-            "average_tenure": data.get("average_tenure")
-        }
+            "metrics": {
+                "employees": data.get("employee_count"),
+                "employee_growth": data.get("employee_growth"),
+                "hiring_status": data.get("hiring_status"),
+                "average_tenure": data.get("average_tenure")
+            },
+            "top_skills": data.get("top_skills", [])[:5]
         }
 
 class CrunchbaseAdapter(BaseAdapter):

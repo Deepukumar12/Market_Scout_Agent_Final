@@ -53,8 +53,27 @@ async def post_scan(
         # 1. Store new features in feature_updates (delta detection)
         await store_new_features(body.company_name, result.features)
         
-        # 2. Persist full report to reports collection
         now = datetime.now(timezone.utc)
+
+        # 2. Update Competitor Profile with fresh intelligence (Logo, Employees, Industry)
+        if result.company:
+            update_data = {
+                "last_scan": now,
+                "status": "Active",
+                "firmographics": {
+                    "logo": result.company.get("logo"),
+                    "industry": result.company.get("industry"),
+                    "location": result.company.get("location"),
+                    "employees": result.company.get("metrics", {}).get("employees"),
+                    "market_cap": (result.financials or {}).get("market_cap")
+                }
+            }
+            await db.db["competitors"].update_one(
+                {"name": {"$regex": f"^{body.company_name}$", "$options": "i"}},
+                {"$set": update_data}
+            )
+
+        # 3. Persist full report to reports collection
         report_doc = result.model_dump()
         report_doc.update({
             "user_id": str(current_user.id),

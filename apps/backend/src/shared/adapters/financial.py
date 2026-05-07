@@ -116,15 +116,12 @@ class FMPAdapter(BaseAdapter):
 
     def normalize(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         return {
-            "mkt_cap": raw.get("mktCap"),
-            "price": raw.get("price"),
+            "market_cap": raw.get("mktCap"),
+            "current_price": raw.get("price"),
             "beta": raw.get("beta"),
             "last_div": raw.get("lastDiv"),
-            "range": raw.get("range"),
-            "changes": raw.get("changes"),
-            "company_name": raw.get("companyName"),
-            "currency": raw.get("currency"),
             "exchange": raw.get("exchange"),
-            "sector": raw.get("sector")
+            "sector": raw.get("sector"),
+            "currency": raw.get("currency")
         }
 
