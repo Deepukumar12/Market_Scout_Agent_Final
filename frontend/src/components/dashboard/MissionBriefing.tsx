@@ -1,5 +1,6 @@
+
 import { motion } from 'framer-motion';
-import { ShieldAlert, Lightbulb, Activity } from 'lucide-react';
+import { ShieldAlert, Lightbulb, Activity, ExternalLink } from 'lucide-react';
 import { MissionBriefingData } from '@/store/intelStore';
 
 interface MissionBriefingProps {
@@ -56,7 +57,7 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
               </h2>
               
               <div className="flex flex-wrap gap-4 mt-8">
-                {['Accuracy: 100%', 'Status: Verified', 'Cycle: 7-Day Window'].map((tag) => (
+                {['Accuracy: High', 'Status: Verified', 'Cycle: 7-Day Window'].map((tag) => (
                   <span key={tag} className="px-4 py-2 rounded-full bg-card/50 border border-border text-[9px] font-black text-foreground uppercase tracking-widest italic shadow-apple-sm">
                     {tag}
                   </span>
@@ -69,12 +70,28 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
               <div className="p-6 rounded-[32px] bg-card/50 border border-border backdrop-blur-sm">
                 <div className="flex items-center gap-2 mb-4">
                   <ShieldAlert size={16} className="text-red-500" />
-                  <span className="text-[10px] font-black text-red-500 uppercase tracking-widest italic">Technical Risks</span>
+                  <span className="text-[10px] font-black text-red-500 uppercase tracking-widest italic">Verified Risks</span>
                 </div>
-                <ul className="space-y-3">
+                <ul className="space-y-4">
                   {data.technical_risks.map((risk, i) => (
-                    <li key={i} className="text-[11px] font-bold text-muted-foreground leading-relaxed flex items-start gap-2 italic">
-                      <span className="text-red-500">•</span> {risk}
+                    <li key={i} className="group cursor-default">
+                      <div className="flex items-start gap-2">
+                        <span className="text-red-500 mt-1.5">•</span>
+                        <p className="text-[11px] font-bold text-muted-foreground leading-relaxed italic">
+                          {typeof risk === 'string' ? risk : risk.text}
+                        </p>
+                      </div>
+                      {typeof risk !== 'string' && risk.source_url && (
+                        <a 
+                          href={risk.source_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="mt-1 ml-4 inline-flex items-center gap-1.5 text-[9px] font-black uppercase text-red-500/60 hover:text-red-500 transition-colors"
+                        >
+                          <ExternalLink size={10} />
+                          {risk.source_title || 'Evidence Link'}
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -84,12 +101,28 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
               <div className="p-6 rounded-[32px] bg-primary/5 border border-primary/10 backdrop-blur-sm">
                 <div className="flex items-center gap-2 mb-4">
                   <Lightbulb size={16} className="text-primary" />
-                  <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">Market Opportunities</span>
+                  <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">Verified Opportunities</span>
                 </div>
-                <ul className="space-y-3">
+                <ul className="space-y-4">
                   {data.market_opportunities.map((opp, i) => (
-                    <li key={i} className="text-[11px] font-bold text-muted-foreground leading-relaxed flex items-start gap-2 italic">
-                      <span className="text-primary">•</span> {opp}
+                    <li key={i} className="group cursor-default">
+                      <div className="flex items-start gap-2">
+                        <span className="text-primary mt-1.5">•</span>
+                        <p className="text-[11px] font-bold text-muted-foreground leading-relaxed italic">
+                          {typeof opp === 'string' ? opp : opp.text}
+                        </p>
+                      </div>
+                      {typeof opp !== 'string' && opp.source_url && (
+                        <a 
+                          href={opp.source_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="mt-1 ml-4 inline-flex items-center gap-1.5 text-[9px] font-black uppercase text-primary/60 hover:text-primary transition-colors"
+                        >
+                          <ExternalLink size={10} />
+                          {opp.source_title || 'Evidence Link'}
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>

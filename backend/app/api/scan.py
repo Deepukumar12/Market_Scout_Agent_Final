@@ -1,7 +1,7 @@
 """
 POST /api/v1/scan – Market Scout Agent.
 Strict input: company_name, website (optional), time_window_days.
-Strict output: ScanResponse or {"error": "Gemini API unavailable"}.
+Strict output: ScanResponse or {"error": "AI Intelligence Service unavailable"}.
 No synthetic fallback.
 """
 import logging
@@ -13,7 +13,7 @@ from app.models.scan import ScanRequest, ScanResponse
 from app.models.user import User
 from app.services.scan_pipeline import run_scan
 from app.services.search_service import SearchServiceError
-from app.services.gemini_client import GeminiClientError
+from app.services.search_service import SearchServiceError
 import os
 from datetime import datetime, timezone
 from app.core.database import db
@@ -35,7 +35,7 @@ async def post_scan(
     """
     Run the 5-step Market Scout Agent pipeline:
     Query Planning (LLM) → Search (Zenserp) → Scrape + Date Filter → Content Filter → Gemini Analysis.
-    Returns strict ScanResponse JSON, or {"error": "Gemini API unavailable"} if Gemini fails.
+    Returns strict ScanResponse JSON, or {"error": "AI Intelligence Service unavailable"} if all providers fail.
     """
     logger.info("SCAN [%s] <- FRESH SCAN (ad-hoc POST /scan)", body.company_name)
     result = await run_scan(body)
@@ -43,7 +43,7 @@ async def post_scan(
     if result is None:
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"error": "Gemini API unavailable"},
+            content={"error": "AI Intelligence Service unavailable"},
         )
 
     # Persist findings for Activity Timeline consistency

@@ -30,21 +30,23 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (!company.trim() || company.trim().length < 2) {
+      if (!company.trim() || company.trim().length < 1) {
         setDynamicSuggestions([]);
         return;
       }
       
+      setIsSearching(true);
       try {
         const results = await getCompanySuggestions(company.trim());
-        setDynamicSuggestions(results.filter((c: string) => c.toLowerCase() !== company.trim().toLowerCase()));
+        setDynamicSuggestions(results);
       } catch (e) {
         console.error("Suggestion fetch error:", e);
       } finally {
-        // Done
+        setIsSearching(false);
       }
     };
 
@@ -65,9 +67,11 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
       setFocusedIndex(prev => (prev > 0 ? prev - 1 : -1));
     } else if (e.key === 'Enter' && focusedIndex >= 0) {
       e.preventDefault();
-      setCompany(filteredSuggestions[focusedIndex]);
+      const selected = filteredSuggestions[focusedIndex];
+      setCompany(selected);
       setShowSuggestions(false);
       setFocusedIndex(-1);
+      onAnalyze(selected); // Immediate Trigger
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
       setFocusedIndex(-1);
@@ -128,33 +132,58 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                       onKeyDown={handleKeyDown}
                       onFocus={() => setShowSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                      className="w-full bg-muted border border-transparent focus:border-primary focus:bg-card rounded-2xl py-5 pl-14 pr-6 text-foreground text-lg font-medium outline-none transition-all"
+                      className="w-full bg-muted border border-transparent focus:border-primary focus:bg-card rounded-2xl py-5 pl-14 pr-14 text-foreground text-lg font-medium outline-none transition-all"
                       autoFocus
                     />
                     
+                    {isSearching && (
+                      <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none">
+                        <Loader2 size={20} className="text-primary animate-spin" />
+                      </div>
+                    )}
+                    
                     <AnimatePresence>
-                      {showSuggestions && filteredSuggestions.length > 0 && (
+                      {showSuggestions && company.trim() && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
                           className="absolute z-10 w-full mt-2 bg-card rounded-xl shadow-xl border border-border max-h-64 overflow-y-auto"
                         >
-                          {filteredSuggestions.map((suggestion, index) => (
-                            <button
-                              key={suggestion}
-                              type="button"
-                              onMouseEnter={() => setFocusedIndex(index)}
-                              onClick={() => {
-                                setCompany(suggestion);
-                                setShowSuggestions(false);
-                                setFocusedIndex(-1);
-                              }}
-                              className={`w-full text-left px-6 py-3 font-medium transition-colors border-b border-gray-50 last:border-0 ${index === focusedIndex ? 'bg-muted text-primary' : 'hover:bg-muted text-foreground'}`}
-                            >
-                              {suggestion}
-                            </button>
-                          ))}
+                          {filteredSuggestions.length > 0 ? (
+                            filteredSuggestions.map((suggestion, index) => (
+                              <button
+                                key={suggestion}
+                                type="button"
+                                onMouseEnter={() => setFocusedIndex(index)}
+                                onClick={() => {
+                                  setCompany(suggestion);
+                                  setShowSuggestions(false);
+                                  setFocusedIndex(-1);
+                                  onAnalyze(suggestion); // Immediate Trigger
+                                }}
+                                className={`w-full text-left px-6 py-4 font-bold transition-all border-b border-border/50 last:border-0 ${index === focusedIndex ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50 text-foreground'}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="text-[14px]">
+                                      {suggestion.split(new RegExp(`(${company})`, 'gi')).map((part, i) => 
+                                        part.toLowerCase() === company.toLowerCase() 
+                                          ? <span key={i} className="text-primary font-black underline decoration-primary/30 underline-offset-4">{part}</span> 
+                                          : <span key={i}>{part}</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                  <ChevronRight size={14} className={cn("transition-opacity", index === focusedIndex ? "opacity-100" : "opacity-0")} />
+                                </div>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-6 py-8 text-center">
+                              <p className="text-sm font-black text-muted-foreground uppercase tracking-widest italic mb-1">No Intelligence Match</p>
+                              <p className="text-[10px] font-medium text-muted-foreground/60 italic">Type full name to initiate manual scan</p>
+                            </div>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -162,8 +191,9 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                   
                   <div className="pt-4">
                     <Button 
-                      disabled={!company.trim()}
-                      className="w-full h-16 rounded-2xl bg-primary hover:bg-[#0077ED] text-white text-lg font-bold shadow-lg shadow-[#0071E3]/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2 group"
+                      type="submit"
+                      disabled={!company.trim() || status === 'running'}
+                      className="w-full h-16 rounded-2xl bg-primary hover:bg-[#0077ED] text-white text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/30 disabled:opacity-50 transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
                     >
                       Analyze Company
                       <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />

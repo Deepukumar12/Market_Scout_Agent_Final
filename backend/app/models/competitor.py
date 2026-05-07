@@ -26,11 +26,15 @@ class CompetitorBase(BaseModel):
 class CompetitorCreate(CompetitorBase):
     pass
 
-class CompetitorUpdate(CompetitorBase):
+class CompetitorUpdate(BaseModel):
     name: Optional[str] = None
     url: Optional[HttpUrl] = None
     monitoring_enabled: Optional[bool] = None
     scan_frequency: Optional[str] = None
+    priority: Optional[str] = None
+    sector: Optional[str] = None
+    logo_url: Optional[str] = None
+    stock_symbol: Optional[str] = None
 
 class Competitor(CompetitorBase):
     # Represent MongoDB id as a simple string in API responses.

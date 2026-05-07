@@ -30,8 +30,10 @@ class DeepSeekClient:
             raise ValueError("DEEPSEEK_API_KEY is not configured")
 
         prompt = (
-            f"Analyse technical updates for {competitor_name} across the last {time_window_days} days.\n"
-            f"Sources: {scraped_items[:10]}\n\n"
+            f"Analyze technical updates for {competitor_name} across the last {time_window_days} days.\n"
+            f"Sources: {scraped_items[:12]}\n\n"
+            f"Extract every feature release, pricing change, or hiring event.\n"
+            f"Each feature must include: activity_type, impact_level, platform, confidence_score.\n"
             f"Output ONLY a JSON object matching the Market Scout schema."
         )
 

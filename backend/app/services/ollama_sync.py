@@ -126,10 +126,11 @@ class OllamaClient:
         prompt = (
             f"Analyze technical updates for {competitor_name} for the last {time_window_days} days. Scan Date: {scan_date_iso}.\n"
             f"Sources: {json.dumps(limited_items)}\n\n"
+            f"Identify every distinct feature release, pricing change, hiring spree, or major social event.\n"
             f"Output ONLY a JSON object matching this schema:\n"
             f"{{\"competitor\": \"string\", \"scan_date\": \"string\", \"time_window_days\": int, "
             f"\"total_sources_scanned\": int, \"total_valid_updates\": int, "
-            f"\"features\": [{{\"feature_title\": \"string\", \"technical_summary\": \"string\", \"publish_date\": \"YYYY-MM-DD\", \"source_url\": \"string\", \"source_domain\": \"string\", \"category\": \"string\", \"confidence_score\": int}}], "
+            f"\"features\": [{{\"feature_title\": \"string\", \"technical_summary\": \"string\", \"publish_date\": \"YYYY-MM-DD\", \"source_url\": \"string\", \"source_domain\": \"string\", \"category\": \"string\", \"confidence_score\": int, \"activity_type\": \"feature|pricing|social|hiring\", \"impact_level\": \"Low|Medium|High|Critical\", \"platform\": \"GitHub|LinkedIn|Blog\"}}], "
             f"\"executive_summary\": \"string\", \"innovation_velocity_score\": int}}\n\n"
             f"STRICT: Output ONLY JSON. No explanations."
         )
@@ -177,7 +178,19 @@ async def generate_text_ollama_async(prompt: str, system: str = "", max_tokens: 
 def generate_text_ollama(prompt: str, system: str = "", max_tokens: int = 2048) -> str:
     """Synchronous wrapper for Ollama generation."""
     try:
-        return asyncio.run(generate_text_ollama_async(prompt, system, max_tokens))
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If we're already in a loop, we can't use run() or run_until_complete()
+            # This is a fallback that should ideally be avoided by using the async version directly.
+            import nest_asyncio
+            nest_asyncio.apply()
+            return loop.run_until_complete(generate_text_ollama_async(prompt, system, max_tokens))
+        else:
+            return loop.run_until_complete(generate_text_ollama_async(prompt, system, max_tokens))
     except Exception as e:
-        logger.error(f"Sync Ollama failed: {e}")
-        return ""
+        # Final fallback: just use asyncio.run if nothing else works
+        try:
+            return asyncio.run(generate_text_ollama_async(prompt, system, max_tokens))
+        except Exception as e2:
+            logger.error(f"Sync Ollama failed: {e2}")
+            return ""

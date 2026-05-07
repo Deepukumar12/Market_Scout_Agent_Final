@@ -43,14 +43,6 @@ const DashboardLayout = () => {
     // Initial fetch
     refreshAllData(searchQuery);
     fetchNotifications();
-
-    // High-frequency polling for "Real-Time" feel (10 seconds)
-    const interval = setInterval(() => {
-        refreshAllData(searchQuery);
-        fetchNotifications();
-    }, 10000);
-
-    return () => clearInterval(interval);
   }, [refreshAllData, fetchNotifications, searchQuery]);
 
   useEffect(() => {

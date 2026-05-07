@@ -34,18 +34,34 @@ class FinancialService:
         return None
 
     @staticmethod
-    async def get_market_news(symbol: str) -> Optional[Dict[str, Any]]:
-        if not settings.FINNHUB_API_KEY:
+    async def get_income_statement(symbol: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetches annual and quarterly income statements for revenue analysis.
+        """
+        if not settings.ALPHA_VANTAGE_API_KEY:
             return None
         
         try:
-            url = f"https://finnhub.io/api/v1/news?category=general&token={settings.FINNHUB_API_KEY}"
+            url = f"https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol={symbol}&apikey={settings.ALPHA_VANTAGE_API_KEY}"
             async with httpx.AsyncClient() as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
-                    return resp.json()[:5] # Top 5 news items
+                    data = resp.json()
+                    # Return only the essential growth metrics
+                    annual = data.get("annualReports", [])
+                    if annual:
+                        return {
+                            "reports": [
+                                {
+                                    "fiscalDateEnding": r.get("fiscalDateEnding"),
+                                    "totalRevenue": r.get("totalRevenue"),
+                                    "grossProfit": r.get("grossProfit"),
+                                    "netIncome": r.get("netIncome")
+                                } for r in annual[:5]
+                            ]
+                        }
         except Exception as e:
-            logger.error(f"Finnhub news fetch failed: {e}")
+            logger.error(f"Alpha Vantage Income Statement fetch failed: {e}")
         return None
 
 financial_service = FinancialService()

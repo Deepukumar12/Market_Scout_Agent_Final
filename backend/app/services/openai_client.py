@@ -86,9 +86,10 @@ class OpenAIClient:
         prompt = (
             f"Analyse technical updates for {competitor_name} across the last {time_window_days} days. Scan Date: {scan_date_iso}.\n"
             f"Sources: {json.dumps(limited_items)}\n\n"
+            f"Identify every distinct feature release, pricing change, hiring spree, or major social event.\n"
             f"Output ONLY a JSON object: "
             f"{{\"competitor\": \"{competitor_name}\", \"scan_date\": \"{scan_date_iso}\", \"time_window_days\": {time_window_days}, "
-            f"\"features\": [{{\"feature_title\": \"string\", \"technical_summary\": \"string\", \"publish_date\": \"YYYY-MM-DD\", \"source_url\": \"string\", \"source_domain\": \"string\", \"category\": \"API|UI|Security\", \"confidence_score\": 85}}], "
+            f"\"features\": [{{\"feature_title\": \"string\", \"technical_summary\": \"string\", \"publish_date\": \"YYYY-MM-DD\", \"source_url\": \"string\", \"source_domain\": \"string\", \"category\": \"API|UI|Security\", \"confidence_score\": 85, \"activity_type\": \"feature|pricing|social|hiring\", \"impact_level\": \"Low|Medium|High|Critical\", \"platform\": \"GitHub|LinkedIn|Blog\"}}], "
             f"\"executive_summary\": \"string\", \"innovation_velocity_score\": 50}}\n"
         )
 

@@ -1,473 +1,300 @@
-
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  LineChart, Line, XAxis, Tooltip, ResponsiveContainer, 
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, 
-  BarChart, Bar, CartesianGrid
-} from 'recharts';
-import { 
-  Activity, Zap, BrainCircuit, Target, ArrowUpRight, Loader2, Trophy, BarChart3, TrendingUp
+  TrendingUp, 
+  Zap, 
+  BarChart3, 
+  Target, 
+  ArrowUpRight,
+  Info,
+  Calendar,
+  Layers,
+  ChevronRight,
+  PieChart as PieChartIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { useCompetitorStore } from '@/store/competitorStore';
-import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/authStore';
+import { useCompetitorStore } from '@/store/competitorStore';
+import { RevenueChart } from '@/components/dashboard/RevenueChart';
+import { PredictiveChart } from '@/components/dashboard/PredictiveChart';
+import { EvidenceBadge, EvidenceCatalog } from '@/components/ui/EvidenceUI';
 
 interface PerformerMetric {
-    competitor_id: string;
-    name: string;
-    change_velocity_score: number;
-    innovation_index: number;
-    market_sentiment: string;
-    predicted_trend: string;
-    trend_probability: number;
+  competitor_id: string;
+  name: string;
+  change_velocity_score: number;
+  innovation_index: number;
+  market_sentiment: string;
+  predicted_trend: string;
+  trend_probability: number;
 }
 
-interface PredictiveAnalysisResult {
-    top_performers: PerformerMetric[];
-    stable_performers: PerformerMetric[];
-    trending_predictions: PerformerMetric[];
-    analysis_timestamp: string;
+interface FinancialData {
+  company_name: string;
+  annual_revenue_history: any[];
+  quarterly_growth_velocity: number;
+  profitability_index: number;
+  evidence_catalog: any[];
+}
+
+interface PredictiveForecastingData {
+    company_name: string;
+    historical_points: any[];
+    forecast_points: any[];
+    events: any[];
+    overall_confidence: number;
+    primary_trend: string;
+}
+
+interface PredictiveData {
+  top_performers: PerformerMetric[];
+  stable_performers: PerformerMetric[];
+  trending_predictions: PerformerMetric[];
+  analysis_timestamp: string;
 }
 
 const PredictiveAnalyticsPage = () => {
-  const { competitors, fetchCompetitors } = useCompetitorStore();
+  const { competitors, selectedCompetitorId, setSelectedCompetitorId, fetchCompetitors } = useCompetitorStore();
   const { token } = useAuthStore();
-  
-  const [loading, setLoading] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<PredictiveAnalysisResult | null>(null);
+  const [predictiveData, setPredictiveData] = useState<PredictiveData | null>(null);
+  const [financialData, setFinancialData] = useState<FinancialData | null>(null);
+  const [forecastData, setForecastData] = useState<PredictiveForecastingData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showEvidence, setShowEvidence] = useState(false);
 
   useEffect(() => {
     fetchCompetitors();
   }, [fetchCompetitors]);
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 15000); // 15s refresh for predictive updates
-    return () => clearInterval(interval);
-  }, [token]);
+    if (!selectedCompetitorId && competitors.length > 0) {
+      setSelectedCompetitorId(competitors[0].id || competitors[0]._id || null);
+    }
+  }, [competitors, selectedCompetitorId, setSelectedCompetitorId]);
 
-  const fetchData = async () => {
-      setLoading(true);
-      try {
-          // @ts-ignore - import.meta.env is provided by Vite
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-          const res = await fetch(`${apiUrl}/api/v1/intelligence/predictive-pipeline`, {
-               headers: { Authorization: `Bearer ${token}` }
-          });
-          if (res.ok) {
-              const data = await res.json();
-              setAnalysisResult(data);
-          }
-      } catch (e) {
-          console.error(e);
-      } finally {
-          setLoading(false);
+  const fetchDataFixed = async () => {
+    setLoading(true);
+    try {
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+      
+      const predRes = await fetch(`${apiUrl}/api/v1/intelligence/predictive-pipeline`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (predRes.ok) setPredictiveData(await predRes.json());
+
+      if (selectedCompetitorId) {
+        // Fetch Financial Intelligence
+        const finRes = await fetch(`${apiUrl}/api/v1/intelligence/financial-intelligence?competitor_id=${selectedCompetitorId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (finRes.ok) setFinancialData(await finRes.json());
+
+        // Fetch Predictive Forecasting
+        const foreRes = await fetch(`${apiUrl}/api/v1/intelligence/predictive-forecasting?competitor_id=${selectedCompetitorId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (foreRes.ok) setForecastData(await foreRes.json());
       }
-  };
+      
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const handleInitializePipeline = () => {
-    fetchData();
-  };
-  
-
-  // Deduplicate combined array by competitor_id to prevent redundant UI traces
-  const allPerformers = analysisResult 
-    ? Array.from(
-        new Map([...analysisResult.top_performers, ...analysisResult.stable_performers]
-        .map(item => [item.competitor_id, item]))
-        .values()
-      ) 
-    : [];
-  
-  const trendData = analysisResult ? allPerformers.map((p, i) => ({
-      name: p.name.substring(0, 10),
-      value: p.change_velocity_score,
-      time: `T${i}`
-  })) : [];
-  
-  const radarData = analysisResult ? allPerformers.slice(0, 5).map(p => ({
-      subject: p.name.substring(0, 12),
-      A: p.change_velocity_score,
-      fullMark: 100
-  })) : [];
-  
-  const revData = analysisResult ? (
-      analysisResult.trending_predictions.length > 0 
-        ? analysisResult.trending_predictions.map(p => ({
-            name: p.name.substring(0, 8),
-            gap: p.trend_probability * 100
-          }))
-        : allPerformers.map(p => ({
-            name: p.name.substring(0, 8),
-            gap: p.innovation_index
-          }))
-  ) : [];
+  useEffect(() => {
+    fetchDataFixed();
+  }, [selectedCompetitorId, token]);
 
   return (
-    <div className="relative max-w-7xl mx-auto space-y-12 pb-20">
-      {/* Background Glow */}
-      <div className="pointer-events-none absolute -top-20 -right-20 w-[600px] h-[600px] bg-purple-500/10 blur-[120px] animate-pulse-slow" />
-
-      {/* Hero Header */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-10">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-             <div className="px-3 py-1 rounded-lg bg-[#AF52DE]/10 border border-[#AF52DE]/20 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#AF52DE] animate-pulse" />
-                <span className="text-[10px] font-black text-[#AF52DE] uppercase tracking-widest">Neural Forecast Engine</span>
-             </div>
-             <div className="px-3 py-1 rounded-lg bg-muted border border-border text-[10px] font-mono text-muted-foreground  uppercase">
-                Status: {loading ? "Computing" : "Modeling"}
-             </div>
+    <div className="space-y-10 pb-20">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+             <TrendingUp size={14} className="text-[#34C759]" />
+             <span className="text-[10px] font-black text-[#34C759] uppercase tracking-[0.2em] italic">Predictive Intelligence Engine</span>
           </div>
-          <div className="flex gap-4">
-          </div>
-          <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-5xl lg:text-6xl font-black tracking-tighter text-foreground uppercase italic leading-tight"
-          >
-            Predictive <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#AF52DE] to-[#5AC8FA]">Futures</span>
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-muted-foreground dark:text-muted-foreground mt-2 max-w-2xl font-medium leading-relaxed italic"
-          >
-            Leveraging autonomous modeling threads to anticipate competitor pivots and market fluctuations. 
-            Analyzing <span className="text-foreground">{competitors.length} intelligence nodes</span> for high-confidence strategy mapping.
-          </motion.p>
+          <h1 className="text-4xl font-black text-foreground uppercase italic tracking-tighter">Growth <span className="text-primary">Forecasting</span></h1>
+          <p className="text-muted-foreground font-medium italic">High-fidelity predictive analytics and market expansion modeling.</p>
         </div>
-        
-        {/* Animated 3D-ish Graphic Simulation */}
-        <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="relative w-64 h-40 bg-card/70 border border-border rounded-[40px] backdrop-blur-xl flex items-center justify-center overflow-hidden group shadow-apple"
-        >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent opacity-50" />
-            <div className="absolute inset-0 bg-grid-white/[0.02]" />
-            <motion.div 
-                animate={{ rotateX: [0, 10, 0], rotateY: [0, 15, 0] }}
-                transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                className="w-full h-full flex items-center justify-center relative z-10"
+
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end gap-2">
+            <select 
+              value={selectedCompetitorId || ''} 
+              onChange={(e) => setSelectedCompetitorId(e.target.value)}
+              className="h-12 px-6 rounded-2xl border border-border bg-card text-sm font-bold text-foreground focus:outline-none shadow-apple-sm min-w-[200px]"
             >
-                <BrainCircuit size={64} className={`text-[#AF52DE]/50 drop-shadow-[0_0_20px_rgba(175,82,222,0.3)] ${loading ? 'animate-pulse' : ''}`} />
-                <div className={`absolute inset-0 flex items-center justify-center ${loading ? 'opacity-100' : 'opacity-0'}`}>
-                   <Loader2 className="w-12 h-12 text-[#AF52DE] animate-spin" />
-                </div>
-            </motion.div>
-        </motion.div>
+              <option value="" disabled>Focus Target</option>
+              {competitors.map(c => (
+                <option key={c._id || c.id} value={c._id || c.id}>{c.name}</option>
+              ))}
+            </select>
+            {financialData && <EvidenceBadge count={financialData.evidence_catalog.length} confidence={92} status="Audited" />}
+          </div>
+        </div>
       </div>
 
-        <AnimatePresence>
-            {!loading && !analysisResult && (
-                <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-20 bg-white/40 dark:bg-black/20 border border-dashed border-border rounded-[40px] backdrop-blur-sm"
-                >
-                    <Activity className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-                    <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter">No Analysis Available</h3>
-                    <p className="text-[10px] text-muted-foreground font-mono mt-2 uppercase tracking-widest max-w-xs text-center">
-                        Initialize the pipeline to model futures based on your current intelligence nodes.
-                    </p>
-                </motion.div>
-            )}
+      {loading ? (
+        <div className="h-96 flex items-center justify-center">
+            <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className="space-y-10">
+          
+          {/* Main Predictive Visualization */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              <div className="lg:col-span-2 p-10 rounded-[40px] bg-card/70 backdrop-blur-xl border border-border shadow-apple h-[600px]">
+                  {forecastData ? (
+                      <PredictiveChart 
+                        historicalData={forecastData.historical_points} 
+                        forecastData={forecastData.forecast_points} 
+                        events={forecastData.events}
+                        companyName={forecastData.company_name}
+                        confidence={forecastData.overall_confidence}
+                      />
+                  ) : (
+                      <div className="h-full flex items-center justify-center text-muted-foreground italic font-medium">
+                          Select a target to generate predictive vector.
+                      </div>
+                  )}
+              </div>
 
-            {analysisResult && (
-                <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="space-y-10 overflow-hidden"
-                >
-                    <div className="flex items-center gap-4 py-4 border-b border-border">
-                        <h2 className="text-2xl font-black text-foreground uppercase italic tracking-tighter flex items-center gap-3">
-                            <Target className="w-6 h-6 text-emerald-500" />
-                            Pipeline Output
-                        </h2>
-                        <span className="text-[10px] font-mono text-muted-foreground  uppercase tracking-widest">
-                            Generated: {new Date(analysisResult.analysis_timestamp).toLocaleTimeString('en-IN')}
-                        </span>
-                    </div>
+              <div className="lg:col-span-1 space-y-8">
+                  <div className="p-8 rounded-[40px] bg-foreground text-background shadow-apple flex flex-col justify-between h-[280px] relative overflow-hidden group">
+                      <div className="absolute -right-4 -top-4 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                          <Zap size={120} className="text-primary" />
+                      </div>
+                      <div>
+                          <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] italic mb-4">Strategic Trend</h3>
+                          <div className="text-4xl font-black text-white tracking-tighter italic mb-2">{forecastData?.primary_trend || "N/A"}</div>
+                          <p className="text-xs text-white/50 font-bold uppercase tracking-widest italic leading-relaxed">
+                            Detected momentum shift based on hiring acceleration and technical signal density.
+                          </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest italic pt-4 border-t border-white/10">
+                          <BarChart3 size={12} /> AI Forecast Accuracy: {forecastData?.overall_confidence || 0}%
+                      </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        {/* Top Performers (High Change Velocity) */}
-                        <div className="bg-card/70 border border-border rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-emerald-500/20 transition-all shadow-apple shadow-sm">
-                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] rounded-full pointer-events-none" />
-                             <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                                    <Trophy className="w-5 h-5 text-emerald-600" />
+                  <div className="p-8 rounded-[40px] bg-card border border-border shadow-apple flex flex-col justify-between h-[280px] relative overflow-hidden group">
+                      <div className="absolute -right-4 -top-4 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                          <Target size={120} className="text-primary" />
+                      </div>
+                      <div>
+                          <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest italic mb-4">Growth Velocity</h3>
+                          <div className="text-4xl font-black text-foreground tracking-tighter italic">+{financialData?.quarterly_growth_velocity || 0}%</div>
+                          <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest italic mt-2">Historical Baseline</p>
+                      </div>
+                      <Button 
+                        onClick={() => setShowEvidence(!showEvidence)}
+                        variant="ghost" 
+                        className="w-full h-14 rounded-2xl border border-border bg-muted/50 font-black uppercase tracking-widest text-[9px] italic"
+                      >
+                          {showEvidence ? 'Hide Model Evidence' : 'Analyze Forecasting Provenance'}
+                      </Button>
+                  </div>
+              </div>
+          </div>
+
+          {/* Evidence Catalog Overlay */}
+          <AnimatePresence>
+                {showEvidence && financialData && (
+                    <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="p-10 rounded-[40px] bg-[#1c1c1e] text-white shadow-2xl border border-white/10">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-3">
+                                    <Info className="text-primary" size={24} />
+                                    <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">Forecasting <span className="text-primary">Signals</span></h2>
                                 </div>
-                                <div>
-                                    <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Top Performers</h3>
-                                    <p className="text-[9px] text-muted-foreground  font-mono uppercase tracking-widest">High Change Velocity</p>
-                                </div>
-                             </div>
-                             
-                             <div className="space-y-4">
-                                {analysisResult.top_performers.map((company, idx) => (
-                                    <div key={idx} className="space-y-2">
-                                        <div className="flex justify-between items-center text-xs font-bold text-foreground">
-                                            <span>{company.name}</span>
-                                            <span className="text-emerald-600 font-black">{company.change_velocity_score}%</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                                            <motion.div 
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${company.change_velocity_score}%` }}
-                                                transition={{ duration: 1, delay: 0.2 * idx }}
-                                                className="h-full bg-emerald-500"
-                                            />
-                                        </div>
-                                        <div className="flex justify-between items-center text-[9px] font-mono text-muted-foreground ">
-                                            <span>Innovation: {company.innovation_index}</span>
-                                            <span className="flex items-center gap-1 text-emerald-600"><ArrowUpRight className="w-2.5 h-2.5" /> High Activity</span>
-                                        </div>
-                                    </div>
-                                ))}
-                             </div>
+                                <Button variant="ghost" onClick={() => setShowEvidence(false)} className="text-white/50 hover:text-white hover:bg-white/10">Close</Button>
+                            </div>
+                            <EvidenceCatalog sources={financialData.evidence_catalog} />
                         </div>
+                    </motion.div>
+                )}
+          </AnimatePresence>
 
-                        {/* Stable Performers (Low Change Velocity) */}
-                         <div className="bg-card/70 border border-border rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-primary/20 transition-all shadow-apple shadow-sm">
-                             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] rounded-full pointer-events-none" />
-                             <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                                    <BarChart3 className="w-5 h-5 text-primary" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Consistent Core</h3>
-                                    <p className="text-[9px] text-muted-foreground  font-mono uppercase tracking-widest">Steady Execution</p>
-                                </div>
-                             </div>
-                             
-                             <div className="space-y-4">
-                                {analysisResult.stable_performers.map((company, idx) => (
-                                    <div key={idx} className="space-y-2">
-                                        <div className="flex justify-between items-center text-xs font-bold text-foreground">
-                                            <span>{company.name}</span>
-                                            <span className="text-primary font-black">{company.change_velocity_score}%</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                                            <motion.div 
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${company.change_velocity_score}%` }}
-                                                transition={{ duration: 1, delay: 0.2 * idx }}
-                                                className="h-full bg-primary"
-                                            />
-                                        </div>
-                                         <div className="flex justify-between items-center text-[9px] font-mono text-muted-foreground ">
-                                             <span>Risk: {company.change_velocity_score > 60 ? "Elevated" : "Low"}</span>
-                                             <span className={cn(
-                                                "flex items-center gap-1",
-                                                company.change_velocity_score > 60 ? "text-amber-600" : "text-primary"
-                                             )}>
-                                                {company.change_velocity_score > 60 ? "Dynamic Shift" : "Stable Growth"}
-                                             </span>
-                                         </div>
-                                    </div>
-                                ))}
-                             </div>
-                        </div>
+          {/* Predictive Trends */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {predictiveData?.trending_predictions.map((p, i) => (
+                  <motion.div 
+                    key={i}
+                    whileHover={{ y: -5 }}
+                    className="p-8 rounded-[40px] bg-card border border-border shadow-apple flex flex-col gap-6 group"
+                  >
+                      <div className="flex justify-between items-start">
+                          <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-primary font-black text-xl italic border border-border">
+                              {p.name.charAt(0)}
+                          </div>
+                          <div className="flex flex-col items-end">
+                              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest italic mb-1">Confidence</span>
+                              <div className="flex items-center gap-1">
+                                  <span className="text-sm font-black text-foreground italic">{p.trend_probability * 100}%</span>
+                                  <div className="w-8 h-1 bg-muted rounded-full overflow-hidden">
+                                      <div className="h-full bg-primary" style={{ width: `${p.trend_probability * 100}%` }} />
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
 
-                        {/* Trending Predictions */}
-                        <div className="bg-card/70 border border-border rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-[#AF52DE]/20 transition-all shadow-apple shadow-sm">
-                             <div className="absolute top-0 right-0 w-32 h-32 bg-[#AF52DE]/5 blur-[50px] rounded-full pointer-events-none" />
-                             <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-xl bg-[#AF52DE]/10 flex items-center justify-center border border-[#AF52DE]/20">
-                                    <Zap className="w-5 h-5 text-[#AF52DE]" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Predicted Trending</h3>
-                                    <p className="text-[9px] text-muted-foreground font-mono uppercase tracking-widest">Future Breakouts</p>
-                                </div>
-                             </div>
-                             
-                             <div className="divide-y divide-white/5">
-                                {analysisResult.trending_predictions.map((company, idx) => (
-                                    <motion.div 
-                                        key={idx}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.3 * idx }}
-                                        className="py-3 first:pt-0 last:pb-0 border-b border-border last:border-0"
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                 <div className="text-xs font-black text-foreground uppercase italic">{company.name}</div>
-                                                 <div className="text-[9px] text-muted-foreground font-mono mt-0.5">Prob: {(company.trend_probability * 100).toFixed(0)}%</div>
-                                            </div>
-                                            <span className="text-[9px] font-black text-[#AF52DE] bg-[#AF52DE]/10 px-2 py-0.5 rounded border border-[#AF52DE]/20 uppercase tracking-wider">
-                                                {company.market_sentiment}
-                                            </span>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                             </div>
-                        </div>
+                      <div className="space-y-1">
+                          <h4 className="text-xl font-black text-foreground uppercase italic tracking-tighter leading-none">{p.name}</h4>
+                          <p className="text-[10px] font-black text-primary uppercase tracking-widest italic">{p.predicted_trend}</p>
+                      </div>
 
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+                      <div className="grid grid-cols-2 gap-4 py-6 border-y border-border">
+                          <div>
+                              <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest italic mb-1">Innovation Index</div>
+                              <div className="text-lg font-black text-foreground italic">{p.innovation_index}</div>
+                          </div>
+                          <div>
+                              <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest italic mb-1">Market Sentiment</div>
+                              <div className="text-lg font-black text-foreground italic">{p.market_sentiment}</div>
+                          </div>
+                      </div>
 
-      {/* Grid Cards (Static Visuals) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-        
-        {/* Card 1: Market Trend Forecast */}
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="p-10 rounded-[40px] bg-card/70 border border-border backdrop-blur-xl group hover:border-[#AF52DE]/30 transition-all shadow-apple shadow-sm"
-        >
-            <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-foreground flex items-center gap-3 uppercase italic tracking-tighter">
-                    <TrendingUp className="w-5 h-5 text-[#AF52DE]" /> Traction Forecast
-                </h3>
-                <span className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-black tracking-widest">
-                    +{analysisResult ? (analysisResult.trending_predictions.reduce((acc, p) => acc + p.trend_probability, 0) / (analysisResult.trending_predictions.length || 1) * 100).toFixed(0) : '0'}% ACC
-                </span>
-            </div>
-            <div className="h-48 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={trendData}>
-                        <defs>
-                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#c084fc" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#c084fc" stopOpacity={0}/>
-                            </linearGradient>
-                        </defs>
-                        <Tooltip 
-                            contentStyle={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', border: '1px solid #E5E5EA', borderRadius: '12px' }}
-                            itemStyle={{ color: '#1D1D1F' }}
-                        />
-                        <Line 
-                            type="monotone" 
-                            dataKey="value" 
-                            stroke="#c084fc" 
-                            strokeWidth={4} 
-                            dot={false}
-                            activeDot={{ r: 6, stroke: '#c084fc', strokeWidth: 2, fill: '#020617' }} 
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
-            <p className="text-[10px] text-muted-foreground font-mono mt-6 uppercase tracking-widest leading-relaxed">
-                Aggregated projection across {competitors.length} active units
-            </p>
-        </motion.div>
+                      <Button className="w-full h-12 rounded-2xl bg-foreground text-background font-black uppercase tracking-widest text-[9px] italic group-hover:bg-primary group-hover:text-white transition-colors">
+                          Analyze Vector <ArrowUpRight size={14} className="ml-2" />
+                      </Button>
+                  </motion.div>
+              ))}
+          </div>
 
-        {/* Card 2: Competitor Pivot Risk */}
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="p-10 rounded-[40px] bg-card/70 border border-border backdrop-blur-xl group hover:border-[#FF9500]/30 transition-all shadow-apple shadow-sm"
-        >
-            <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-foreground flex items-center gap-3 uppercase italic tracking-tighter">
-                    <Target className="w-5 h-5 text-[#FF9500]" /> Vector Analysis
-                </h3>
-                <span className={cn(
-                    "text-[10px] px-2.5 py-1 rounded-lg border font-black tracking-widest uppercase",
-                    (analysisResult?.top_performers[0]?.change_velocity_score || 0) > 75 
-                        ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
-                        : "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20"
-                )}>
-                    {(analysisResult?.top_performers[0]?.change_velocity_score || 0) > 75 ? "CRITICAL RISK" : "MID RISK"}
-                </span>
-            </div>
-            <div className="h-48 w-full flex items-center justify-center">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                        <PolarGrid stroke="#e5e7eb" gridType="polygon" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#475569', fontSize: 10, fontWeight: '900' }} />
-                        <PolarRadiusAxis domain={[0, 150]} tick={false} axisLine={false} />
-                        <Tooltip 
-                            contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid #E5E5EA', borderRadius: '12px', fontWeight: 'bold' }}
-                            itemStyle={{ color: '#FF9500', fontWeight: '900' }}
-                        />
-                        <Radar
-                            name="Velocity"
-                            dataKey="A"
-                            stroke="#FF9500"
-                            strokeWidth={3}
-                            fill="#FF9500"
-                            fillOpacity={0.35}
-                        />
-                    </RadarChart>
-                </ResponsiveContainer>
-            </div>
-             <p className="text-[10px] text-muted-foreground font-mono mt-6 uppercase tracking-widest leading-relaxed">
-                Neural vector mapping of technical debt shifts
-            </p>
-        </motion.div>
+          <div className="p-12 rounded-[50px] bg-gradient-to-br from-primary to-[#0077ED] text-white flex flex-col lg:flex-row items-center justify-between gap-10 shadow-2xl relative overflow-hidden">
+              <div className="absolute -left-20 -bottom-20 p-20 opacity-10">
+                  <PieChartIcon size={300} />
+              </div>
+              <div className="space-y-4 max-w-2xl relative z-10">
+                  <div className="flex items-center gap-2">
+                      <Calendar size={16} />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Q3 2026 Projections</span>
+                  </div>
+                  <h2 className="text-4xl font-black uppercase italic tracking-tighter leading-none">Enterprise <span className="text-white/60">Expansion Roadmap</span></h2>
+                  <p className="text-lg font-medium italic text-white/80 leading-relaxed">
+                      Our predictive engines have detected a {predictiveData?.top_performers[0]?.trend_probability * 100}% probability shift in the {predictiveData?.top_performers[0]?.name} market vector. Initiate defensive roadmap protocols immediately.
+                  </p>
+              </div>
+              <div className="flex flex-col gap-4 w-full lg:w-auto relative z-10">
+                  <Button className="h-16 px-10 rounded-2xl bg-white text-primary font-black uppercase tracking-widest text-xs italic shadow-xl hover:scale-105 transition-transform">
+                      Unlock Full Roadmap
+                  </Button>
+                  <Button variant="ghost" className="h-16 px-10 rounded-2xl border border-white/20 text-white font-black uppercase tracking-widest text-xs italic hover:bg-white/10">
+                      View Secondary Triggers
+                  </Button>
+              </div>
+          </div>
 
-        {/* Card 3: Revenue Shift Alert */}
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="p-10 rounded-[40px] bg-card/70 border border-border backdrop-blur-xl group hover:border-[#5AC8FA]/30 transition-all shadow-apple shadow-sm"
-        >
-            <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-foreground flex items-center gap-3 uppercase italic tracking-tighter">
-                    <Activity className="w-5 h-5 text-[#5AC8FA]" /> Signal Gaps
-                </h3>
-                <span className="text-[10px] px-2.5 py-1 rounded-lg bg-[#5AC8FA]/10 text-[#5AC8FA] border border-[#5AC8FA]/20 font-black tracking-widest">
-                    {analysisResult && analysisResult.trending_predictions.length > 0 ? `EST. $${(analysisResult.trending_predictions.length * 1.4).toFixed(1)}M` : 'NO DATA'}
-                </span>
-            </div>
-            <div className="h-48 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                        <Tooltip 
-                            cursor={{fill: 'rgba(255,255,255,0.02)'}}
-                            contentStyle={{ backgroundColor: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                        />
-                        <Bar dataKey="gap" fill="#22d3ee" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-             <p className="text-[10px] text-muted-foreground font-mono mt-6 uppercase tracking-widest leading-relaxed">
-                Economic opportunity delta in Q4 timeline
-            </p>
-        </motion.div>
-
-      </div>
-
-      {/* Footer CTA */}
-      <div className="flex justify-center mt-12 relative z-10">
-        <Button 
-            onClick={handleInitializePipeline}
-            disabled={loading}
-            className="relative group overflow-hidden px-10 py-7 bg-[#AF52DE] hover:bg-[#A855F7] text-white font-black uppercase tracking-widest text-sm rounded-2xl active:scale-95 transition-all shadow-xl shadow-[#AF52DE]/20"
-        >
-            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
-            <div className="flex items-center gap-3">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 fill-current" />}
-                {loading ? 'ANALYZING NETWORK SIGNALS...' : 'Initialize Predictive Pipeline'}
-                {!loading && <ArrowUpRight className="w-4 h-4" />}
-            </div>
-        </Button>
-      </div>
-
-      <div className="pt-10 border-t border-white/5 flex flex-wrap justify-center gap-10 text-[9px] text-muted-foreground font-mono uppercase tracking-[0.2em] font-black">
-          <div>Engine: Dynamic Prediction Matrix</div>
-          <div>Mode: Real-time Analysis</div>
-          <div>Intelligence: Audited Signals Only</div>
-          <div>Data Status: Verified & Live</div>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

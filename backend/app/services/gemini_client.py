@@ -274,7 +274,7 @@ FIELD RULES:
 - time_window_days: use the integer provided.
 - total_sources_scanned: set to the number of items in scraped_sources.
 - total_valid_updates: set to the length of the features array you output.
-- Each feature: feature_title (from article), technical_summary (2-4 sentence summary from article), publish_date (FIND THE EXACT DATE inside the article snippet/content and format it as YYYY-MM-DD. DO NOT hallucinate. If no exact date is found, output exactly 'UNKNOWN'), source_url, source_domain, category (API|UI|Infrastructure|Security|Platform|AI|SDK|News|Blog|Press Release|Partnership|Product), confidence_score (0-100 based on source clarity).
+- Each feature: feature_title (from article), technical_summary (2-4 sentence summary from article), publish_date (FIND THE EXACT DATE inside the article snippet/content and format it as YYYY-MM-DD. DO NOT hallucinate. If no exact date is found, output exactly 'UNKNOWN'), source_url, source_domain, category (API|UI|Infrastructure|Security|Platform|AI|SDK|News|Blog|Press Release|Partnership|Product), confidence_score (0-100 based on source clarity), activity_type (feature|pricing|social|press|funding|hiring|app_update|technical|content), impact_level (Low|Medium|High|Critical), platform (GitHub|LinkedIn|X|Blog|News|RSS|Press|YouTube|Reddit).
 
 Return only the JSON object. No additional text or explanation.
 """
@@ -328,8 +328,26 @@ Return only the JSON object. No additional text or explanation.
                     continue
                 else:
                     break
-
         raise GeminiClientError(f"Gemini scan report failed: {last_error}")
+
+    async def generate(self, prompt: str, system: str = "", max_tokens: int = 2048, temperature: float = 0.2) -> str:
+        """Generic text generation for the gateway."""
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "maxOutputTokens": max_tokens,
+                "temperature": temperature,
+            },
+        }
+        if system:
+            payload["systemInstruction"] = {"parts": [{"text": system}]}
+        
+        raw = await self._post_generate_content(payload)
+        candidates = raw.get("candidates") or []
+        if not candidates: return ""
+        parts = candidates[0].get("content", {}).get("parts") or []
+        if not parts: return ""
+        return parts[0].get("text", "").strip()
 
     def _resolve_schema_refs(self, schema: Dict[str, Any]) -> Dict[str, Any]:
         """

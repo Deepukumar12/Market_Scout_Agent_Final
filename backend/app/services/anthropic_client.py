@@ -79,8 +79,14 @@ class AnthropicClient:
             raise ValueError("ANTHROPIC_API_KEY is not configured")
 
         prompt = (
-            f"Analyse technical updates for {competitor_name} across the last {time_window_days} days.\n"
-            f"Sources: {json.dumps(scraped_items[:10])}\n\n"
+            f"As a lead market intelligence analyst, analyze technical updates for {competitor_name} across the last {time_window_days} days.\n"
+            f"Sources: {json.dumps(scraped_items[:12])}\n\n"
+            f"Identify every distinct feature release, pricing change, hiring spree, or major social event.\n"
+            f"For each feature, you MUST provide:\n"
+            f"- activity_type: 'feature', 'pricing', 'sentiment', 'risk', 'funding', 'hiring', or 'social'\n"
+            f"- impact_level: 'Low', 'Medium', 'High', or 'Critical'\n"
+            f"- platform: 'GitHub', 'LinkedIn', 'X', 'Press Release', 'Blog', 'Youtube', 'Reddit', or 'Web'\n"
+            f"- confidence_score: 0-100\n\n"
             f"Output ONLY a JSON object: "
             f"{{\"competitor\": \"{competitor_name}\", \"features\": [{{...}}], \"executive_summary\": \"...\", \"innovation_velocity_score\": 50}}\n"
         )

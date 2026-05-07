@@ -19,9 +19,9 @@ SCAN_FIRST_WINDOW_DAYS = 14  # First scan: look back 14 days
 SCAN_DELTA_WINDOW_DAYS = 7   # Subsequent scans: strict 7 days
 
 # Adaptive frequency
-FREQUENCY_DEFAULT_HOURS = 24
-FREQUENCY_AFTER_EMPTY_HOURS = 72  # After 3 consecutive empty scans
-FREQUENCY_ACTIVE_HOURS = 12       # When updates found frequently
+FREQUENCY_DEFAULT_HOURS = 12
+FREQUENCY_AFTER_EMPTY_HOURS = 24  # After 3 consecutive empty scans
+FREQUENCY_ACTIVE_HOURS = 4       # When updates found frequently
 EMPTY_SCAN_THRESHOLD = 3          # Consecutive empty scans before backing off
 
 
@@ -40,6 +40,11 @@ def _feature_to_doc(company: str, f: ScanFeature) -> dict[str, Any]:
         "category": f.category,
         "technical_summary": f.technical_summary,
         "source_url": f.source_url,
+        "source_domain": f.source_domain,
+        "confidence_score": f.confidence_score,
+        "activity_type": getattr(f, "activity_type", "feature"),
+        "impact_level": getattr(f, "impact_level", "Medium"),
+        "platform": getattr(f, "platform", "Web"),
         "hash_id": hash_id,
         "created_at": datetime.now(timezone.utc),
     }

@@ -95,6 +95,28 @@ app.include_router(api_router)
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(telemetry_router, prefix="/api/v1/telemetry", tags=["telemetry"])
 
+from fastapi.responses import JSONResponse
+import traceback
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all for all unhandled exceptions.
+    Logs structured traceback and returns a clean JSON error to the client.
+    """
+    error_trace = traceback.format_exc()
+    logger.error(f"UNHANDLED_EXCEPTION | Path: {request.url.path} | Error: {str(exc)}\n{error_trace}")
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "An internal agent system error occurred.",
+            "error_type": exc.__class__.__name__,
+            "message": str(exc),
+            "path": request.url.path
+        }
+    )
+
 @app.get("/")
 def read_root():
     return {"message": "MarketScout Agent API is running."}

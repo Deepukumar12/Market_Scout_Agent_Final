@@ -58,7 +58,7 @@ def start_scheduler():
     _scheduler = AsyncIOScheduler()
     _scheduler.add_job(
         _run_scheduled_scans,
-        trigger=IntervalTrigger(hours=24),
+        trigger=IntervalTrigger(hours=4),
         id="competitor_scans",
         replace_existing=True,
     )

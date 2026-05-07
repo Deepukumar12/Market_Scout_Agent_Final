@@ -10,6 +10,15 @@ function getScanErrorMessage(res: any): string {
   return err || 'Scan failed.';
 }
 
+export interface SourceReference {
+  title: string;
+  url: string;
+  platform?: string;
+  credibility_score?: number;
+  snippet?: string;
+  date?: string;
+}
+
 export interface ScanFeature {
   feature_title: string;
   technical_summary: string;
@@ -18,6 +27,8 @@ export interface ScanFeature {
   source_domain: string;
   category: 'API' | 'UI' | 'Infrastructure' | 'Security' | 'Platform' | 'AI' | 'SDK';
   confidence_score: number;
+  evidence_sources?: SourceReference[];
+  verification_status?: string;
 }
 
 export interface GlobalMetrics {
@@ -39,21 +50,22 @@ export interface MarketComparisonMetric {
   velocity: string;
 }
 
-export interface MonthlyRelease {
-  company_name: string;
-  feature_name: string;
-  category: string;
-  release_date: string;
+
+
+export interface EvidencePoint {
+  text: string;
   source_url?: string;
-  hash_id: string;
+  source_title?: string;
+  confidence?: number;
 }
 
 export interface MissionBriefingData {
   executive_summary: string;
-  technical_risks: string[];
-  market_opportunities: string[];
+  technical_risks: EvidencePoint[];
+  market_opportunities: EvidencePoint[];
   sentiment_pulse: string;
   last_updated: string;
+  evidence_catalog?: SourceReference[];
 }
 
 export interface StrategicPlan {
@@ -81,6 +93,8 @@ export interface ScanReport {
   total_sources_scanned: number;
   total_valid_updates: number;
   features: ScanFeature[];
+  global_confidence_score?: number;
+  sources_catalog?: SourceReference[];
   profile?: {
     business_model: string;
     market_position: string;
@@ -101,6 +115,16 @@ export interface ScanReport {
   }[];
 }
 
+export interface SilenceAnalysis {
+  is_silent: boolean;
+  last_activity_at: string;
+  silence_duration: string;
+  activity_frequency: number;
+  momentum_score: number;
+  alert_level: string;
+  insight: string;
+}
+
 interface IntelState {
   report: any | null;
   scanReport: ScanReport | null;
@@ -109,11 +133,13 @@ interface IntelState {
   signals: any[];
   recommendations: any[];
   activities: any[];
+  silenceAnalysis: SilenceAnalysis | null;
   innovationTrends: any | null;
   globalMetrics: GlobalMetrics | null;
   comparisonMatrix: MarketComparisonMetric[];
-  monthlyReleases: MonthlyRelease[];
-  lastSevenDays: MonthlyRelease[];
+  monthlyReleases: any[];
+
+  lastSevenDays: any[];
   missionBriefing: MissionBriefingData | null;
   strategicPlan: StrategicPlan | null;
   competitors: any[];
@@ -128,7 +154,7 @@ interface IntelState {
   fetchGlobalMetrics: () => Promise<void>;
   fetchMarketComparison: () => Promise<void>;
   fetchMonthlyReleases: () => Promise<void>;
-  fetchLastSevenDays: (query?: string) => Promise<void>;
+
   fetchMissionBriefing: () => Promise<void>;
   fetchCompetitors: () => Promise<void>;
   fetchStrategicPlan: (competitorId: string, focusArea: string, riskLevel: string) => Promise<void>;
@@ -138,6 +164,7 @@ interface IntelState {
   fetchDashboardOverview: (query?: string) => Promise<void>;
   refreshAllData: (query?: string) => Promise<void>;
   clear: () => void;
+  scansInProgress: Set<string>;
 }
 
 export const useIntelStore = create<IntelState>((set) => ({
@@ -148,24 +175,43 @@ export const useIntelStore = create<IntelState>((set) => ({
   signals: [],
   recommendations: [],
   activities: [],
+  silenceAnalysis: null,
   innovationTrends: null,
   globalMetrics: null,
   comparisonMatrix: [],
-  monthlyReleases: [],
   lastSevenDays: [],
   missionBriefing: null,
   strategicPlan: null,
   competitors: [],
   loading: false,
   error: null,
+  scansInProgress: new Set(),
+  monthlyReleases: [],
 
-  runScan: async (competitorId: string) => {
-    set({ loading: true, error: null, scanReport: null, report: null });
+  runScan: async (competitorId: string, forceRefresh = false) => {
+    const { scanReport, scansInProgress, loading } = useIntelStore.getState();
+    
+    // 🛑 DEDUPLICATION GUARD: Prevent duplicate triggers
+    if (scansInProgress.has(competitorId) && !forceRefresh) {
+        console.log(`Scan for ${competitorId} already in flight. Blocking duplicate.`);
+        return;
+    }
+
+    // Only show full-screen loader if we have no data for THIS specific competitor yet
+    const isDifferentCompetitor = scanReport && String(scanReport.id || scanReport._id) !== competitorId;
+    
+    if (!scanReport || isDifferentCompetitor || forceRefresh) {
+      set((state) => ({ ...state, loading: true, error: null, scanReport: isDifferentCompetitor ? null : scanReport }));
+    }
+
+    // Mark as in-progress
+    set(state => ({ scansInProgress: new Set(state.scansInProgress).add(competitorId) }));
+    
     const { addNotification } = useNotificationStore.getState();
 
     try {
-      const data = await runCompetitorScan(competitorId);
-      set({ scanReport: data, loading: false });
+      const data = await runCompetitorScan(competitorId, forceRefresh);
+      set((state) => ({ ...state, scanReport: data, loading: false }));
 
       if (data.total_valid_updates > 0) {
         addNotification({
@@ -179,60 +225,75 @@ export const useIntelStore = create<IntelState>((set) => ({
       console.error('Scan error:', err);
       const res = err.response?.data;
       const message = getScanErrorMessage(res);
-      set({ error: message, loading: false });
+      set((state) => ({ ...state, error: message, loading: false }));
 
       addNotification({
         title: 'Surveillance Error',
         message: `Failed to complete scan: ${message}`,
         type: 'error'
       });
+    } finally {
+      // Release from in-progress
+      set(state => {
+          const next = new Set(state.scansInProgress);
+          next.delete(competitorId);
+          return { scansInProgress: next };
+      });
     }
   },
 
   fetchHistory: async (query?: string) => {
-    set({ loading: true });
+    const { history } = useIntelStore.getState();
+    if (history.length === 0) set((state) => ({ ...state, loading: true }));
     try {
       const data = await getCompetitors(query);
-      // If the backend returns { reports: [...] }
       if (data && data.reports) {
-        set({ history: data.reports, loading: false });
+        set((state) => ({ ...state, history: data.reports, loading: false }));
       } else if (Array.isArray(data)) {
-        set({ history: data, loading: false });
+        set((state) => ({ ...state, history: data, loading: false }));
       } else {
-        set({ history: [], loading: false });
+        set((state) => ({ ...state, history: [], loading: false }));
       }
     } catch(e) {
       console.error("Failed to fetch history", e);
-      set({ loading: false });
+      set((state) => ({ ...state, loading: false }));
     }
   },
 
   fetchSignals: async () => { 
-    set({ loading: true });
+    const { signals } = useIntelStore.getState();
     try {
       const { getIntelligenceStream } = await import('@/services/api');
       const data = await getIntelligenceStream(50);
-      set({ signals: data.signals || [], loading: false });
+      set((state) => ({ ...state, signals: data.signals || [], loading: false }));
     } catch(error) {
       console.error("Failed to fetch intelligence data:", error);
-      set({ loading: false });
+      set((state) => ({ ...state, loading: false }));
     }
   },
 
   fetchRecommendations: async () => {
-    set({ loading: true });
+    const { recommendations } = useIntelStore.getState();
+    if (recommendations.length === 0) set((state) => ({ ...state, loading: true }));
     try {
       const { getRecommendations } = await import('@/services/api');
       const data = await getRecommendations();
-      set({ recommendations: data, loading: false });
+      set((state) => ({ ...state, recommendations: data, loading: false }));
     } catch(e) {
       console.error("Failed to fetch recommendations", e);
-      set({ loading: false });
+      set((state) => ({ ...state, loading: false }));
     }
   },
 
-  runMarketScan: async (payload) => {
-    set({ loading: true, error: null, scanReport: null, report: null, agentReport: null });
+  runMarketScan: async (payload, forceRefresh = false) => {
+    const { scansInProgress } = useIntelStore.getState();
+    const key = payload.company_name;
+
+    if (scansInProgress.has(key) && !forceRefresh) return;
+
+    set((state) => ({ ...state, loading: true, error: null, scanReport: null, report: null, agentReport: null }));
+    set(state => ({ ...state, scansInProgress: new Set(state.scansInProgress).add(key) }));
+    
     const { addNotification } = useNotificationStore.getState();
 
     try {
@@ -240,8 +301,9 @@ export const useIntelStore = create<IntelState>((set) => ({
         company_name: payload.company_name,
         website: payload.website ?? undefined,
         time_window_days: payload.time_window_days ?? 7,
+        force_refresh: forceRefresh
       });
-      set({ scanReport: data, loading: false });
+      set((state) => ({ ...state, scanReport: data, loading: false }));
 
       addNotification({
         title: `Scout Success: ${payload.company_name}`,
@@ -252,23 +314,29 @@ export const useIntelStore = create<IntelState>((set) => ({
       console.error('Market scan error:', err);
       const res = err.response?.data;
       const message = getScanErrorMessage(res);
-      set({ error: message, loading: false });
+      set((state) => ({ ...state, error: message, loading: false }));
 
       addNotification({
         title: 'Mission Interrupted',
         message: `Scout network failed for ${payload.company_name}: ${message}`,
         type: 'error'
       });
+    } finally {
+        set(state => {
+            const next = new Set(state.scansInProgress);
+            next.delete(key);
+            return { scansInProgress: next };
+        });
     }
   },
 
   analyzeCompany: async (company: string) => {
-    set({ loading: true, error: null, agentReport: null, scanReport: null });
+    set((state) => ({ ...state, loading: true, error: null, agentReport: null, scanReport: null }));
     const { addNotification } = useNotificationStore.getState();
 
     try {
       const reportMd = await analyzeCompanyApi(company);
-      set({ agentReport: reportMd, loading: false });
+      set((state) => ({ ...state, agentReport: reportMd, loading: false }));
 
       addNotification({
         title: `Analysis Compiled: ${company}`,
@@ -277,7 +345,7 @@ export const useIntelStore = create<IntelState>((set) => ({
       });
     } catch (err: any) {
       console.error('Analyze error:', err);
-      set({ error: "Failed to connect to agent network.", loading: false });
+      set((state) => ({ ...state, error: "Failed to connect to agent network.", loading: false }));
 
       addNotification({
         title: 'Synthesis Failed',
@@ -310,7 +378,11 @@ export const useIntelStore = create<IntelState>((set) => ({
     try {
       const { getActivityTimeline } = await import('@/services/api');
       const data = await getActivityTimeline(query);
-      set({ activities: data.days || [] });
+      set((state) => ({ 
+        ...state,
+        activities: data.days || [],
+        silenceAnalysis: data.silence_analysis || null
+      }));
     } catch(err) {
       console.error("Failed to fetch activity timeline:", err);
     }
@@ -320,7 +392,7 @@ export const useIntelStore = create<IntelState>((set) => ({
     try {
       const { getInnovationTrends } = await import('@/services/api');
       const data = await getInnovationTrends();
-      set({ innovationTrends: data });
+      set((state) => ({ ...state, innovationTrends: data }));
     } catch(err) {
       console.error("Failed to fetch innovation trends:", err);
     }
@@ -330,7 +402,7 @@ export const useIntelStore = create<IntelState>((set) => ({
     try {
       const { getGlobalMetrics } = await import('@/services/api');
       const data = await getGlobalMetrics();
-      set({ globalMetrics: data });
+      set((state) => ({ ...state, globalMetrics: data }));
     } catch(err) {
       console.error("Failed to fetch global metrics:", err);
     }
@@ -340,7 +412,7 @@ export const useIntelStore = create<IntelState>((set) => ({
     try {
       const { getMarketComparison } = await import('@/services/api');
       const data = await getMarketComparison();
-      set({ comparisonMatrix: data });
+      set((state) => ({ ...state, comparisonMatrix: data }));
     } catch(err) {
       console.error("Failed to fetch market comparison:", err);
     }
@@ -350,33 +422,24 @@ export const useIntelStore = create<IntelState>((set) => ({
     try {
       const { getMonthlyReleases } = await import('@/services/api');
       const data = await getMonthlyReleases();
-      set({ monthlyReleases: data });
+      set((state) => ({ ...state, monthlyReleases: data }));
     } catch(err) {
       console.error("Failed to fetch monthly releases:", err);
     }
   },
 
-  fetchLastSevenDays: async (query?: string) => {
-    try {
-        const { getLastSevenDays } = await import('@/services/api');
-        const data = await getLastSevenDays(query);
-        set({ lastSevenDays: data });
-    } catch(err) {
-        console.error("Failed to fetch last 7 days releases:", err);
-    }
-  },
   fetchMissionBriefing: async () => {
     try {
       const { getMissionBriefing } = await import('@/services/api');
       const data = await getMissionBriefing();
-      set({ missionBriefing: data });
+      set((state) => ({ ...state, missionBriefing: data }));
     } catch(err) {
       console.error("Failed to fetch mission briefing:", err);
     }
   },
 
   fetchStrategicPlan: async (competitorId, focusArea, riskLevel) => {
-    set({ loading: true, error: null, strategicPlan: null });
+    set((state) => ({ ...state, loading: true, error: null, strategicPlan: null }));
     try {
         const { getStrategicPlan } = await import('@/services/api');
         const data = await getStrategicPlan({ 
@@ -394,51 +457,69 @@ export const useIntelStore = create<IntelState>((set) => ({
   fetchCompetitors: async () => {
     try {
         const data = await getCompetitors();
-        set({ competitors: data });
+        set((state) => ({ ...state, competitors: data }));
     } catch(err) {
         console.error("Failed to fetch competitors:", err);
     }
   },
 
   fetchDashboardOverview: async (query?: string) => {
-    set({ loading: true });
+    const { globalMetrics } = useIntelStore.getState();
+    if (!globalMetrics) set((state) => ({ ...state, loading: true }));
     try {
       const { getDashboardOverview } = await import('@/services/api');
       const data = await getDashboardOverview(query);
       
-      set({
+      set((state) => ({
+        ...state,
         globalMetrics: data.global_metrics,
         innovationTrends: data.innovation_trends,
         comparisonMatrix: data.market_comparison,
         signals: data.signals,
         history: data.history,
-        monthlyReleases: data.monthly_releases,
+
         missionBriefing: data.mission_briefing,
         activities: data.activities,
+        silenceAnalysis: data.silence_analysis || null,
         loading: false
-      });
+      }));
     } catch (err) {
       console.error("Failed to fetch dashboard overview:", err);
-      set({ loading: false });
+      set((state) => ({ ...state, loading: false }));
     }
   },
 
   refreshAllData: async (query?: string) => {
-    // Refresh all global dashboard data points in parallel
+    // Refresh all global dashboard data points in parallel with safety guards
+    const state = useIntelStore.getState();
+    
+    const safeExecute = async (actionName: string, actionFn?: () => Promise<void>) => {
+      if (typeof actionFn === 'function') {
+        try {
+          await actionFn();
+        } catch (e) {
+          console.error(`Store Action Failed: ${actionName}`, e);
+        }
+      } else {
+        console.warn(`Store Action Missing: ${actionName}`);
+      }
+    };
+
     await Promise.allSettled([
-      useIntelStore.getState().fetchHistory(query),
-      useIntelStore.getState().fetchSignals(),
-      useIntelStore.getState().fetchActivityTimeline(query),
-      useIntelStore.getState().fetchInnovationTrends(),
-      useIntelStore.getState().fetchGlobalMetrics(),
-      useIntelStore.getState().fetchMarketComparison(),
-      useIntelStore.getState().fetchMonthlyReleases(),
-      useIntelStore.getState().fetchMissionBriefing(),
-      useIntelStore.getState().fetchCompetitors(),
+      safeExecute('fetchHistory', () => state.fetchHistory(query)),
+      safeExecute('fetchSignals', state.fetchSignals),
+      safeExecute('fetchActivityTimeline', () => state.fetchActivityTimeline(query)),
+      safeExecute('fetchInnovationTrends', state.fetchInnovationTrends),
+      safeExecute('fetchGlobalMetrics', state.fetchGlobalMetrics),
+      safeExecute('fetchMarketComparison', state.fetchMarketComparison),
+      safeExecute('fetchMonthlyReleases', state.fetchMonthlyReleases),
+      safeExecute('fetchMissionBriefing', state.fetchMissionBriefing),
+      safeExecute('fetchCompetitors', state.fetchCompetitors),
     ]);
   },
 
-  clear: () => set({ 
+  clear: () => set((state) => ({ 
+    ...state,
     report: null, 
     scanReport: null, 
     agentReport: null, 
@@ -447,11 +528,12 @@ export const useIntelStore = create<IntelState>((set) => ({
     signals: [], 
     recommendations: [], 
     activities: [], 
+    silenceAnalysis: null,
     innovationTrends: null, 
     globalMetrics: null, 
     strategicPlan: null, 
     competitors: [],
     monthlyReleases: [],
     lastSevenDays: []
-  }),
+  })),
 }));

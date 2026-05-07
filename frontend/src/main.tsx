@@ -73,14 +73,21 @@ const ProtectedDashboard = () => {
   return <DashboardLayout />;
 };
 
+import NotFoundPage from '@/components/layout/NotFoundPage';
+
 const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+    errorElement: <NotFoundPage />,
     children: [
       {
         path: "/",
         element: <LandingPage />,
+      },
+      {
+        path: "/intelligence",
+        element: <Navigate to="/dashboard/reports" replace />,
       },
       {
         path: "/login",
@@ -146,17 +153,24 @@ const router = createBrowserRouter([
           },
         ],
       },
+      {
+        path: "*",
+        element: <NotFoundPage />,
+      }
     ],
   },
 ]);
 
 import { ThemeProvider } from '@/context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
+import GeneralErrorBoundary from '@/components/layout/GeneralErrorBoundary';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>
-      <RouterProvider router={router} />
+      <GeneralErrorBoundary>
+        <RouterProvider router={router} />
+      </GeneralErrorBoundary>
       <Toaster position="bottom-right" />
     </ThemeProvider>
   </React.StrictMode>,

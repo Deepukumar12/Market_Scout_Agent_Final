@@ -37,9 +37,6 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
     results: List[Dict[str, Any]] = []
     seen_urls = set()
 
-    # Time restriction logic (Last 7 days)
-    # Different APIs have different ways to handle time, we'll configure as best we can
-
     # Helper to add results
     def add_result(url: str, title: str, snippet: str, source: str, published_date: Optional[str] = None):
         if url and url not in seen_urls and not url.lower().endswith(".pdf") and url.startswith("http"):
@@ -52,163 +49,95 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
                 "published_date": published_date
             })
 
+    # --- Parallel Search Strategy ---
+    import asyncio
+    from urllib.parse import quote_plus
+    
+    tasks = []
+    
+    # 1. Tavily Task
+    if settings.TAVILY_API_KEY:
+        async def fetch_tavily():
+            try:
+                url = "https://api.tavily.com/search"
+                payload = {
+                    "api_key": settings.TAVILY_API_KEY,
+                    "query": query,
+                    "search_depth": "advanced",
+                    "max_results": max(num_results, 10),
+                    "days": time_window_days
+                }
+                async with httpx.AsyncClient(timeout=15) as client:
+                    resp = await client.post(url, json=payload)
+                    if resp.status_code == 200:
+                        return resp.json().get("results", []), "tavily"
+            except: pass
+            return [], "tavily"
+        tasks.append(fetch_tavily())
 
+    # 2. Exa AI Task
+    if settings.EXA_API_KEY:
+        async def fetch_exa():
+            try:
+                exa_url = "https://api.exa.ai/search"
+                headers = {"x-api-key": settings.EXA_API_KEY, "Content-Type": "application/json"}
+                payload = {
+                    "query": query,
+                    "numResults": 5,
+                    "useAutoprompt": True,
+                    "startPublishedDate": (datetime.now() - timedelta(days=time_window_days)).isoformat()
+                }
+                async with httpx.AsyncClient(timeout=15) as client:
+                    resp = await client.post(exa_url, json=payload, headers=headers)
+                    if resp.status_code == 200:
+                        return resp.json().get("results", []), "exa"
+            except: pass
+            return [], "exa"
+        tasks.append(fetch_exa())
 
-    # 1. Tavily
-    if settings.TAVILY_API_KEY and len(results) < num_results:
-        s_start = time.perf_counter()
-        url = "https://api.tavily.com/search"
-        payload = {
-            "api_key": settings.TAVILY_API_KEY,
-            "query": query,
-            "search_depth": "advanced",
-            "max_results": max(num_results, 10),
-            "days": time_window_days
-        }
+    # 3. Brave Task
+    if settings.BRAVE_API_KEY:
+        async def fetch_brave():
+            try:
+                url = f"https://api.search.brave.com/res/v1/web/search?q={quote_plus(query)}&count={num_results}"
+                headers = {"Accept": "application/json", "X-Subscription-Token": settings.BRAVE_API_KEY}
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.get(url, headers=headers)
+                    if resp.status_code == 200:
+                        return resp.json().get("web", {}).get("results", []), "brave"
+            except: pass
+            return [], "brave"
+        tasks.append(fetch_brave())
+
+    if tasks:
+        p_start = time.perf_counter()
+        search_responses = await asyncio.gather(*tasks)
+        p_duration = time.perf_counter() - p_start
+        logger.info(f"PARALLEL SEARCH | {p_duration:.4f}s | Providers: {len(tasks)}")
+        
+        for data, source in search_responses:
+            if source == "tavily":
+                for r in data: add_result(r.get("url"), r.get("title"), r.get("content"), "tavily", r.get("published_date"))
+            elif source == "exa":
+                for r in data: add_result(r.get("url"), r.get("title"), r.get("text") or r.get("snippet"), "exa", r.get("publishedDate"))
+            elif source == "brave":
+                for r in data: add_result(r.get("url"), r.get("title"), r.get("description"), "brave")
+
+    # Final resort: DuckDuckGo if nothing found
+    if not results:
         try:
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.post(url, json=payload)
-                duration = time.perf_counter() - s_start
-                if resp.status_code == 200:
-                    data = resp.json().get("results", [])
-                    for r in data:
-                        add_result(r.get("url"), r.get("title"), r.get("content"), "tavily", r.get("published_date"))
-                    logger.info(f"SEARCH HIT  | TAVILY  | {duration:.4f}s | Found {len(data)} items")
-                else:
-                    logger.warning(f"SEARCH ERR  | TAVILY  | {duration:.4f}s | Status: {resp.status_code}")
-        except Exception as e:
-            logger.error(f"SEARCH FAIL | TAVILY  | Error: {e}")
-
-    # 2. Exa AI
-    if settings.EXA_API_KEY and len(results) < num_results:
-        s_start = time.perf_counter()
-        try:
-            exa_url = "https://api.exa.ai/search"
-            headers = {"x-api-key": settings.EXA_API_KEY, "Content-Type": "application/json"}
-            payload = {
-                "query": query,
-                "numResults": 5,
-                "useAutoprompt": True,
-                "startPublishedDate": (datetime.now() - timedelta(days=time_window_days)).isoformat()
-            }
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.post(exa_url, json=payload, headers=headers)
-                duration = time.perf_counter() - s_start
-                if resp.status_code == 200:
-                    data = resp.json().get("results", [])
-                    for r in data:
-                        add_result(r.get("url"), r.get("title"), r.get("text") or r.get("snippet"), "exa", r.get("publishedDate"))
-                    logger.info(f"SEARCH HIT  | EXA AI  | {duration:.4f}s | Found {len(data)} items")
-                else:
-                    logger.warning(f"SEARCH ERR  | EXA AI  | {duration:.4f}s | Status: {resp.status_code}")
-        except Exception as e:
-            logger.error(f"SEARCH FAIL | EXA AI  | Error: {e}")
-
-    # 3. Serper.dev (Google Search)
-    if settings.SERPER_API_KEY and len(results) < num_results:
-        logger.info(f"Running Serper search for: {query}")
-        try:
-            serper_url = "https://google.serper.dev/search"
-            headers = {
-                "X-API-KEY": settings.SERPER_API_KEY,
-                "Content-Type": "application/json"
-            }
-            payload = {"q": query, "num": 5}
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.post(serper_url, json=payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json().get("organic", [])
-                    for r in data:
-                        add_result(r.get("link"), r.get("title"), r.get("snippet"), "serper")
-                else:
-                    logger.warning(f"Serper API error: {resp.status_code}")
-        except Exception as e:
-            logger.error(f"Serper error: {e}")
-
-    # 4. Brave Search
-    if settings.BRAVE_API_KEY and len(results) < num_results:
-        logger.info(f"Running Brave search for: {query}")
-        try:
-            brave_url = "https://api.search.brave.com/res/v1/web/search"
-            headers = {
-                "Accept": "application/json",
-                "X-Subscription-Token": settings.BRAVE_API_KEY
-            }
-            params = {"q": query, "count": 5}
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(brave_url, headers=headers, params=params)
-                if resp.status_code == 200:
-                    data = resp.json().get("web", {}).get("results", [])
-                    for r in data:
-                        add_result(r.get("url"), r.get("title"), r.get("description"), "brave")
-                else:
-                    logger.warning(f"Brave API error: {resp.status_code}")
-        except Exception as e:
-            logger.error(f"Brave error: {e}")
-
-    # 5. Zenserp (as a fallback for web)
-    if settings.ZENSERP_API_KEY and len(results) < num_results:
-        logger.info(f"Running Zenserp web search for: {query}")
-        try:
-            z_url = "https://app.zenserp.com/api/v2/search"
-            params = {"apikey": settings.ZENSERP_API_KEY, "q": query, "num": 5}
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(z_url, params=params)
-                if resp.status_code == 200:
-                    data = resp.json().get("organic", [])
-                    for r in data:
-                        add_result(r.get("url"), r.get("title"), r.get("description"), "zenserp")
-                else:
-                    logger.warning(f"Zenserp API error: {resp.status_code}")
-        except Exception as e:
-            logger.error(f"Zenserp error: {e}")
-
-    # 6. DuckDuckGo Fallback
-    if len(results) < num_results and not settings.MOCK_MODE:
-        logger.info(f"Running DuckDuckGo fallback search for: {query}")
-        # Note: This is a simple HTML-based scraper for DDG as a last-resort fallback.
-        # In a production environment, one might use 'duckduckgo-search' library.
-        ddg_url = f"https://html.duckduckgo.com/html/?q={query}+after%3A{(datetime.now() - timedelta(days=time_window_days)).strftime('%Y-%m-%d')}"
-        try:
-            headers = {"User-Agent": "Mozilla/5.0"}
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(ddg_url, headers=headers)
-                if resp.status_code == 200:
-                    soup = BeautifulSoup(resp.text, "html.parser")
-                    # DDG HTML results are usually in 'links_main' class
-                    links = soup.find_all("a", class_="result__a")
-                    snippets = soup.find_all("a", class_="result__snippet")
-                    for i, link in enumerate(links[:num_results]):
-                        href = link.get("href")
-                        # DDG often redirects, simple extraction
-                        if href and "duckduckgo.com/l/?" in href:
-                            import urllib.parse
-                            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
-                            href = parsed.get("uddg", [None])[0]
-                        
-                        snippet_text = snippets[i].get_text() if i < len(snippets) else ""
-                        if href:
-                            add_result(href, link.get_text(), snippet_text, "duckduckgo")
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                ddg_results = list(ddgs.text(query, max_results=num_results))
+                for r in ddg_results:
+                    add_result(r.get("href"), r.get("title"), r.get("body"), "ddg")
         except Exception as e:
             logger.error(f"DuckDuckGo fallback error: {e}")
 
-    # 3. Mock results ONLY if MOCK_MODE is True or everything failed and MOCK_MODE is True
-    if not results and settings.MOCK_MODE:
-        logger.info(f"MOCK_MODE: Returning synthetic results for query '{query}'")
-        for i in range(num_results):
-            add_result(f"https://example.com/mock-news-{i}", f"Mock: {query}", "Synthetic result", "mock")
+    final_results = results[:num_results]
+    await cache.set(cache_key, final_results, expire=14400) # 4 hours
+    return final_results
 
-    tavily_results = results[:num_results]
-
-    # Removed GitHub fetching here to avoid polluting LLM context with raw GitHub repos.
-    # GitHub data is already separately fetched and appended to the final ScanResponse in scan_pipeline.py.
-    
-    combined_results = tavily_results
-    logger.info(f"🌐 Tavily/Web: {len(tavily_results)} results found.")
-    
-    # 🟢 Set Cache
-    await cache.set(cache_key, combined_results, expire=86400) # 24h cache for search results
-    return combined_results
 async def search_news(query: str, num_results: int = 5) -> List[Dict[str, Any]]:
     """
     Dedicated real-time news search via NewsAPI.

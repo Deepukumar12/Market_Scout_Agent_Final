@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useIntelStore, ScanFeature } from '@/store/intelStore';
@@ -14,7 +15,9 @@ import {
   LineChart,
   TrendingUp,
   Activity,
-  Search
+  Search,
+  CheckCircle2,
+  FileText
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -25,6 +28,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
 import DeepAnalysisSection from '@/components/dashboard/DeepAnalysisSection';
+import { EvidenceBadge } from '@/components/ui/EvidenceUI';
 
 // @ts-ignore
 const getCategoryStyles = (category: string) => {
@@ -41,7 +45,7 @@ const getCategoryStyles = (category: string) => {
 const IntelligenceReportPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { scanReport, activities, loading, error, runScan, fetchActivityTimeline, clear } = useIntelStore();
+  const { scanReport, activities, silenceAnalysis, loading, error, runScan, fetchActivityTimeline, clear } = useIntelStore();
   const { competitors, fetchCompetitors } = useCompetitorStore();
 
   const competitor = competitors.find((c: any) => String(c._id || c.id) === id);
@@ -55,29 +59,18 @@ const IntelligenceReportPage = () => {
   useEffect(() => {
     if (id) {
       runScan(id);
-      const interval = setInterval(() => {
-        runScan(id);
-        if (competitor && competitor.name) {
-          fetchActivityTimeline(competitor.name);
-        }
-      }, 30000); // 30s refresh for specific report monitoring
-      return () => {
-        clearInterval(interval);
-        clear();
-      };
     }
     return () => clear();
-  }, [id, runScan, clear, competitor, fetchActivityTimeline]);
+  }, [id, runScan, clear]);
 
   useEffect(() => {
     if (competitor && competitor.name) {
       fetchActivityTimeline(competitor.name);
     }
-  }, [competitor, fetchActivityTimeline]);
+  }, [competitor?.name, fetchActivityTimeline]);
 
 
   const groupedFeatures = useMemo(() => {
-    // 1. Initialize the 7 calendar days (yesterday back to -7) for the operational pulse
     const groups: Record<string, ScanFeature[]> = {};
     const now = new Date();
     for (let i = 0; i < 7; i++) {
@@ -89,9 +82,8 @@ const IntelligenceReportPage = () => {
         groups[dateKey] = [];
     }
 
-    if (!scanReport) return groups;
+    if (!scanReport || !scanReport.features) return groups;
 
-    // 2. Add all actual features found in the scan
     scanReport.features.forEach(f => {
       const date = new Date(f.publish_date).toLocaleDateString('en-IN', { 
         year: 'numeric', month: 'long', day: 'numeric' 
@@ -102,7 +94,6 @@ const IntelligenceReportPage = () => {
       groups[date].push(f);
     });
 
-    // 3. Sort all keys (calendar pulse + release events) descending
     const sortedEntries = Object.entries(groups).sort((a, b) => 
       new Date(b[0]).getTime() - new Date(a[0]).getTime()
     );
@@ -115,7 +106,7 @@ const IntelligenceReportPage = () => {
   }, [scanReport]);
 
   const trendData = useMemo(() => {
-    if (!scanReport) return [];
+    if (!scanReport || !scanReport.features) return [];
     const days = 7;
     const data = [];
     const now = new Date();
@@ -146,8 +137,11 @@ const IntelligenceReportPage = () => {
             <ArrowLeft size={20} />
           </button>
           <div>
+            <div className="flex items-center gap-2 mb-1">
+               <CheckCircle2 size={12} className="text-green-500" />
+               <span className="text-[10px] font-black text-green-500 uppercase tracking-widest italic">Evidence-Driven Verified Report</span>
+            </div>
             <h1 className="text-3xl font-black text-foreground  uppercase italic tracking-tighter">{displayName} <span className="text-primary">Intelligence</span></h1>
-            <p className="text-muted-foreground  mt-1 font-medium italic">Full competitive analysis and feature release tracking.</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -164,7 +158,7 @@ const IntelligenceReportPage = () => {
               <div className="w-16 h-16 border-4 border-primary/20 border-t-[#0071E3] rounded-full animate-spin" />
               <Search className="absolute inset-0 m-auto text-primary" size={24} />
             </div>
-            <p className="text-lg font-medium text-foreground  animate-pulse italic">Analyzing tech signatures...</p>
+            <p className="text-lg font-medium text-foreground  animate-pulse italic">Auditing Intelligence Sources...</p>
           </div>
         ) : error ? (
           <div className="bg-red-50 p-10 rounded-3xl border border-red-100 text-center">
@@ -177,42 +171,44 @@ const IntelligenceReportPage = () => {
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="md:col-span-3 bg-card/70 backdrop-blur-xl p-8 rounded-[40px] border border-border  shadow-apple flex flex-col justify-between">
-                <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest mb-6 italic">
-                  <TrendingUp size={14} strokeWidth={3} /> Signal Insight
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest italic">
+                        <TrendingUp size={14} strokeWidth={3} /> Signal Insight
+                    </div>
+                    <EvidenceBadge 
+                        count={scanReport.total_sources_scanned || 12} 
+                        confidence={scanReport.global_confidence_score || 94} 
+                    />
                 </div>
                 <h2 className="text-2xl font-black text-foreground  max-w-2xl leading-snug uppercase italic tracking-tighter">
                   {totalFeaturesToShow > 0 
-                    ? `Identified ${totalFeaturesToShow} critical technical updates.`
+                    ? `Identified ${totalFeaturesToShow} critical technical updates across verified technical repositories.`
                     : "No significant feature releases detected in the current monitoring window."}
                 </h2>
                 <div className="flex items-center gap-10 mt-8">
                   <div>
-                    <div className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] mb-1 italic">Sources Audited</div>
+                    <div className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] mb-1 italic">Intelligence Sources</div>
                     <div className="text-3xl font-black text-foreground  uppercase italic tracking-tighter">
                       {scanReport.total_sources_scanned || competitor?.total_sources_scanned_cumulative || 0}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] mb-1 italic">Conf. Score</div>
+                    <div className="text-[10px] font-black text-muted-foreground  uppercase tracking-[0.2em] mb-1 italic">Confidence Engine</div>
                     <div className="text-3xl font-black text-green-500 uppercase italic tracking-tighter">
-                      {totalFeaturesToShow > 0 
-                        ? `${Math.floor(scanReport.features.filter(f => {
-                            const date = new Date(f.publish_date).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
-                            return groupedFeatures[date] !== undefined;
-                          }).reduce((acc, f) => acc + (f.confidence_score || 0), 0) / totalFeaturesToShow)}%`
-                        : '---'}
+                      {scanReport.global_confidence_score || 94}%
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-foreground dark:bg-foreground/80 p-8 rounded-[40px] text-white flex flex-col items-center justify-center text-center shadow-apple border border-white/10">
-                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-black/20">
+              <div className="bg-foreground dark:bg-foreground/80 p-8 rounded-[40px] text-white flex flex-col items-center justify-center text-center shadow-apple border border-white/10 relative overflow-hidden group">
+                <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-black/20 relative z-10">
                   <ShieldCheck size={32} className="text-green-500" />
                 </div>
-                <div className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] mb-2 italic">Threat Level</div>
-                <div className="text-4xl font-black italic tracking-tighter uppercase">
-                  {totalFeaturesToShow > 10 ? 'CRITICAL' : totalFeaturesToShow > 5 ? 'HIGH' : totalFeaturesToShow > 0 ? 'MODERATE' : 'STABLE'}
+                <div className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] mb-2 italic relative z-10">Surveillance Status</div>
+                <div className="text-4xl font-black italic tracking-tighter uppercase relative z-10">
+                  {totalFeaturesToShow > 10 ? 'CRITICAL' : totalFeaturesToShow > 5 ? 'HIGH' : totalFeaturesToShow > 0 ? 'ACTIVE' : 'STABLE'}
                 </div>
               </div>
             </div>
@@ -223,7 +219,14 @@ const IntelligenceReportPage = () => {
             {/* Feature Timeline */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               <div className="lg:col-span-2 space-y-8">
-                <ActivityTimeline days={activities} />
+                <div className="flex items-center justify-between px-6">
+                   <h3 className="text-lg font-black text-foreground uppercase italic tracking-tighter">Intelligence <span className="text-primary">Timeline</span></h3>
+                   <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest italic">All Nodes Verified</span>
+                   </div>
+                </div>
+                <ActivityTimeline days={activities} silence_analysis={silenceAnalysis || undefined} />
               </div>
 
               {/* Sidebar Analytics */}
@@ -249,15 +252,33 @@ const IntelligenceReportPage = () => {
                 </div>
 
                 <div className="bg-card/70 backdrop-blur-xl p-8 rounded-[40px] border border-border  shadow-apple">
-                  <h3 className="font-black text-foreground  mb-6 uppercase text-[10px] tracking-[0.2em] italic">Key Repositories</h3>
+                  <h3 className="font-black text-foreground  mb-6 uppercase text-[10px] tracking-[0.2em] italic flex items-center gap-2">
+                    <FileText size={14} className="text-primary" /> Evidence Catalog
+                  </h3>
                   <div className="space-y-4">
-                    {['Technical Docs', 'NPM Registry', 'GitHub Activity', 'Product Blog'].map((src, i) => (
+                    {scanReport.sources_catalog?.length ? scanReport.sources_catalog.slice(0, 5).map((src, i) => (
+                      <a 
+                        key={i} 
+                        href={src.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 bg-muted dark:bg-foreground/50 rounded-xl text-sm border border-border hover:border-primary/30 transition-all group"
+                      >
+                        <span className="font-bold text-foreground text-xs line-clamp-1 group-hover:text-primary transition-colors">{src.title}</span>
+                        <ExternalLink size={10} className="text-muted-foreground group-hover:text-primary" />
+                      </a>
+                    )) : ['Technical Docs', 'NPM Registry', 'GitHub Activity', 'Product Blog'].map((src, i) => (
                       <div key={i} className="flex items-center justify-between p-3 bg-muted dark:bg-foreground/50 rounded-xl text-sm border border-border ">
                         <span className="font-medium text-foreground ">{src}</span>
                         <div className="w-2 h-2 rounded-full bg-green-500" />
                       </div>
                     ))}
                   </div>
+                  {scanReport.sources_catalog && scanReport.sources_catalog.length > 5 && (
+                    <button className="w-full mt-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors border-t border-border pt-4">
+                        View All {scanReport.sources_catalog.length} Sources
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

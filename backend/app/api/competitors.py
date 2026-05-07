@@ -12,9 +12,14 @@ from app.core.security import get_current_user
 from app.models.competitor import (
     Competitor,
     CompetitorCreate,
+    CompetitorUpdate,
     CompetitorStatus,
 )
 from app.models.user import User
+from pydantic import BaseModel, Field
+
+class ScanCompetitorRequest(BaseModel):
+    force_refresh: bool = Field(default=False)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -69,6 +74,16 @@ async def create_competitor(
     """
     collection = await get_competitor_collection()
 
+    # Check for duplicates for this user
+    existing = await collection.find_one({
+        "user_id": str(current_user.id),
+        "name": {"$regex": f"^{competitor.name}$", "$options": "i"}
+    })
+    if existing:
+        doc = existing.copy()
+        doc["_id"] = str(doc["_id"])
+        return Competitor(**doc)
+
     new_competitor = competitor.model_dump()
     if competitor.url is not None:
         new_competitor["url"] = str(competitor.url)
@@ -101,6 +116,154 @@ async def create_competitor(
     if "_id" in doc:
         doc["_id"] = str(doc["_id"])
     return Competitor(**doc)
+
+
+@router.get("/competitors/{competitor_id}", response_model=Competitor)
+async def get_competitor(
+    competitor_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Retrieve a single competitor by ID.
+    """
+    if not ObjectId.is_valid(competitor_id):
+        raise HTTPException(status_code=400, detail="Invalid competitor ID")
+        
+    collection = await get_competitor_collection()
+    competitor = await collection.find_one({
+        "_id": ObjectId(competitor_id),
+        "user_id": str(current_user.id)
+    })
+    
+    if not competitor:
+        raise HTTPException(status_code=404, detail="Competitor not found")
+        
+    doc = competitor.copy()
+    doc["_id"] = str(doc["_id"])
+    return Competitor(**doc)
+
+
+@router.patch("/competitors/{competitor_id}", response_model=Competitor)
+async def update_competitor(
+    competitor_id: str,
+    competitor_update: CompetitorUpdate,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Update an existing competitor entry.
+    """
+    if not ObjectId.is_valid(competitor_id):
+        raise HTTPException(status_code=400, detail="Invalid competitor ID")
+        
+    collection = await get_competitor_collection()
+    
+    # Verify ownership
+    existing = await collection.find_one({
+        "_id": ObjectId(competitor_id),
+        "user_id": str(current_user.id)
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Competitor not found")
+        
+    update_data = {k: v for k, v in competitor_update.model_dump().items() if v is not None}
+    
+    if "url" in update_data:
+        update_data["url"] = str(update_data["url"])
+        # Refresh logo if URL changed
+        from urllib.parse import urlparse
+        domain = urlparse(update_data["url"]).netloc
+        if domain:
+            update_data["logo_url"] = f"https://logo.clearbit.com/{domain}"
+
+    if update_data:
+        await collection.update_one(
+            {"_id": ObjectId(competitor_id)},
+            {"$set": update_data}
+        )
+        
+    updated = await collection.find_one({"_id": ObjectId(competitor_id)})
+    doc = updated.copy()
+    doc["_id"] = str(doc["_id"])
+    return Competitor(**doc)
+
+
+@router.post("/competitors/{competitor_id}/scan", response_model=None)
+async def scan_competitor(
+    competitor_id: str,
+    scan_req: ScanCompetitorRequest = None,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Trigger a fresh intelligence scan for a specific competitor.
+    """
+    if not ObjectId.is_valid(competitor_id):
+        raise HTTPException(status_code=400, detail="Invalid competitor ID")
+        
+    collection = await get_competitor_collection()
+    competitor = await collection.find_one({
+        "_id": ObjectId(competitor_id),
+        "user_id": str(current_user.id)
+    })
+    
+    if not competitor:
+        raise HTTPException(status_code=404, detail="Competitor not found")
+        
+    from app.models.scan import ScanRequest
+    from app.services.scan_pipeline import run_scan
+    
+    # Update status to Scanning
+    await collection.update_one(
+        {"_id": ObjectId(competitor_id)},
+        {"$set": {"status": CompetitorStatus.SCANNING}}
+    )
+    
+    try:
+        scan_request = ScanRequest(
+            company_name=competitor["name"],
+            website=competitor.get("url"),
+            time_window_days=7,
+            force_refresh=scan_req.force_refresh if scan_req else False
+        )
+        
+        result = await run_scan(scan_request)
+        
+        # Update status back to Active
+        await collection.update_one(
+            {"_id": ObjectId(competitor_id)},
+            {"$set": {
+                "status": CompetitorStatus.ACTIVE,
+                "last_scan": datetime.now(timezone.utc)
+            }}
+        )
+        
+        if result:
+            # Persist findings (similar to scan.py logic)
+            from app.services.delta_engine import store_new_features
+            await store_new_features(competitor["name"], result.features)
+            
+            # Persist report
+            report_doc = result.model_dump()
+            report_doc.update({
+                "user_id": str(current_user.id),
+                "company": competitor["name"],
+                "competitor_id": competitor_id,
+                "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                "status": "Completed"
+            })
+            await db.db["reports"].insert_one(report_doc)
+            
+            return result
+        else:
+            raise HTTPException(status_code=503, detail="All AI intelligence providers are currently at capacity (Rate Limited). Please retry in a few minutes.")
+            
+    except Exception as e:
+        logger.error(f"Manual scan failed for {competitor['name']}: {e}")
+        await collection.update_one(
+            {"_id": ObjectId(competitor_id)},
+            {"$set": {"status": CompetitorStatus.ACTIVE}}
+        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/competitors/{competitor_id}")

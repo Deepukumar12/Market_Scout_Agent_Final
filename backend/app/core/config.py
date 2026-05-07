@@ -167,12 +167,7 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str = ""
 
 
-    # ---------------------------------------------------
-    # MOCK MODE (IMPORTANT)
-    # ---------------------------------------------------
-    # If True → fake search results
-    # If False → real web search + scraping
-    MOCK_MODE: bool = False
+
 
 
     # ---------------------------------------------------

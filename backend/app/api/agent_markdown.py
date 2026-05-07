@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.competitor import CompetitorStatus
 from app.services.scan_pipeline import run_scan
 from app.models.scan import ScanRequest
+from app.core.logger import agent_logger
 import logging
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,10 @@ async def analyze_company(
             raise HTTPException(status_code=400, detail="Company name is required")
             
         logger.info(f"User {current_user.email} triggering DEEP analysis for: {company_name}")
-        await agent_logger.log(f"Phase 0: Initializing deep intelligence probe for {company_name}...", "SYSTEM")
+        
+        # Safe Logger Call
+        if agent_logger:
+            await agent_logger.log(f"Phase 0: Initializing deep intelligence probe for {company_name}...", "SYSTEM")
 
         # 1. Ensure Competitor exists in DB
         database = await get_database()
@@ -93,7 +97,8 @@ async def analyze_company(
         report_data["competitor_id"] = str(comp_id)
         report_data["timestamp"] = datetime.utcnow()
         
-        await database["reports"].insert_one(report_data)
+        res = await database["reports"].insert_one(report_data)
+        report_id = res.inserted_id
         
         await collection.update_one(
             {"_id": comp_id},
@@ -103,7 +108,8 @@ async def analyze_company(
             }}
         )
         
-        await agent_logger.log(f"Deep analysis for {company_name} finalized and persisted.", "SYSTEM")
+        if agent_logger:
+            await agent_logger.log(f"Deep analysis for {company_name} finalized and persisted.", "SYSTEM")
         
         return {
             "report_id": str(report_id),

@@ -2,7 +2,7 @@ import { useCompetitorStore } from '@/store/competitorStore';
 import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PlusCircle, Radar, Globe2, Search, Target, ArrowUpRight, Loader2, Trash2, FileDown, Download } from 'lucide-react';
+import { PlusCircle, Radar, Globe2, Search, Target, ArrowUpRight, Loader2, Trash2, FileDown, Download, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { useIntelStore } from '@/store/intelStore';
@@ -11,7 +11,7 @@ import { useComponentLogger } from '@/hooks/useComponentLogger';
 
 const CompetitorsPage = () => {
   useComponentLogger('CompetitorsPage');
-  const { competitors, loading, error, fetchCompetitors, removeCompetitor } = useCompetitorStore();
+  const { competitors, loading, error, fetchCompetitors, removeCompetitor, updateCompetitor } = useCompetitorStore();
   const { searchQuery } = useOutletContext<{ searchQuery: string }>();
   const { globalMetrics, fetchGlobalMetrics } = useIntelStore();
   const [localFilter, setLocalFilter] = useState('');
@@ -171,86 +171,15 @@ const CompetitorsPage = () => {
 
         <div className="divide-y divide-border/5">
           {filteredCompetitors.map((c: any, idx: number) => (
-            <motion.div
-              key={c._id || c.id || c.name || idx}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: idx * 0.05 }}
-              className="grid grid-cols-[1fr_100px_130px_160px] items-center px-8 py-6 text-sm text-foreground hover:bg-muted/40 transition-colors cursor-pointer group"
-              onClick={() => navigate(`/dashboard/competitors/${c._id || c.id}/report`)}
-            >
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-lg font-black text-primary border border-border group-hover:border-primary/30 transition-all group-hover:bg-primary/5 uppercase italic overflow-hidden">
-                  {c.logo_url ? (
-                    <img 
-                      src={c.logo_url} 
-                      alt={c.name} 
-                      className="w-full h-full object-contain p-2"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                        (e.target as any).parentElement.innerText = c.name?.[0] || '?';
-                      }}
-                    />
-                  ) : (
-                    c.name?.[0] || '?'
-                  )}
-                </div>
-                <div>
-                  <div className="font-black uppercase italic tracking-tight text-foreground group-hover:text-primary transition-colors">{c.name}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase mt-1 break-all">{c.url}</div>
-                </div>
-              </div>
-              <div className="text-center">
-                <span className={cn(
-                  "inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                  String(c._id || c.id).startsWith('s') 
-                    ? "border-primary/20 text-blue-400 bg-primary/50/5 animate-pulse" 
-                    : "border-emerald-500/20 text-emerald-400 bg-emerald-500/5"
-                )}>
-                  {String(c._id || c.id).startsWith('s') ? 'System Node' : (c.status || 'Active')}
-                </span>
-              </div>
-              <div className="text-center">
-                 <span className={cn(
-                    "inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                    c.priority === 'High' ? 'border-rose-500/20 text-rose-400 bg-rose-500/5' : 
-                    c.priority === 'Low' ? 'border-primary/20 text-blue-400 bg-primary/50/5' :
-                    'border-amber-500/20 text-amber-400 bg-amber-500/5'
-                 )}>
-                    {c.priority || 'Medium'}
-                 </span>
-              </div>
-              <div className="text-right flex flex-col items-end gap-1">
-                  <div className="text-[10px] font-black text-foreground uppercase italic tracking-tighter flex items-center gap-1 group/link hover:text-primary transition-colors">
-                    OPEN REPORT <ArrowUpRight className="w-3 h-3 text-primary group-hover/link:translate-x-1 transition-transform" />
-                  </div>
-                  <div className="flex gap-2 mt-1 relative z-20">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(`Target ${c.name} for termination?`)) {
-                          removeCompetitor(c._id || c.id);
-                        }
-                      }}
-                      className="p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-all"
-                      title="Terminate Node"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleExportPDF([c._id || c.id]);
-                      }}
-                      className="p-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all"
-                      title="Download Competitor PDF"
-                    >
-                      <Download size={12} />
-                    </button>
-                    <div className="text-[9px] text-muted-foreground font-mono uppercase tracking-widest self-center">GEN-7 ARCHIVE</div>
-                  </div>
-              </div>
-            </motion.div>
+            <CompetitorRow 
+              key={c._id || c.id || idx}
+              competitor={c}
+              idx={idx}
+              navigate={navigate}
+              updateCompetitor={updateCompetitor}
+              removeCompetitor={removeCompetitor}
+              handleExportPDF={handleExportPDF}
+            />
           ))}
 
           {!loading && filteredCompetitors.length === 0 && (
@@ -261,7 +190,7 @@ const CompetitorsPage = () => {
                   <div>
                     <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter">Surveillance Grid Active</h3>
                     <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-2 font-medium italic leading-relaxed">
-                       {searchQuery || localFilter ? `Telemetry mismatch for "${searchQuery || localFilter}".` : "Auto-loading flagship nodes for global market intelligence benchmarks."}
+                       {searchQuery || localFilter ? `Telemetry mismatch for "${searchQuery || localFilter}".` : "No competitors found in your surveillance network."}
                     </p>
                     <Button
                       onClick={() => navigate('/dashboard/add-competitor')}
@@ -301,6 +230,188 @@ const CompetitorsPage = () => {
   );
 };
 
+const CompetitorRow = ({ 
+  competitor: c, 
+  idx, 
+  navigate, 
+  updateCompetitor, 
+  removeCompetitor, 
+  handleExportPDF 
+}: any) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(c.name);
+  const [editUrl, setEditUrl] = useState(c.url || '');
+  const [editPriority, setEditPriority] = useState(c.priority || 'Medium');
+
+  const handleSave = async () => {
+    await updateCompetitor(c._id || c.id, { 
+      name: editName, 
+      url: editUrl,
+      priority: editPriority
+    });
+    setIsEditing(false);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: idx * 0.05 }}
+      className={cn(
+        "grid grid-cols-[1fr_100px_130px_160px] items-center px-8 py-6 text-sm text-foreground hover:bg-muted/40 transition-colors cursor-pointer group",
+        isEditing && "bg-muted/60"
+      )}
+      onClick={() => !isEditing && navigate(`/dashboard/competitors/${c._id || c.id}/report`)}
+    >
+      <div className="flex items-center gap-5">
+        <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-lg font-black text-primary border border-border group-hover:border-primary/30 transition-all group-hover:bg-primary/5 uppercase italic overflow-hidden">
+          {c.logo_url ? (
+            <img 
+              src={c.logo_url} 
+              alt={c.name} 
+              className="w-full h-full object-contain p-2"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as any).parentElement.innerText = c.name?.[0] || '?';
+              }}
+            />
+          ) : (
+            c.name?.[0] || '?'
+          )}
+        </div>
+        {isEditing ? (
+          <div className="space-y-2 flex-1" onClick={e => e.stopPropagation()}>
+            <input 
+              className="bg-background border border-border rounded-md px-2 py-1 text-xs w-full font-bold uppercase italic"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+            />
+            <input 
+              className="bg-background border border-border rounded-md px-2 py-1 text-[10px] w-full font-mono"
+              value={editUrl}
+              onChange={e => setEditUrl(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div>
+            <div className="font-black uppercase italic tracking-tight text-foreground group-hover:text-primary transition-colors">{c.name}</div>
+            <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase mt-1 break-all">{c.url}</div>
+          </div>
+        )}
+      </div>
+      <div className="text-center">
+        <span className={cn(
+          "inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+          c.status === 'Scanning' ? "border-amber-500/20 text-amber-400 bg-amber-500/5 animate-pulse" : "border-emerald-500/20 text-emerald-400 bg-emerald-500/5"
+        )}>
+          {c.status || 'Active'}
+        </span>
+      </div>
+      <div className="text-center" onClick={e => isEditing && e.stopPropagation()}>
+         {isEditing ? (
+           <select 
+              className="bg-background border border-border rounded-md px-2 py-1 text-[9px] font-black uppercase"
+              value={editPriority}
+              onChange={e => setEditPriority(e.target.value)}
+           >
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+           </select>
+         ) : (
+          <span className={cn(
+              "inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+              c.priority === 'High' ? 'border-rose-500/20 text-rose-400 bg-rose-500/5' : 
+              c.priority === 'Low' ? 'border-primary/20 text-blue-400 bg-primary/50/5' :
+              'border-amber-500/20 text-amber-400 bg-amber-500/5'
+           )}>
+              {c.priority || 'Medium'}
+           </span>
+         )}
+      </div>
+      <div className="text-right flex flex-col items-end gap-1">
+          {isEditing ? (
+            <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+              <Button 
+                onClick={handleSave}
+                className="h-8 px-3 text-[10px] font-black uppercase bg-emerald-600 hover:bg-emerald-500"
+              >
+                Save
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setIsEditing(false)}
+                className="h-8 px-3 text-[10px] font-black uppercase"
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="text-[10px] font-black text-foreground uppercase italic tracking-tighter flex items-center gap-1 group/link hover:text-primary transition-colors">
+                OPEN REPORT <ArrowUpRight className="w-3 h-3 text-primary group-hover/link:translate-x-1 transition-transform" />
+              </div>
+              <div className="flex gap-2 mt-1 relative z-20">
+                <button 
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const { runCompetitorScan } = await import('@/services/api');
+                    try {
+                      toast.promise(runCompetitorScan(c._id || c.id), {
+                        loading: `Agent deploying for ${c.name}...`,
+                        success: `Intelligence sync complete for ${c.name}`,
+                        error: `Surveillance failure for ${c.name}`
+                      });
+                    } catch(err) {}
+                  }}
+                  className={cn(
+                    "p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all",
+                    c.status === 'Scanning' && "animate-spin opacity-50 pointer-events-none"
+                  )}
+                  title="Trigger Fresh Scan"
+                >
+                  <RefreshCcw size={12} />
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditing(true);
+                  }}
+                  className="p-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all"
+                  title="Edit Telemetry"
+                >
+                  <PlusCircle size={12} className="rotate-45" />
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Target ${c.name} for termination?`)) {
+                      removeCompetitor(c._id || c.id);
+                    }
+                  }}
+                  className="p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-all"
+                  title="Terminate Node"
+                >
+                  <Trash2 size={12} />
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleExportPDF([c._id || c.id]);
+                  }}
+                  className="p-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all"
+                  title="Download Competitor PDF"
+                >
+                  <Download size={12} />
+                </button>
+              </div>
+            </>
+          )}
+      </div>
+    </motion.div>
+  );
+};
+
 const SummaryCard = ({
   icon,
   title,
@@ -337,4 +448,3 @@ const SummaryCard = ({
 );
 
 export default CompetitorsPage;
-

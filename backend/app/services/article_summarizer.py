@@ -138,3 +138,40 @@ ARTICLES TO SUMMARIZE:
         logger.warning("Batch summarization failed: %s. Falling back to individual calls.", str(e)[:100])
         # Fallback to individual calls
         return [(summarize_article(url, inp), url) for inp, url in articles_with_urls]
+
+async def summarize_article_async(url: str, article_input: str) -> str:
+    """
+    Async: Summarize one article in 200–250 words.
+    """
+    if not article_input or not article_input.strip():
+        return ""
+    from app.services.llm_gateway import generate_text_async
+    article_input = truncate_to_token_limit(article_input, MAX_INPUT_TOKENS_PER_ARTICLE)
+    
+    prompt = f"""You are an analytical news assistant.
+Summarize this article clearly in about {SUMMARY_WORDS} words.
+- If the article has a publication date or "dated" information, start your summary with "Dated: [exact date]" on the first line (e.g. Dated: January 22, 2026).
+- Then summarize: key events, important facts, strategic impact, dates and numbers.
+Output only the summary. No preamble.
+
+Article:
+{article_input}
+"""
+    sys_text = "You summarize articles concisely."
+    try:
+        out = await generate_text_async(prompt, system=sys_text, max_tokens=350)
+        return out or ""
+    except Exception as e:
+        logger.warning("Async summarization failed for %s: %s", url[:60], e)
+        return ""
+
+async def summarize_articles_batch_async(articles_with_urls: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    """
+    Async batch summarization using parallel asyncio.gather for maximum performance.
+    """
+    if not articles_with_urls: return []
+    import asyncio
+    tasks = [summarize_article_async(url, inp) for inp, url in articles_with_urls]
+    results = await asyncio.gather(*tasks)
+    
+    return [(results[i], articles_with_urls[i][1]) for i in range(len(articles_with_urls))]

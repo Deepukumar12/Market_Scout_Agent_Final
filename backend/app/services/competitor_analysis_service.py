@@ -54,11 +54,25 @@ async def discover_competitors(company_name: str, industry: str = "Technology") 
     
     try:
         response = await generate_text_async(prompt)
-        clean_json = response.strip().strip("`").removeprefix("json").strip()
-        competitors = json.loads(clean_json)
-        if isinstance(competitors, list):
-            await agent_logger.log(f"Market mapping complete. Detected {len(competitors)} strategic rivals.", "STRATEGY")
-            return competitors
+        if not response:
+            return []
+            
+        # Robust JSON extraction
+        import re
+        match = re.search(r'\[.*\]', response, re.DOTALL)
+        if match:
+            clean_json = match.group(0)
+            try:
+                competitors = json.loads(clean_json)
+                if isinstance(competitors, list):
+                    await agent_logger.log(f"Market mapping complete. Detected {len(competitors)} strategic rivals.", "STRATEGY")
+                    return competitors
+            except json.JSONDecodeError:
+                # Try repair
+                clean_json = clean_json.strip().rstrip('`').strip()
+                competitors = json.loads(clean_json)
+                if isinstance(competitors, list):
+                    return competitors
     except Exception as e:
         logger.error(f"Competitor discovery failed: {e}")
         
@@ -114,8 +128,25 @@ async def analyze_company_profile(company_name: str, website: str = "") -> Dict[
     
     try:
         response = await generate_text_async(prompt)
-        clean_json = response.strip().strip("`").removeprefix("json").strip()
-        return json.loads(clean_json)
+        if not response:
+            logger.warning(f"LLM returned empty response for {company_name} profiling.")
+            return {}
+            
+        # Robust JSON extraction
+        import re
+        match = re.search(r'\{.*\}', response, re.DOTALL)
+        if match:
+            clean_json = match.group(0)
+            try:
+                return json.loads(clean_json)
+            except json.JSONDecodeError as je:
+                logger.error(f"JSON decode failed on extracted segment for {company_name}: {je}")
+                # Try one more cleanup - sometimes LLMs add extra trailing chars
+                clean_json = clean_json.strip().rstrip('`').strip()
+                return json.loads(clean_json)
+        else:
+            logger.error(f"No JSON object found in LLM response for {company_name}")
+            return {}
     except Exception as e:
         logger.error(f"Company profiling failed: {e}")
         return {}

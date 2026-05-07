@@ -15,12 +15,8 @@ from app.services.scraper_service import (
     filter_content_technical_only,
 )
 from app.services.query_planner import generate_filter_patterns, plan_queries
-from app.services.gemini_client import GeminiClient, GeminiClientError
-from app.services.ollama_sync import OllamaClient
-from app.services.openai_client import OpenAIClient
-from app.services.anthropic_client import AnthropicClient
-from app.services.deepseek_client import DeepSeekClient
-from app.services.groq_client import GroqClient
+from app.services.llm_gateway import generate_text_async
+from app.services.mistral_client import MistralClient
 from app.services.github_client import fetch_company_github_data, GitHubClientError
 from app.services.proxycurl_client import proxycurl_client
 from app.services.financial_service import financial_service
@@ -36,381 +32,288 @@ logger = logging.getLogger(__name__)
 async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     """
     Execute the 5-step pipeline. Returns ScanResponse on success.
-    Supports multi-provider (Ollama / Gemini).
+    Supports multi-provider (Gemini / Groq / Ollama).
     """
+    from app.services.cache_service import cache
+    import uuid
+
     company = request.company_name.strip()
     time_window_days = request.time_window_days
     scan_date_iso = datetime.now(timezone.utc).isoformat()
-
-    # -------------------------------------------------------------------------
-    # STEP 0 – LLM Client Factory
-    # -------------------------------------------------------------------------
-    provider = settings.LLM_PROVIDER.lower()
     
-    if provider == "ollama":
-        logger.info("Using OLLAMA as primary LLM provider")
-        client = OllamaClient()
-    elif provider == "openai":
-        logger.info("Using OPENAI as primary LLM provider")
-        client = OpenAIClient()
-    elif provider == "anthropic":
-        logger.info("Using ANTHROPIC as primary LLM provider")
-        client = AnthropicClient()
-    elif provider == "deepseek":
-        logger.info("Using DEEPSEEK as primary LLM provider")
-        client = DeepSeekClient()
-    elif provider == "groq":
-        logger.info("Using GROQ as primary LLM provider")
-        client = GroqClient()
-    else:
-        logger.info("Using GEMINI as primary LLM provider")
-        client = GeminiClient()
+    # --- SCAN SESSION MANAGEMENT ---
+    scan_session_id = str(uuid.uuid4())
+    cache_key = f"scan_result:{company.lower()}:{time_window_days}"
+    lock_name = f"scan_lock:{company.lower()}"
 
-    # -------------------------------------------------------------------------
-    # STEP 1 – Query Planning (LLM)
-    # -------------------------------------------------------------------------
-    await agent_logger.log(f"Phase 1: Strategizing search vectors for {company}...", "STRATEGY")
-    queries = []
-    try:
-        queries = plan_queries(company, time_window_days)
-        logger.info("scoutiq_db step=query_planning company=%s queries=%s", company, queries)
-        await agent_logger.log(f"Generated {len(queries)} intelligent search queries.", "STRATEGY")
-        for idx, q in enumerate(queries, 1):
-            await agent_logger.log(f"  ➜ {q}", "STRATEGY")
-    except Exception as e:
-        logger.warning(f"scoutiq_db step=query_planning failed: {e}")
+    # 1. Check Cache First (unless force refresh)
+    if not request.force_refresh:
+        cached_result, ttl = await cache.get_with_ttl(cache_key)
+        if cached_result:
+            logger.info(f"SCAN HIT   | CACHE    | Company: {company} | TTL: {ttl}s")
+            await agent_logger.log(f"Retrieving cached intelligence for {company} (Expires in {ttl}s).", "SYSTEM")
+            return ScanResponse.model_validate(cached_result)
+
+    # 2. Check for Active Scan Lock (Deduplication)
+    lock_id = await cache.acquire_lock(lock_name, acquire_timeout=5, lock_timeout=300)
+    if not lock_id:
+        logger.warning(f"SCAN BLK   | DUPLICATE| Company: {company} | Session: {scan_session_id}")
+        await agent_logger.log(f"Surveillance already in progress for {company}. Monitoring existing thread...", "WARNING")
         
-        # If it's a critical logic error, return None. 
-        if not queries: return None
-
-    if not queries:
-        logger.info("scoutiq_db step=query_planning no_queries company=%s", company)
-        return ScanResponse(
-            competitor=company,
-            scan_date=scan_date_iso,
-            time_window_days=time_window_days,
-            total_sources_scanned=0,
-            total_valid_updates=0,
-            features=[],
-            github=None,
-        )
-
-    # -------------------------------------------------------------------------
-    # STEP 2 – Real Search Execution via Multiple Providers
-    # -------------------------------------------------------------------------
-    await agent_logger.log(f"Phase 2: Deploying web crawlers for {company}...", "SEARCH")
-    seen_urls: set[str] = set()
-    all_results: list[dict[str, Any]] = []
-    
-    search_tasks = [search_web_multi(q, company_name=company, num_results=5, time_window_days=time_window_days) for q in queries]
-    search_results_raw = await asyncio.gather(*search_tasks, return_exceptions=True)
-    
-    for res in search_results_raw:
-        if isinstance(res, Exception):
-            logger.warning(f"Search task failed: {res}")
-            continue
-        for r in res:
-            url = r.get("url")
-            if url and url not in seen_urls:
-                seen_urls.add(url)
-                all_results.append(r)
-
-    logger.info("scoutiq_db step=search company=%s urls_collected=%d", company, len(all_results))
-    await agent_logger.log(f"Surveillance complete. Captured {len(all_results)} potential intelligence nodes.", "SEARCH")
-
-    # -------------------------------------------------------------------------
-    # STEP 3 – Scraping + Date Extraction
-    # -------------------------------------------------------------------------
-    await agent_logger.log(f"Phase 3: Extracting high-fidelity technical data from {len(all_results)} sources...", "DATA")
-    async def _scrape_task(res: dict[str, Any]):
-        url = res.get("url")
-        if not url:
-            return None
-        item = await scrape_url(url)
-        if item:
-            item["snippet"] = res.get("snippet") or ""
-            if not item.get("publish_date") and res.get("published_date"):
-                item["publish_date"] = res.get("published_date")
-        return item
-
-    # Limit concurrency to 10 for stability
-    semaphore = asyncio.Semaphore(10)
-    async def sem_scrape_task(res):
-        async with semaphore:
-            return await _scrape_task(res)
-
-    tasks = [sem_scrape_task(r) for r in all_results]
-    scraped_raw = await asyncio.gather(*tasks)
-    scraped = [s for s in scraped_raw if s is not None]
-
-    # For Deep Analysis, we relax the date filter to capture static pages (pricing, products, docs)
-    # that might not have a visible publish date but are critical for the profile.
-    if request.deep_analysis:
-        filtered_by_date = [s for s in scraped if s.get("content") and len(s["content"].strip()) > 500]
-        logger.info(f"Deep Analysis mode: Bypassing date filter for {company}. Scraped: {len(scraped)}, Kept: {len(filtered_by_date)}")
-        await agent_logger.log(f"Deep analysis mode enabled. Retaining all {len(filtered_by_date)} high-fidelity content nodes.", "DATA")
-    else:
-        filtered_by_date = filter_by_time_and_technical(scraped, time_window_days)
-        logger.info(
-            "scoutiq_db step=scrape company=%s scraped=%d after_date_filter=%d",
-            company, len(scraped), len(filtered_by_date),
-        )
-        await agent_logger.log(f"Data extraction successful. {len(filtered_by_date)} valid technical updates isolated.", "DATA")
-
-    # Generate dynamic filter patterns based on industry
-    req_regex, blk_regex = generate_filter_patterns(company)
-
-    # -------------------------------------------------------------------------
-    # STEP 4 – Content Filtering (technical only)
-    # -------------------------------------------------------------------------
-    # Step 4: Content Filtering
-    # We count all_results as sources scanned, because we attempted to audit them.
-    # This ensures "Sources Audited" isn't 0 if scraping failed for some.
-    total_sources_scanned = len(all_results)
-    filtered = filter_content_technical_only(filtered_by_date, required_regex=req_regex, block_regex=blk_regex)
-    logger.info(
-        "scoutiq_db step=content_filter company=%s after_content_filter=%d",
-        company, len(filtered),
-    )
-
-    if not filtered:
-        return ScanResponse(
-            competitor=company,
-            scan_date=scan_date_iso,
-            time_window_days=time_window_days,
-            total_sources_scanned=total_sources_scanned,
-            total_valid_updates=0,
-            features=[],
-            github=None,
-        )
-
-    # -------------------------------------------------------------------------
-    # STEP 5 – LLM Analysis (Optimized for Latency)
-    # -------------------------------------------------------------------------
-    # Token Safeguard: Prevent LLM quota errors (429) by limiting massive payloads.
-    safe_filtered = filtered[:15]
-    for item in safe_filtered:
-        if "content" in item and item["content"]:
-            item["content"] = item["content"][:3000] + "... [TRUNCATED]"
-
-    await agent_logger.log("Phase 4: Synthesis - Running deep-layer competitive analysis...", "SYNTHESIS")
-    
-    # Start metadata tasks in parallel with synthesis
-    github_task = asyncio.create_task(fetch_company_github_data(company, max_repos=15, time_window_days=time_window_days))
-    
-    talent_task = None
-    if settings.PROXYCURL_API_KEY:
-        try:
-            from urllib.parse import urlparse
-            domain = ""
-            if request.company_url: domain = urlparse(str(request.company_url)).netloc
-            elif request.website: domain = urlparse(str(request.website)).netloc
-            if domain: talent_task = asyncio.create_task(proxycurl_client.get_talent_intelligence(domain))
-        except Exception: pass
-
-    financial_task = None
-    if request.stock_symbol and (settings.ALPHA_VANTAGE_API_KEY or settings.FINNHUB_API_KEY):
-        financial_task = asyncio.create_task(financial_service.get_stock_quote(request.stock_symbol))
-
-    # Parallel Deep Analysis Tasks
-    profile_task = None
-    competitors_task = None
-    if request.deep_analysis:
-        profile_task = asyncio.create_task(analyze_company_profile(company, request.website or ""))
-        competitors_task = asyncio.create_task(discover_competitors(company))
-
-    # Perform Synthesis using the PRIMARY client first (fastest/most capable)
-    # Then fallback to others if needed.
-    out = None
-    try:
-        # Use primary client (Gemini/Groq/etc.)
-        out = await client.generate_scan_report(
-            competitor_name=company,
-            time_window_days=time_window_days,
-            scraped_items=safe_filtered,
-            scan_date_iso=scan_date_iso,
-        )
-        await agent_logger.log("Intelligence report generated. Finalizing data integrity checks...", "SYNTHESIS")
-    except Exception as e:
-        logger.error(f"Primary LLM synthesis failed: {e}. Falling back to Ollama/Groq...")
-        try:
-            # Fallback to Ollama (Local)
-            heavy_client = OllamaClient()
-            out = await heavy_client.generate_scan_report(
-                competitor_name=company,
-                time_window_days=time_window_days,
-                scraped_items=safe_filtered,
-                scan_date_iso=scan_date_iso,
-            )
-        except Exception as ollama_e:
-            logger.error(f"Ollama fallback also failed: {ollama_e}. Trying Groq...")
-            try:
-                groq_fallback = GroqClient()
-                out = await groq_fallback.generate_scan_report(
-                    competitor_name=company,
-                    time_window_days=time_window_days,
-                    scraped_items=safe_filtered,
-                    scan_date_iso=scan_date_iso,
-                )
-            except Exception:
-                logger.critical("All LLM analysis layers failed.")
-                return None
-        except Exception as fallback_e:
-            logger.error(f"Fallback synthesis failed: {fallback_e}")
-            return None
-
-    source_map = {item["url"]: item for item in filtered}
-    
-    # Handle parsing differences
-    try:
-        report = ScanResponse.model_validate(out)
-    except Exception as e:
-        logger.error(f"scoutiq_db step=validation failed for {provider}: {e}")
-        # Minimal valid return if parsing fails
+        # Wait and retry cache for 30 seconds if it's a duplicate request
+        for _ in range(30):
+            await asyncio.sleep(1)
+            cached_result = await cache.get(cache_key)
+            if cached_result:
+                return ScanResponse.model_validate(cached_result)
         return None
 
-    seen_feature_urls = {}
-    for f in report.features:
-        pub = f.publish_date or ""
-        # 1. First, check if there's a scraped source mapped to this feature.
-        src_item = source_map.get(f.source_url)
-        if not src_item:
-            # Fallback domain / partial URL matching
-            src_item = next(
-                (item for url, item in source_map.items() 
-                 if (f.source_url and url in f.source_url) or (f.source_url and f.source_url in url)),
-                None
+    try:
+        logger.info(f"SCAN START | SESSION  | {scan_session_id} | Company: {company}")
+        await agent_logger.log(f"New surveillance session initiated: {scan_session_id}", "SYSTEM")
+
+        # -------------------------------------------------------------------------
+        # STEP 0 – LLM Client Factory (REMOVED: Now handled by llm_gateway)
+        # -------------------------------------------------------------------------
+
+        # -------------------------------------------------------------------------
+        # STEP 1 – Query Planning (LLM)
+        # -------------------------------------------------------------------------
+        await agent_logger.log(f"Phase 1: Strategizing search vectors for {company}...", "STRATEGY")
+        queries = []
+        try:
+            queries = await plan_queries(company, time_window_days)
+            await agent_logger.log(f"Generated {len(queries)} intelligent search queries.", "STRATEGY")
+        except Exception as e:
+            logger.warning(f"Query planning failed: {e}")
+            if not queries: return None
+
+        if not queries:
+            return ScanResponse(
+                competitor=company,
+                scan_date=scan_date_iso,
+                time_window_days=time_window_days,
+                total_sources_scanned=0,
+                total_valid_updates=0,
+                features=[],
             )
 
-        # 2. Extract best publish date. If the pipeline successfully extracted a date,
-        # it is the TRUTH, and overrides the LLM's potentially hallucinated date.
-        true_pub: Optional[str] = None
-        if src_item and src_item.get("publish_date"):
-            true_pub = src_item["publish_date"]
-
-        # 3. If pipeline failed to find a date, use LLM's date if valid
-        if not true_pub:
-            valid_date_format = ("-" in pub and "XX" not in pub.upper() and pub.upper() != "UNKNOWN")
-            if pub and valid_date_format and len(pub) >= 8:
-                true_pub = pub
-            else:
-                true_pub = scan_date_iso
-
-        # Clean the date to ISO representation for consistency if it has "T"
-        if true_pub and "T" in true_pub:
-            true_pub = true_pub.split("T")[0]
-
-        # 4. FINAL STRICT DATE FILTER: Guarantee no old articles slip through
-        if true_pub:
-            try:
-                feature_dt = datetime.fromisoformat(true_pub.replace("Z", "+00:00"))
-                if feature_dt.tzinfo is None:
-                    feature_dt = feature_dt.replace(tzinfo=timezone.utc)
-                cutoff = datetime.now(timezone.utc) - timedelta(days=time_window_days + 1) # +1 buffer
-                if feature_dt < cutoff:
-                    logger.info(f"Dropping old feature '{f.feature_title}' (Date: {true_pub} is older than window)")
-                    continue
-            except ValueError:
-                pass
-
-        # 5. QUALITY FILTER: Drop any feature that the LLM couldn't properly identify
-        new_feature = ScanFeature(**{**f.model_dump(), "publish_date": true_pub})
-        title_lower = new_feature.feature_title.lower().strip()
-        summary_lower = new_feature.technical_summary.lower().strip()
+        # -------------------------------------------------------------------------
+        # STEP 2 – Search Execution
+        # -------------------------------------------------------------------------
+        await agent_logger.log(f"Phase 2: Deploying web crawlers for {company}...", "SEARCH")
+        seen_urls: set[str] = set()
+        all_results: list[dict[str, Any]] = []
         
-        if "unknown" in title_lower or "untitled" in title_lower or not title_lower or "unknown" in summary_lower:
-            logger.info(f"Dropping low-quality feature (Unknown Title): {f.source_url}")
-            continue
-
-        # 6. DEDUPLICATION: Prevent multiple feature cards from the exact same URL
-        url_key = (f.source_url or "unknown_url").strip().rstrip('/').lower()
+        search_tasks = [search_web_multi(q, company_name=company, num_results=5, time_window_days=time_window_days) for q in queries]
+        search_results_raw = await asyncio.gather(*search_tasks, return_exceptions=True)
         
-        if url_key in seen_feature_urls:
-            continue
-            
-        seen_feature_urls[url_key] = new_feature
+        for res in search_results_raw:
+            if isinstance(res, Exception): continue
+            for r in res:
+                url = r.get("url")
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    all_results.append(r)
 
-    fixed_features = list(seen_feature_urls.values())
-        
-    github_data = None
-    try:
-        github_result = await github_task
-        if not github_result.get("error"):
-            github_data = github_result
-            num_repos = len(github_data.get("repos", []))
-            if num_repos > 0:
-                await agent_logger.log(f"GitHub fetch complete. Discovered {num_repos} recently updated repositories.", "DATA")
-            else:
-                await agent_logger.log(f"GitHub fetch complete. No recent repositories found for {company}.", "DATA")
+        await agent_logger.log(f"Surveillance complete. Captured {len(all_results)} potential intelligence nodes.", "SEARCH")
+
+        # -------------------------------------------------------------------------
+        # STEP 3 – Scraping + Date Extraction
+        # -------------------------------------------------------------------------
+        await agent_logger.log(f"Phase 3: Extracting high-fidelity technical data from {len(all_results)} sources...", "DATA")
+        async def _scrape_task(res: dict[str, Any]):
+            url = res.get("url")
+            if not url: return None
+            item = await scrape_url(url)
+            if item:
+                item["snippet"] = res.get("snippet") or ""
+                if not item.get("publish_date") and res.get("published_date"):
+                    item["publish_date"] = res.get("published_date")
+            return item
+
+        semaphore = asyncio.Semaphore(10)
+        async def sem_scrape_task(res):
+            async with semaphore: return await _scrape_task(res)
+
+        tasks = [sem_scrape_task(r) for r in all_results]
+        scraped_raw = await asyncio.gather(*tasks)
+        scraped = [s for s in scraped_raw if s is not None]
+
+        if request.deep_analysis:
+            filtered_by_date = [s for s in scraped if s.get("content") and len(s["content"].strip()) > 500]
         else:
-            await agent_logger.log(f"GitHub fetch returned an error: {github_result.get('error')}", "WARNING")
-    except GitHubClientError as e:
-        logger.warning("GitHub data skipped for %s: %s", company, e)
-        await agent_logger.log(f"GitHub API Error: {e}", "WARNING")
-    except asyncio.CancelledError:
-        logger.debug("GitHub fetch was cancelled")
+            filtered_by_date = filter_by_time_and_technical(scraped, time_window_days)
 
-    talent_data = None
-    if talent_task:
-        try:
-            talent_data = await talent_task
-            if talent_data:
-                await agent_logger.log(f"Talent intelligence secured. Workforce size detected: {talent_data.get('employee_count', 'N/A')}.", "DATA")
-        except Exception as e:
-            logger.warning(f"Proxycurl data skipped: {e}")
+        req_regex, blk_regex = await generate_filter_patterns(company)
 
-    financial_data = None
-    if financial_task:
-        try:
-            financial_data = await financial_task
-            if financial_data:
-                 await agent_logger.log(f"Financial pulse secured for {request.stock_symbol}. Price: {financial_data.get('price', 'N/A')}.", "DATA")
-        except Exception as e:
-            logger.warning(f"Financial data skipped: {e}")
+        # -------------------------------------------------------------------------
+        # STEP 4 – Content Filtering
+        # -------------------------------------------------------------------------
+        total_sources_scanned = len(all_results)
+        filtered = filter_content_technical_only(filtered_by_date, required_regex=req_regex, block_regex=blk_regex)
 
-    profile_data = None
-    if profile_task:
-        try:
-            profile_data = await profile_task
-        except Exception as e:
-            logger.warning(f"Profile synthesis failed: {e}")
+        if not filtered:
+            return ScanResponse(
+                competitor=company,
+                scan_date=scan_date_iso,
+                time_window_days=time_window_days,
+                total_sources_scanned=total_sources_scanned,
+                total_valid_updates=0,
+                features=[],
+            )
 
-    discovered_comps = []
-    if competitors_task:
-        try:
-            discovered_comps = await competitors_task
-        except Exception as e:
-            logger.warning(f"Competitor discovery failed: {e}")
+        # -------------------------------------------------------------------------
+        # STEP 5 – LLM Analysis
+        # -------------------------------------------------------------------------
+        safe_filtered = filtered[:15]
+        for item in safe_filtered:
+            if "content" in item and item["content"]:
+                item["content"] = item["content"][:3000] + "... [TRUNCATED]"
 
-    await agent_logger.log("Market Scout operation successful. Results synchronized.", "SYSTEM")
-    
-    # --- ENTERPRISE BROADCAST ---
-    if len(fixed_features) > 0:
-        alert_msg = f"🔍 SCOUTIQ ALERT: New intelligence for {report.competitor}!\n" \
-                    f"Detected {len(fixed_features)} technical updates in the last {time_window_days} days.\n" \
-                    f"Top Update: {fixed_features[0].feature_title}\n" \
-                    f"🔗 Source: {fixed_features[0].source_url}"
-        asyncio.create_task(notification_service.broadcast_alert(alert_msg))
+        await agent_logger.log("Phase 4: Synthesis - Running deep-layer competitive analysis...", "SYNTHESIS")
         
-        # --- REAL-TIME WEBSOCKET BROADCAST ---
-        asyncio.create_task(ws_manager.broadcast_json({
-            "type": "NEW_INTELLIGENCE",
-            "competitor": report.competitor,
-            "updates_count": len(fixed_features),
-            "top_update": fixed_features[0].feature_title,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }))
+        # 1. Parallel Enrichment Tasks
+        github_task = asyncio.create_task(fetch_company_github_data(company, max_repos=15, time_window_days=time_window_days))
+        
+        talent_task = None
+        if settings.PROXYCURL_API_KEY:
+            try:
+                from urllib.parse import urlparse
+                domain = ""
+                if request.company_url: domain = urlparse(str(request.company_url)).netloc
+                elif request.website: domain = urlparse(str(request.website)).netloc
+                if domain: talent_task = asyncio.create_task(proxycurl_client.get_talent_intelligence(domain))
+            except Exception: pass
 
-    return ScanResponse(
-        competitor=report.competitor,
-        scan_date=report.scan_date,
-        time_window_days=report.time_window_days,
-        total_sources_scanned=total_sources_scanned,
-        total_valid_updates=len(fixed_features),
-        features=fixed_features,
-        profile=profile_data,
-        discovered_competitors=discovered_comps,
-        github=github_data,
-        talent_intelligence=talent_data,
-        financial_data=financial_data,
-    )
+        financial_task = None
+        if request.stock_symbol and (settings.ALPHA_VANTAGE_API_KEY or settings.FINNHUB_API_KEY):
+            financial_task = asyncio.create_task(financial_service.get_stock_quote(request.stock_symbol))
+
+        profile_task = None
+        competitors_task = None
+        if request.deep_analysis:
+            profile_task = asyncio.create_task(analyze_company_profile(company, request.website or ""))
+            competitors_task = asyncio.create_task(discover_competitors(company))
+        
+        # 2. Generate Scan Report via Unified Gateway
+        report_prompt = (
+            f"Analyze technical updates for {company} for the last {time_window_days} days. Scan Date: {scan_date_iso}.\n"
+            f"Sources: {json.dumps(safe_filtered)}\n\n"
+            f"GOAL: Generate a fully evidence-driven intelligence report.\n"
+            f"STRICT RULES:\n"
+            f"1. Every feature must be linked to at least one real source URL from the provided data.\n"
+            f"2. Every feature must have an 'evidence_sources' array with objects containing title, url, platform, credibility_score, and snippet.\n"
+            f"3. Do not make claims without proof. If no evidence exists, skip the feature.\n"
+            f"4. Provide a 'global_confidence_score' and a 'sources_catalog' of all unique URLs scanned.\n\n"
+            f"Output ONLY a JSON object matching this schema:\n"
+            f"{{\n"
+            f"  \"competitor\": \"string\",\n"
+            f"  \"scan_date\": \"string\",\n"
+            f"  \"time_window_days\": int,\n"
+            f"  \"total_sources_scanned\": int,\n"
+            f"  \"total_valid_updates\": int,\n"
+            f"  \"global_confidence_score\": int,\n"
+            f"  \"sources_catalog\": [{{ \"title\": \"string\", \"url\": \"string\", \"platform\": \"string\", \"credibility_score\": int }}],\n"
+            f"  \"features\": [\n"
+            f"    {{\n"
+            f"      \"feature_title\": \"string\",\n"
+            f"      \"technical_summary\": \"string\",\n"
+            f"      \"publish_date\": \"YYYY-MM-DD\",\n"
+            f"      \"source_url\": \"string\",\n"
+            f"      \"source_domain\": \"string\",\n"
+            f"      \"category\": \"string\",\n"
+            f"      \"confidence_score\": int,\n"
+            f"      \"activity_type\": \"feature|pricing|social|hiring\",\n"
+            f"      \"impact_level\": \"Low|Medium|High|Critical\",\n"
+            f"      \"platform\": \"string\",\n"
+            f"      \"verification_status\": \"Verified\",\n"
+            f"      \"evidence_sources\": [{{ \"title\": \"string\", \"url\": \"string\", \"platform\": \"string\", \"credibility_score\": int, \"snippet\": \"string\" }}]\n"
+            f"    }}\n"
+            f"  ],\n"
+            f"  \"executive_summary\": \"string\",\n"
+            f"  \"innovation_velocity_score\": int\n"
+            f"}}\n\n"
+            f"STRICT: Output ONLY JSON. No explanations."
+        )
+        
+        out_raw = await generate_text_async(report_prompt, system="Output ONLY VALID EVIDENCE-DRIVEN JSON.")
+        out = None
+        if out_raw:
+            try:
+                # Cleanup potential markdown wrapper
+                if "```json" in out_raw: out_raw = out_raw.split("```json")[1].split("```")[0]
+                elif "```" in out_raw: out_raw = out_raw.split("```")[1].split("```")[0]
+                out = json.loads(out_raw.strip())
+            except: pass
+
+        fixed_features = []
+        report_meta = {"competitor": company, "scan_date": scan_date_iso, "time_window_days": time_window_days}
+
+        if out:
+            try:
+                report = ScanResponse.model_validate(out)
+                report_meta["competitor"] = report.competitor
+                report_meta["scan_date"] = report.scan_date
+                
+                source_map = {item["url"]: item for item in filtered}
+                seen_urls = set()
+                
+                for f in report.features:
+                    src_item = source_map.get(f.source_url)
+                    true_pub = src_item.get("publish_date") if src_item else f.publish_date
+                    if not true_pub or "XX" in true_pub.upper(): true_pub = scan_date_iso
+                    
+                    new_f = ScanFeature(**{**f.model_dump(), "publish_date": true_pub})
+                    if new_f.source_url not in seen_urls:
+                        fixed_features.append(new_f)
+                        seen_urls.add(new_f.source_url)
+            except Exception as e:
+                logger.error(f"Validation failed: {e}")
+                out = None
+
+        if not out:
+            await agent_logger.log("Warning: Synthesis failed. Using raw technical signals.", "WARNING")
+            from urllib.parse import urlparse
+            for item in safe_filtered:
+                domain = urlparse(item["url"]).netloc
+                fixed_features.append(ScanFeature(
+                    feature_title=item.get("title") or f"Technical Update from {domain}",
+                    technical_summary=item.get("snippet") or (item.get("content")[:200] + "..."),
+                    publish_date=item.get("publish_date") or scan_date_iso,
+                    source_url=item["url"],
+                    source_domain=domain,
+                    category="Platform",
+                    confidence_score=70
+                ))
+
+        # Collect async tasks
+        github_data = await github_task if github_task else None
+        talent_data = await talent_task if talent_task else None
+        financial_data = await financial_task if financial_task else None
+        profile_data = await profile_task if profile_task else None
+        discovered_comps = await competitors_task if competitors_task else []
+
+        final_response = ScanResponse(
+            competitor=report_meta["competitor"],
+            scan_date=report_meta["scan_date"],
+            time_window_days=time_window_days,
+            total_sources_scanned=total_sources_scanned,
+            total_valid_updates=len(fixed_features),
+            features=fixed_features,
+            profile=profile_data,
+            discovered_competitors=discovered_comps,
+            github=github_data,
+            talent_intelligence=talent_data,
+            financial_data=financial_data,
+        )
+
+        await cache.set(cache_key, final_response, expire=21600)
+        await agent_logger.log("Market Scout operation successful.", "SYSTEM")
+        return final_response
+
+    except Exception as e:
+        logger.error(f"SCAN ERR | {company} | {e}")
+        raise
+    finally:
+        await cache.release_lock(lock_name, lock_id)

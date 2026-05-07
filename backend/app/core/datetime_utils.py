@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Optional
 
 # Indian Standard Time (IST) is UTC+5:30
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -8,8 +8,10 @@ def get_now_ist() -> datetime:
     """Returns the current datetime in Indian Standard Time (IST)."""
     return datetime.now(IST)
 
-def to_ist(dt: datetime) -> datetime:
+def to_ist(dt: datetime) -> Optional[datetime]:
     """Converts a UTC datetime or naive datetime to IST."""
+    if dt is None:
+        return None
     if dt.tzinfo is None:
         # Assume naive datetime is UTC
         dt = dt.replace(tzinfo=timezone.utc)

@@ -68,7 +68,10 @@ class GroqClient:
               "source_url": string,
               "source_domain": string,
               "category": string (API|UI|Infrastructure|Security|Platform|AI|SDK|News|Blog|Press Release|Partnership|Product),
-              "confidence_score": integer (0-100)
+              "confidence_score": integer (0-100),
+              "activity_type": string (feature|pricing|social|press|funding|hiring|app_update|technical|content),
+              "impact_level": string (Low|Medium|High|Critical),
+              "platform": string (GitHub|LinkedIn|X|Blog|News|RSS|Press|YouTube|Reddit)
             }
           ]
         }
@@ -124,10 +127,13 @@ Return only the JSON object. No additional text, no markdown blocks.
                     continue
                 else:
                     break
-
         raise GroqClientError(f"Groq scan report failed: {last_error}")
 
-    async def _post_chat_completions(self, messages: List[Dict[str, str]]) -> str:
+    async def generate(self, messages: List[Dict[str, str]], max_tokens: int = 2048, temperature: float = 0.1) -> str:
+        """Generic text generation for the gateway."""
+        return await self._post_chat_completions(messages, max_tokens=max_tokens, temperature=temperature)
+
+    async def _post_chat_completions(self, messages: List[Dict[str, str]], max_tokens: int = 4096, temperature: float = 0.1) -> str:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {self._api_key}",
@@ -136,9 +142,9 @@ Return only the JSON object. No additional text, no markdown blocks.
         body = {
             "model": self._model,
             "messages": messages,
-            "temperature": 0.1,
-            "max_tokens": 4096,
-            "response_format": {"type": "json_object"}
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "response_format": {"type": "json_object"} if any("json" in m.get("content", "").lower() for m in messages) else None
         }
 
         start_time = time.perf_counter()

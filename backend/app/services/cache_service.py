@@ -111,24 +111,26 @@ class CacheService:
     async def set(self, key: str, value: Any, expire: int = 3600):
         """
         Set a value in cache with TTL.
-        Hardened to handle Pydantic models and complex objects.
+        Hardened to handle Pydantic models (including lists) and complex objects.
         """
         start_time = time.perf_counter()
         try:
             # 1. Prepare value for storage (serialization)
-            if hasattr(value, "model_dump") and callable(getattr(value, "model_dump")):
-                serializable_value = value.model_dump()
-            elif hasattr(value, "dict") and callable(getattr(value, "dict")):
-                serializable_value = value.dict()
-            else:
-                serializable_value = value
+            def serialize(obj):
+                if hasattr(obj, "model_dump") and callable(getattr(obj, "model_dump")):
+                    return obj.model_dump()
+                elif hasattr(obj, "dict") and callable(getattr(obj, "dict")):
+                    return obj.dict()
+                elif isinstance(obj, list):
+                    return [serialize(item) for item in obj]
+                elif isinstance(obj, dict):
+                    return {k: serialize(v) for k, v in obj.items()}
+                return obj
 
-            # 2. Convert to JSON string (aggressive serialization)
-            try:
-                val_to_store = json.dumps(serializable_value, default=str)
-            except Exception as json_err:
-                logger.warning(f"CACHE WRN  | JSON serialization failed, falling back to str: {json_err}")
-                val_to_store = str(serializable_value)
+            serializable_value = serialize(value)
+
+            # 2. Convert to JSON string
+            val_to_store = json.dumps(serializable_value, default=str)
 
             # 3. Store in Redis
             if self._redis:
@@ -150,18 +152,71 @@ class CacheService:
         await asyncio.sleep(delay)
         self._memory_cache.pop(key, None)
 
-    async def invalidate(self, key: str):
-        """Remove a key from cache."""
-        start_time = time.perf_counter()
+    async def get_with_ttl(self, key: str) -> tuple[Optional[Any], int]:
+        """Get a value and its remaining TTL."""
+        if not self._redis:
+            return self._memory_cache.get(key), 0
         try:
-            if self._redis:
-                await self._redis.delete(key)
-            self._memory_cache.pop(key, None)
-            duration = time.perf_counter() - start_time
-            logger.info(f"CACHE DEL  | {duration:.4f}s | Key: {key[:50]}")
+            pipe = self._redis.pipeline()
+            pipe.get(key)
+            pipe.ttl(key)
+            val, ttl = await pipe.execute()
+            if val:
+                try: val = json.loads(val)
+                except: pass
+            return val, ttl
+        except:
+            return None, 0
+
+    async def acquire_lock(self, lock_name: str, acquire_timeout: int = 10, lock_timeout: int = 60) -> Optional[str]:
+        """
+        Acquire a distributed lock. Returns a unique identifier if successful.
+        """
+        if not self._redis:
+            # Fallback for memory-only mode (not truly distributed but helps local)
+            if self._memory_cache.get(f"lock:{lock_name}"):
+                return None
+            self._memory_cache[f"lock:{lock_name}"] = True
+            return "memory_lock"
+
+        import uuid
+        identifier = str(uuid.uuid4())
+        end = time.time() + acquire_timeout
+        
+        while time.time() < end:
+            if await self._redis.set(f"lock:{lock_name}", identifier, ex=lock_timeout, nx=True):
+                logger.info(f"LOCK HIT   | ACQUIRED | Lock: {lock_name} | ID: {identifier}")
+                return identifier
+            await asyncio.sleep(0.1)
+        
+        logger.warning(f"LOCK FAIL  | TIMEOUT  | Lock: {lock_name}")
+        return None
+
+    async def release_lock(self, lock_name: str, identifier: str) -> bool:
+        """
+        Release a distributed lock safely.
+        """
+        if not self._redis:
+            if self._memory_cache.get(f"lock:{lock_name}"):
+                self._memory_cache.pop(f"lock:{lock_name}", None)
+                return True
+            return False
+
+        try:
+            # Atomic release using Lua script
+            script = """
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("del", KEYS[1])
+            else
+                return 0
+            end
+            """
+            result = await self._redis.eval(script, 1, f"lock:{lock_name}", identifier)
+            if result:
+                logger.info(f"LOCK REL   | RELEASED | Lock: {lock_name} | ID: {identifier}")
+            return bool(result)
         except Exception as e:
-            duration = time.perf_counter() - start_time
-            logger.error(f"CACHE ERR  | {duration:.4f}s | DEL Key: {key[:50]} | Error: {e}")
-            self._memory_cache.pop(key, None)
+            logger.error(f"LOCK ERR   | RELEASE  | Lock: {lock_name} | Error: {e}")
+            return False
 
 cache = CacheService()

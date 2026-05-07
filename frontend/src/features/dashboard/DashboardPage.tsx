@@ -20,7 +20,7 @@ import ReportTable from '@/components/dashboard/ReportTable';
 import SourceCard from '@/components/dashboard/SourceCard';
 import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
 import MarketComparison from '@/components/dashboard/MarketComparison';
-import MonthlyFeatures from '@/components/dashboard/MonthlyFeatures';
+
 import MissionBriefing from '@/components/dashboard/MissionBriefing';
 
 import { useOutletContext } from 'react-router-dom';
@@ -33,10 +33,11 @@ const DashboardPage = () => {
     history, 
     signals, 
     activities, 
+    silenceAnalysis,
     innovationTrends, 
     globalMetrics,
     comparisonMatrix,
-    monthlyReleases,
+
     missionBriefing,
     fetchHistory, 
     fetchSignals, 
@@ -44,7 +45,6 @@ const DashboardPage = () => {
     fetchInnovationTrends,
     fetchGlobalMetrics,
     fetchMarketComparison,
-    fetchMonthlyReleases,
     fetchMissionBriefing,
     fetchDashboardOverview
   } = useIntelStore();
@@ -64,9 +64,9 @@ const DashboardPage = () => {
   // Global polling is now handled by DashboardLayout refreshAllData
 
   const chartData = innovationTrends?.timeline || [];
-  const chartCompetitors = chartData.length > 0 ? Object.keys(chartData[0].releases) : [];
+  const chartCompetitors = chartData.length > 0 && chartData[0]?.releases ? Object.keys(chartData[0].releases) : [];
   const formattedChartData = chartData.map((d: any) => ({
-    name: d.date,
+    date: d.date,
     ...d.releases
   }));
 
@@ -240,8 +240,8 @@ const DashboardPage = () => {
                         <TrendingUp size={16} />
                     </div>
                     <div>
-                        <div className="text-xs font-black text-foreground uppercase italic">{innovationTrends?.top_innovators[0]?.name}</div>
-                        <div className="text-[10px] font-bold text-muted-foreground uppercase">{innovationTrends?.top_innovators[0]?.top_feature}</div>
+                        <div className="text-xs font-black text-foreground uppercase italic">{innovationTrends?.top_innovators?.[0]?.name || 'No Disruptor Detected'}</div>
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase">{innovationTrends?.top_innovators?.[0]?.top_feature || 'Awaiting Technical Signals'}</div>
                     </div>
                 </div>
             </div>
@@ -249,12 +249,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Monthly Features Releases Section */}
-      <MonthlyFeatures 
-        features={monthlyReleases} 
-        title="Monthly Innovation Surface" 
-        subtitle="Last 30 Days Technical Updates"
-      />
+
 
       {/* 7-Day Operations Pulse Unified Section */}
       <section className="mt-14 space-y-8">
@@ -270,7 +265,7 @@ const DashboardPage = () => {
         </div>
         
         <div className="w-full relative">
-          <ActivityTimeline days={activities} />
+          <ActivityTimeline days={activities} silence_analysis={silenceAnalysis || undefined} />
         </div>
       </section>
 

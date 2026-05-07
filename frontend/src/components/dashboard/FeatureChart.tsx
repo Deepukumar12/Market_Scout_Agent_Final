@@ -23,7 +23,9 @@ const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter">Feature Release <span className="text-primary">Timeline</span></h3>
-          <p className="text-muted-foreground text-sm font-medium italic">Innovation trends across top competitors</p>
+          <p className="text-muted-foreground text-xs font-black uppercase tracking-widest italic mt-1 opacity-70">
+            Surveillance window: {data.length > 0 ? `${data[data.length-1].date} — ${data[0].date}` : 'Last 7 Days'} (Verified Activity)
+          </p>
         </div>
       </div>
       
@@ -40,7 +42,7 @@ const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.1} />
             <XAxis 
-              dataKey="name" 
+              dataKey="date" 
               axisLine={false} 
               tickLine={false} 
               tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 9, fontWeight: 700 }}

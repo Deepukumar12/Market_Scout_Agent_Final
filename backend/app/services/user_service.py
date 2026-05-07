@@ -21,7 +21,7 @@ async def get_user_email(user_id: str):
         user_id (str): MongoDB ObjectId as string
 
     Returns:
-        str | None: Email if found, else None
+        Optional[str]: Email if found, else None
     """
 
     try:

@@ -24,7 +24,9 @@ interface CompetitorState {
     fetchCompetitors: (query?: string) => Promise<void>;
     setSelectedCompetitorId: (id: string | null) => void;
     addCompetitor: (name: string, url: string) => Promise<Competitor | null>;
+    updateCompetitor: (id: string, data: any) => Promise<void>;
     removeCompetitor: (id: string) => Promise<void>;
+    refreshCompetitor: (id: string) => Promise<void>;
 }
 
 export const useCompetitorStore = create<CompetitorState>((set, get) => ({
@@ -73,6 +75,28 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
             return null;
         }
     },
+    updateCompetitor: async (id: string, data: any) => {
+        const { addNotification } = useNotificationStore.getState();
+        const { updateCompetitor: updateApi } = await import('../services/api');
+        try {
+            const updated = await updateApi(id, data);
+            set((state) => ({
+                competitors: state.competitors.map((c) => ((c.id || c._id) === id ? updated : c))
+            }));
+            addNotification({
+                title: 'Telemetry Updated',
+                message: 'Competitor configuration synchronized successfully.',
+                type: 'success'
+            });
+        } catch (err) {
+            console.error(err);
+            addNotification({
+                title: 'Update Failed',
+                message: 'Failed to synchronize competitor configuration.',
+                type: 'error'
+            });
+        }
+    },
     removeCompetitor: async (id: string) => {
         const { addNotification } = useNotificationStore.getState();
         const { deleteCompetitor } = await import('../services/api');
@@ -95,4 +119,15 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
             });
         }
     },
+    refreshCompetitor: async (id: string) => {
+        const { getCompetitor } = await import('../services/api');
+        try {
+            const updated = await getCompetitor(id);
+            set((state) => ({
+                competitors: state.competitors.map((c) => ((c.id || c._id) === id ? updated : c))
+            }));
+        } catch (err) {
+            console.error(err);
+        }
+    }
 }));

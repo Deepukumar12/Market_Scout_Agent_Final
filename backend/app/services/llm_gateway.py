@@ -1,18 +1,25 @@
 import logging
 import asyncio
 import json
+import time
 from typing import Optional, List, Dict, Any
 
 from app.core.config import settings
-from app.services.ollama_sync import OllamaClient, generate_text_ollama_async
-from app.services.groq_sync import generate_text_groq
-from app.services.gemini_sync import generate_text as generate_text_gemini
-from app.services.openai_client import generate_text_openai, OpenAIClient
-from app.services.anthropic_client import generate_text_anthropic, AnthropicClient
-from app.services.groq_client import GroqClient
-from app.services.gemini_client import GeminiClient
+from app.services.cache_service import cache
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("llm_gateway")
+
+async def is_provider_disabled(provider: str) -> bool:
+    """Check if a provider is temporarily disabled due to quota or errors."""
+    disabled = await cache.get(f"ai_disabled:{provider}")
+    if disabled:
+        logger.warning(f"PROVIDER DISABLED | Skipping {provider.upper()} (Status: {disabled})")
+    return bool(disabled)
+
+async def disable_provider(provider: str, reason: str, ttl: int = 3600):
+    """Disable a provider for a certain duration."""
+    logger.error(f"QUOTA EXHAUSTED | Disabling {provider.upper()} | Reason: {reason} | TTL: {ttl}s")
+    await cache.set(f"ai_disabled:{provider}", reason, expire=ttl)
 
 async def generate_text_async(
     prompt: str, 
@@ -21,50 +28,60 @@ async def generate_text_async(
     temperature: float = 0.2
 ) -> str:
     """
-    Unified ASYNC gateway for text generation with intelligent fallbacks.
-    Prioritizes settings.LLM_PROVIDER.
+    Unified ASYNC gateway for text generation with Ollama-first priority.
+    Circuit breaker protection for external APIs.
+    Lazy-loads clients to avoid NameError/ImportError at startup.
     """
-    provider = settings.LLM_PROVIDER.lower()
     
-    # Try preferred provider
+    # 1. OLLAMA (Primary - Local)
     try:
-        if provider == "ollama":
-            return await generate_text_ollama_async(prompt, system=system, max_tokens=max_tokens)
-        elif provider == "groq":
-            client = GroqClient()
-            # We need a general 'generate' method in GroqClient or use a helper
-            # For now, we'll use a local helper for Groq async
-            return await _generate_groq_async(prompt, system=system, max_tokens=max_tokens)
-        elif provider == "gemini":
-            # GeminiClient doesn't have a simple 'generate' yet, it's very structured.
-            # We'll use the sync wrapper inside a thread for now or implement async gemini.
-            return generate_text_gemini(prompt, system=system, max_tokens=max_tokens)
-        elif provider == "openai":
-            client = OpenAIClient()
-            # Same here
-            return generate_text_openai(prompt, system=system, max_tokens=max_tokens)
+        from app.services.ollama_sync import OllamaClient
+        ollama = OllamaClient()
+        if await ollama.health_check():
+            logger.info("OLLAMA ACTIVE | Starting generation...")
+            res = await ollama.generate(prompt, system=system or "", max_tokens=max_tokens)
+            if res:
+                logger.info("OLLAMA RESPONSE SUCCESS")
+                return res
     except Exception as e:
-        logger.warning(f"Preferred provider {provider} failed: {e}. Starting fallback chain.")
+        logger.warning(f"OLLAMA FAIL | {e}")
 
-    # FALLBACK CHAIN
-    # 1. Ollama (if not already tried)
-    if provider != "ollama":
+    # 2. GROQ (Fallback 1)
+    if settings.GROQ_API_KEY and not await is_provider_disabled("groq"):
         try:
-            return await generate_text_ollama_async(prompt, system=system, max_tokens=max_tokens)
-        except: pass
+            from app.services.groq_client import GroqClient, GroqClientError
+            logger.info("GROQ FALLBACK ACTIVATED")
+            groq = GroqClient()
+            messages = []
+            if system: messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+            res = await groq.generate(messages, max_tokens=max_tokens, temperature=temperature)
+            if res: return res
+        except Exception as e:
+            err_str = str(e)
+            if "429" in err_str:
+                await disable_provider("groq", "Rate limit (429)", ttl=3600)
+            else:
+                logger.error(f"GROQ ERR | {err_str}")
 
-    # 2. Groq
-    if provider != "groq":
+    # 3. GEMINI (Fallback 2)
+    if settings.GEMINI_API_KEY and not await is_provider_disabled("gemini"):
         try:
-            return generate_text_groq(prompt, system=system, max_tokens=max_tokens)
-        except: pass
+            from app.services.gemini_client import GeminiClient, GeminiClientError
+            logger.info("GEMINI FALLBACK ACTIVATED")
+            gemini = GeminiClient()
+            res = await gemini.generate(prompt, system=system or "", max_tokens=max_tokens, temperature=temperature)
+            if res: return res
+        except Exception as e:
+            err_str = str(e)
+            if "404" in err_str:
+                await disable_provider("gemini", "Invalid model (404)", ttl=86400) # Disable for 24h
+            elif "429" in err_str:
+                await disable_provider("gemini", "Rate limit (429)", ttl=1800)
+            else:
+                logger.error(f"GEMINI ERR | {err_str}")
 
-    # 3. Gemini
-    if provider != "gemini":
-        try:
-            return generate_text_gemini(prompt, system=system, max_tokens=max_tokens)
-        except: pass
-
+    logger.error("LLM GATEWAY | ALL PROVIDERS FAILED")
     return ""
 
 def generate_text_sync(
@@ -74,40 +91,19 @@ def generate_text_sync(
 ) -> str:
     """
     Unified SYNC gateway for text generation.
-    Useful for parts of the app not yet async (like article_summarizer).
+    Wraps async call with proper event loop handling.
     """
-    # For sync, we use the existing sync functions
-    from app.services.ollama_sync import generate_text_ollama
-    
-    provider = settings.LLM_PROVIDER.lower()
-    
-    # Try preferred
     try:
-        if provider == "ollama":
-            return generate_text_ollama(prompt, system=system, max_tokens=max_tokens)
-        elif provider == "groq":
-            return generate_text_groq(prompt, system=system, max_tokens=max_tokens)
-        elif provider == "gemini":
-            return generate_text_gemini(prompt, system=system, max_tokens=max_tokens)
-    except:
-        pass
-        
-    # Fallback chain
-    funcs = [generate_text_ollama, generate_text_groq, generate_text_gemini, generate_text_openai, generate_text_anthropic]
-    for func in funcs:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import nest_asyncio
+            nest_asyncio.apply()
+            return loop.run_until_complete(generate_text_async(prompt, system=system, max_tokens=max_tokens))
+        else:
+            return loop.run_until_complete(generate_text_async(prompt, system=system, max_tokens=max_tokens))
+    except Exception as e:
         try:
-            res = func(prompt, system=system, max_tokens=max_tokens)
-            if res: return res
+            return asyncio.run(generate_text_async(prompt, system=system, max_tokens=max_tokens))
         except:
-            continue
-            
-    return ""
-
-async def _generate_groq_async(prompt: str, system: str = "", max_tokens: int = 2048) -> str:
-    """Internal helper for async Groq calls using GroqClient logic."""
-    from app.services.groq_client import GroqClient
-    client = GroqClient()
-    messages = []
-    if system: messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
-    return await client._post_chat_completions(messages)
+            logger.error(f"SYNC GATEWAY FAIL | {e}")
+            return ""

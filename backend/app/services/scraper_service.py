@@ -11,9 +11,18 @@ from urllib.parse import quote_plus, urlparse
 import httpx
 from bs4 import BeautifulSoup
 
+import traceback
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+def check_scraper_health() -> Dict[str, bool]:
+    """Check availability of configured scraping providers."""
+    return {
+        "firecrawl": bool(settings.FIRECRAWL_API_KEY),
+        "scrapingbee": bool(settings.SCRAPINGBEE_API_KEY),
+        "crawl4ai": True # Fallback always 'available' as an import attempt
+    }
 
 # Common meta tags and selectors for publish date
 DATE_PATTERNS = [
@@ -318,7 +327,8 @@ async def crawl4ai_scrape(url: str) -> Optional[Dict[str, Any]]:
         logger.error("crawl4ai is not installed. Fallback failed.")
         return None
     except Exception as e:
-        logger.error(f"Crawl4AI scrape error for {url}: {e}")
+        error_trace = traceback.format_exc()
+        logger.error(f"Crawl4AI scrape error for {url}: {e}\n{error_trace}")
         return None
 
 
@@ -442,6 +452,17 @@ async def scrape_url(url: str) -> Optional[Dict[str, Any]]:
     if result:
         # 🟢 4. Set Cache (24 hours)
         await cache.set(cache_key, result, expire=86400)
+    else:
+        # 🔴 5. Absolute Last Resort: Minimal dict to prevent pipeline crash
+        logger.warning(f"SCRAPE ZERO | {url[:60]} | Returning empty shell to prevent crash")
+        return {
+            "url": url,
+            "domain": urlparse(url).netloc or "",
+            "publish_date": None,
+            "content": "",
+            "title": "Untitled Source",
+            "source": "null_fallback"
+        }
         
     return result
 

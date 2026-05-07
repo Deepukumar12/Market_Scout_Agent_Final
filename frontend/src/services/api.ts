@@ -79,13 +79,23 @@ export const createCompetitor = async (data: any) => {
     return response.data;
 };
 
+export const getCompetitor = async (competitorId: string) => {
+    const response = await api.get(`/competitors/${competitorId}`);
+    return response.data;
+};
+
+export const updateCompetitor = async (competitorId: string, data: any) => {
+    const response = await api.patch(`/competitors/${competitorId}`, data);
+    return response.data;
+};
+
 export const deleteCompetitor = async (competitorId: string) => {
     const response = await api.delete(`/competitors/${competitorId}`);
     return response.data;
 };
 
-export const runCompetitorScan = async (competitorId: string) => {
-    const response = await api.post(`/competitors/${competitorId}/scan`);
+export const runCompetitorScan = async (competitorId: string, forceRefresh = false) => {
+    const response = await api.post(`/competitors/${competitorId}/scan`, { force_refresh: forceRefresh });
     return response.data;
 };
 
@@ -98,8 +108,9 @@ export const runScan = async (payload: {
     company_name: string;
     website?: string | null;
     time_window_days?: number;
+    force_refresh?: boolean;
 }) => {
-    // The backend expects ScanRequest: { company_name, website, time_window_days }
+    // The backend expects ScanRequest: { company_name, website, time_window_days, force_refresh }
     const response = await api.post('/scan', payload);
     return response.data;
 };
@@ -189,6 +200,11 @@ export const getInnovationTrends = async () => {
     return response.data;
 };
 
+export const getMonthlyReleases = async () => {
+    const response = await api.get('/intelligence/monthly-releases');
+    return response.data;
+};
+
 export const getPredictivePipeline = async () => {
     const response = await api.get('/intelligence/predictive-pipeline');
     return response.data;
@@ -228,10 +244,7 @@ export const getMarketComparison = async () => {
     return response.data;
 };
 
-export const getMonthlyReleases = async () => {
-    const response = await api.get('/intelligence/monthly-releases');
-    return response.data;
-};
+
 
 export const getDashboardOverview = async (q?: string) => {
     const response = await api.get('/intelligence/dashboard-overview', {
@@ -272,12 +285,7 @@ export const updateSchedulerConfig = async (config: { interval_unit: string, int
     return response.data;
 };
 
-export const getLastSevenDays = async (competitor?: string) => {
-    const response = await api.get('/intelligence/last-seven-days', {
-        params: competitor ? { competitor } : {}
-    });
-    return response.data;
-};
+
 
 export const getStrategicPlan = async (payload: { competitor_id: string, focus_area: string, risk_level: string }) => {
     const response = await api.post('/intelligence/strategic-plan', payload);

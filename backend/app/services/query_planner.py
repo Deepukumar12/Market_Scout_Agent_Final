@@ -7,11 +7,11 @@ import logging
 import re
 from typing import List
 from datetime import datetime, timedelta
-from app.services.llm_gateway import generate_text_sync as generate_text
+from app.services.llm_gateway import generate_text_async as generate_text
 
 logger = logging.getLogger(__name__)
 
-def plan_queries(company_name: str, time_window_days: int = 7) -> List[str]:
+async def plan_queries(company_name: str, time_window_days: int = 7) -> List[str]:
     """
     Generate 8 distinct search queries dynamically using an LLM.
     The LLM will identify the industry and generate highly relevant searches.
@@ -33,23 +33,26 @@ def plan_queries(company_name: str, time_window_days: int = 7) -> List[str]:
     The user wants a deep, real-time intelligence audit for: "{company}".
     
     Step 1: Identify the industry and core business model (SaaS, B2B, Consumer, etc.).
-    Step 2: Generate exactly 8 highly specific search queries to uncover:
-    - Latest product releases and feature updates
-    - Current pricing models, plans, or subscription tiers
-    - Recent strategic partnerships or acquisitions
-    - Technical shifts (APIs, documentation updates, tech stack changes)
-    - Market positioning and recent competitive moves
+    Step 2: Generate exactly 10 highly specific search queries to uncover:
+    - Latest product releases, changelogs, and feature updates
+    - GitHub repository activity, commits, and releases
+    - Social media activity (LinkedIn posts, X/Twitter announcements, Reddit mentions)
+    - Corporate news (Press releases, funding, acquisitions, blog posts)
+    - Technical shifts (API release notes, documentation changes, stack updates)
+    - Hiring trends and job postings
+    - SEO, content, and pricing page modifications
+    - App store updates and YouTube product launches
     
     Published strictly between {past_str} and {today_str}.
     
-    Include the month/year ("{current_month_year}") in 3 of the queries to force freshness.
+    Include specific platforms in the queries (e.g., "site:github.com", "site:linkedin.com", "changelog", "pricing").
     
-    Return ONLY a valid JSON list of 8 strings.
+    Return ONLY a valid JSON list of 10 strings.
     """
     
     try:
         # Call the AI to dynamically generate the queries
-        response = generate_text(prompt)
+        response = await generate_text(prompt)
         
         if response:
             # Clean the response and parse the JSON robustly
@@ -96,7 +99,7 @@ def plan_queries(company_name: str, time_window_days: int = 7) -> List[str]:
         f'"{company}" roadmap future plans',
     ]
 
-def generate_filter_patterns(company_name: str):
+async def generate_filter_patterns(company_name: str):
     """
     Generate dynamic REQUIRED and BLOCK regex patterns based on industry.
     Returns: (required_regex_pattern, block_regex_pattern)
@@ -120,7 +123,7 @@ def generate_filter_patterns(company_name: str):
     }}
     """
     try:
-        response = generate_text(prompt)
+        response = await generate_text(prompt)
         if response:
             clean_json = response.strip()
             if "```" in clean_json:
