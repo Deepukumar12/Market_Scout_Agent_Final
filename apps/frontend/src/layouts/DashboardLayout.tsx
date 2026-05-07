@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import Sidebar from '@/components/layout/Sidebar';
-import Navbar from '@/components/layout/Navbar';
-import NotificationCenter from '@/components/layout/NotificationCenter';
+import Sidebar from '@/layouts/Sidebar';
+import Navbar from '@/layouts/Navbar';
+import NotificationCenter from '@/layouts/NotificationCenter';
 import AnalyzeModal from '@/components/dashboard/AnalyzeModal';
 import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';

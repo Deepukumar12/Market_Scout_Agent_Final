@@ -4,7 +4,7 @@ import { Clock, ArrowRight, Download, Zap, Loader2, X, Filter, Trash2 } from 'lu
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 import { useIntelStore } from '@/store/intelStore';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { jsPDF } from "jspdf";
 import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 

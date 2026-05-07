@@ -10,7 +10,7 @@ import {
   Legend
 } from 'recharts';
 
-import { getCompetitorColor, getCompetitorColorId } from '@/lib/utils';
+import { getCompetitorColor, getCompetitorColorId } from '@/utils/utils';
 
 interface FeatureChartProps {
   data: any[];

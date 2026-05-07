@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Terminal, Minimize2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 

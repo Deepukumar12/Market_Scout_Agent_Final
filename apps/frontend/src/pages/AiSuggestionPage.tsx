@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { useIntelStore } from '@/store/intelStore';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 
 type FocusArea = 'Revenue' | 'Efficiency' | 'Innovation' | 'MarketShare';

@@ -4,7 +4,7 @@ import { Settings, Bell, ShieldCheck, User, LogOut, Check, Save, Sparkles, Alert
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
 import { useAuthStore } from '@/store/authStore';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { AnimatePresence } from 'framer-motion';
 
 // Mock types for user preferences since we don't have a backend endpoint yet

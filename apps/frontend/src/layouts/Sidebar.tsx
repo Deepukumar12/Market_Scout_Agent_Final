@@ -12,7 +12,7 @@ import {
   Globe,
   ShieldAlert
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 
 const menuItems = [
   { icon: LayoutDashboard, text: 'Dashboard', path: '/dashboard' },

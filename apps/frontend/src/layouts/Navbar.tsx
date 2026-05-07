@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 
 interface NavbarProps {
   onAnalyzeClick: () => void;

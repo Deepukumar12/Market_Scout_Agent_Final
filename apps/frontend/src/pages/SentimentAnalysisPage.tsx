@@ -12,7 +12,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';

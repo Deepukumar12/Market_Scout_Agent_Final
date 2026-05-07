@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { PlusCircle, Radar, Globe2, Search, Shield, Target, ArrowUpRight, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { useIntelStore } from '@/store/intelStore';
 
 const CompetitorsPage = () => {

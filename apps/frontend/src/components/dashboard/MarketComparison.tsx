@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Shield, Zap, BarChart3 } from 'lucide-react';
 import { MarketComparisonMetric } from '@/store/intelStore';
-import { getCompetitorColor } from '@/lib/utils';
+import { getCompetitorColor } from '@/utils/utils';
 
 interface MarketComparisonProps {
   data: MarketComparisonMetric[];

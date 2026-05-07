@@ -18,8 +18,8 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Footer } from '@/components/layout/Footer';
-import { cn } from '@/lib/utils';
+import { Footer } from '@/layouts/Footer';
+import { cn } from '@/utils/utils';
 import { useIntelStore } from '@/store/intelStore';
 
 // --- Components ---

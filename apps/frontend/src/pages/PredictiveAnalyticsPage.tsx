@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useAuthStore } from '@/store/authStore';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { jsPDF } from 'jspdf';
 import PdfDownloadModal from '@/components/dashboard/PdfDownloadModal';
 

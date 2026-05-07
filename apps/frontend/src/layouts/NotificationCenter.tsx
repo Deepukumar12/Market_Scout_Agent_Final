@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotificationStore, Notification } from '@/store/notificationStore';
 import { Bell, X, Check, Info, AlertTriangle, Zap, Clock } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { Button } from '@/components/ui/Button';
 
 interface NotificationCenterProps {

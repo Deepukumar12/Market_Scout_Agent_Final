@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Layers, Zap, Shield, TrendingUp, Circle, Youtube } from 'lucide-react';
-import { cn, getCompetitorColor } from '@/lib/utils';
+import { cn, getCompetitorColor } from '@/utils/utils';
 
 interface TimelineActivity {
   id: string;
