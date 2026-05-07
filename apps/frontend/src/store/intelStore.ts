@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { runCompetitorScan, runScan as runScanApi, analyzeCompany as analyzeCompanyApi, deleteReport as deleteReportApi, getCompetitors } from '@/services/api';
+import { runCompetitorScan, runScan as runScanApi, getCompetitors } from '@/services/api';
 import { useNotificationStore } from '@/store/notificationStore';
 
 function getScanErrorMessage(res: any): string {
@@ -22,7 +22,6 @@ export interface ScanFeature {
 
 export interface GlobalMetrics {
   total_competitors: number;
-  total_reports: number;
   features_found: number;
   articles_processed: number;
   system_latency: number;
@@ -74,19 +73,9 @@ export interface StrategicPlan {
   financialProjections: { month: string; value: number; cost: number }[];
 }
 
-export interface ScanReport {
-  competitor: string;
-  scan_date: string;
-  time_window_days: number;
-  total_sources_scanned: number;
-  total_valid_updates: number;
-  features: ScanFeature[];
-}
+
 
 interface IntelState {
-  report: any | null;
-  scanReport: ScanReport | null;
-  agentReport: string | null;
   history: any[];
   signals: any[];
   recommendations: any[];
@@ -102,7 +91,6 @@ interface IntelState {
   loading: boolean;
   error: string | null;
   runScan: (competitorId: string) => Promise<void>;
-  fetchHistory: (query?: string) => Promise<void>;
   fetchSignals: () => Promise<void>;
   fetchRecommendations: () => Promise<void>;
   fetchActivityTimeline: (query?: string) => Promise<void>;
@@ -115,8 +103,6 @@ interface IntelState {
   fetchCompetitors: () => Promise<void>;
   fetchStrategicPlan: (competitorId: string, focusArea: string, riskLevel: string) => Promise<void>;
   runMarketScan: (payload: { company_name: string; website?: string | null; time_window_days?: number }) => Promise<void>;
-  analyzeCompany: (company: string) => Promise<void>;
-  deleteReport: (reportId: string) => Promise<void>;
   clear: () => void;
 }
 
@@ -140,7 +126,7 @@ export const useIntelStore = create<IntelState>((set) => ({
   error: null,
 
   runScan: async (competitorId: string) => {
-    set({ loading: true, error: null, scanReport: null, report: null });
+    set({ loading: true, error: null });
     const { addNotification } = useNotificationStore.getState();
 
     try {
@@ -169,27 +155,7 @@ export const useIntelStore = create<IntelState>((set) => ({
     }
   },
 
-  fetchHistory: async (query?: string) => {
-    set({ loading: true });
-    try {
-        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
-        let url = `${apiUrl}/api/v1/reports/history?limit=12`;
-        if (query) url += `&competitor=${encodeURIComponent(query)}`;
-        
-        const res = await fetch(url, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
-        });
-        if(res.ok) {
-            const data = await res.json();
-            set({ history: data.reports || [], loading: false });
-        } else {
-            set({ loading: false });
-        }
-    } catch(e) {
-        console.error("Failed to fetch history", e);
-        set({ loading: false });
-    }
-  },
+
 
   fetchSignals: async () => {
     try {
@@ -226,7 +192,7 @@ export const useIntelStore = create<IntelState>((set) => ({
   },
 
   runMarketScan: async (payload) => {
-    set({ loading: true, error: null, scanReport: null, report: null, agentReport: null });
+    set({ loading: true, error: null });
     const { addNotification } = useNotificationStore.getState();
 
     try {
@@ -256,49 +222,7 @@ export const useIntelStore = create<IntelState>((set) => ({
     }
   },
 
-  analyzeCompany: async (company: string) => {
-    set({ loading: true, error: null, agentReport: null, scanReport: null });
-    const { addNotification } = useNotificationStore.getState();
 
-    try {
-      const reportMd = await analyzeCompanyApi(company);
-      set({ agentReport: reportMd, loading: false });
-
-      addNotification({
-        title: `Analysis Compiled: ${company}`,
-        message: `High-fidelity intelligence report synthesized via Groq Llama-3.`,
-        type: 'info'
-      });
-    } catch (err: any) {
-      console.error('Analyze error:', err);
-      set({ error: "Failed to connect to agent network.", loading: false });
-
-      addNotification({
-        title: 'Synthesis Failed',
-        message: `Could not compile intelligence for ${company}.`,
-        type: 'error'
-      });
-    }
-  },
-
-  deleteReport: async (reportId: string) => {
-    const { addNotification } = useNotificationStore.getState();
-    try {
-      await deleteReportApi(reportId);
-      addNotification({
-        title: 'Report Purged',
-        message: 'Intelligence brief successfully removed from archives.',
-        type: 'info'
-      });
-    } catch (err: any) {
-      console.error('Delete report error:', err);
-      addNotification({
-        title: 'Cleanup Failed',
-        message: 'Could not remove report from the system.',
-        type: 'error'
-      });
-    }
-  },
 
   fetchActivityTimeline: async (query?: string) => {
     try {
@@ -454,9 +378,6 @@ export const useIntelStore = create<IntelState>((set) => ({
   },
 
   clear: () => set({ 
-    report: null, 
-    scanReport: null, 
-    agentReport: null, 
     error: null, 
     history: [], 
     signals: [], 

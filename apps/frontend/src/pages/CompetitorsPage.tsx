@@ -85,15 +85,6 @@ const CompetitorsPage = () => {
         />
         <SummaryCard
           idx={1}
-          icon={<Globe2 className="w-6 h-6 text-emerald-400" />}
-          title="Reports Available"
-          value={globalMetrics?.total_reports || 0}
-          description="Continuous surveillance"
-          color="text-emerald-400"
-          border="border-emerald-500/20"
-        />
-        <SummaryCard
-          idx={2}
           icon={<Target className="w-6 h-6 text-purple-400" />}
           title="Verified Nodes"
           value={competitors.length || 0}
@@ -104,11 +95,11 @@ const CompetitorsPage = () => {
       </div>
 
       <div className="rounded-[40px] border border-[#E5E5EA] dark:border-white/10 bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl overflow-hidden relative z-10 shadow-apple">
-        <div className="grid grid-cols-[1fr_100px_130px_160px] items-center px-8 py-5 border-b border-[#E5E5EA] dark:border-white/10 text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-black uppercase tracking-[0.2em]">
+        <div className="grid grid-cols-[1fr_100px_130px_100px] items-center px-8 py-5 border-b border-[#E5E5EA] dark:border-white/10 text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-black uppercase tracking-[0.2em]">
           <span>ENTITY IDENTIFIER</span>
           <span className="text-center">STATUS</span>
           <span className="text-center">RISK LEVEL</span>
-          <span className="text-right">TELEMETRY</span>
+          <span className="text-right">ACTIONS</span>
         </div>
 
         <div className="divide-y divide-white/5">
@@ -118,15 +109,14 @@ const CompetitorsPage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: idx * 0.05 }}
-              className="grid grid-cols-[1fr_100px_130px_160px] items-center px-8 py-6 text-sm text-[#1D1D1F] dark:text-white hover:bg-white/40 dark:hover:bg-white/5 transition-colors cursor-pointer group"
-              onClick={() => navigate(`/dashboard/competitors/${c._id || c.id}/report`)}
+              className="grid grid-cols-[1fr_100px_130px_100px] items-center px-8 py-6 text-sm text-[#1D1D1F] dark:text-white hover:bg-white/40 dark:hover:bg-white/5 transition-colors group"
             >
               <div className="flex items-center gap-5">
                 <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] flex items-center justify-center text-lg font-black text-[#0071E3] border border-[#E5E5EA] dark:border-white/10 group-hover:border-[#0071E3]/30 transition-all group-hover:bg-[#0071E3]/5 uppercase italic">
                   {c.name?.[0] || '?'}
                 </div>
                 <div>
-                  <div className="font-black uppercase italic tracking-tight text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors">{c.name}</div>
+                  <div className="font-black uppercase italic tracking-tight text-[#1D1D1F] dark:text-white transition-colors">{c.name}</div>
                   <div className="text-[10px] text-[#6E6E73] dark:text-[#86868B] dark:text-[#86868B] dark:text-[#A1A1A6] font-mono tracking-widest uppercase mt-1 break-all">{c.url}</div>
                 </div>
               </div>
@@ -145,11 +135,8 @@ const CompetitorsPage = () => {
                     {c.priority || 'Medium'}
                  </span>
               </div>
-              <div className="text-right flex flex-col items-end gap-1">
-                  <div className="text-[10px] font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter flex items-center gap-1 group/link hover:text-[#0071E3] transition-colors">
-                    OPEN REPORT <ArrowUpRight className="w-3 h-3 text-[#0071E3] group-hover/link:translate-x-1 transition-transform" />
-                  </div>
-                  <div className="flex gap-2 mt-1 relative z-20">
+              <div className="text-right flex justify-end">
+                  <div className="flex gap-2 relative z-20">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();

@@ -7,13 +7,13 @@ import LandingPage from './pages/LandingPage';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import DashboardPage from '@/pages/DashboardPage';
 import CompetitorsPage from '@/pages/CompetitorsPage';
-import ReportsPage from '@/pages/ReportsPage';
+
 import AnalyticsPage from '@/pages/AnalyticsPage';
 import RiskPage from '@/pages/RiskPage';
 import SettingsPage from '@/pages/SettingsPage';
 import TargetUniversePage from '@/pages/TargetUniversePage';
 import AddCompetitorPage from '@/pages/AddCompetitorPage';
-import IntelligenceReportPage from '@/pages/IntelligenceReportPage';
+
 import PredictiveAnalyticsPage from '@/pages/PredictiveAnalyticsPage';
 import SentimentAnalysisPage from '@/pages/SentimentAnalysisPage';
 import AiSuggestionPage from '@/pages/AiSuggestionPage';
@@ -98,14 +98,8 @@ const router = createBrowserRouter([
             path: "target-universe",
             element: <TargetUniversePage />,
           },
-          {
-            path: "competitors/:id/report",
-            element: <IntelligenceReportPage />,
-          },
-          {
-            path: "reports",
-            element: <ReportsPage />,
-          },
+
+
           {
             path: "analytics",
             element: <AnalyticsPage />,

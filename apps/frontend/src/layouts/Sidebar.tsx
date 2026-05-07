@@ -18,7 +18,7 @@ const menuItems = [
   { icon: LayoutDashboard, text: 'Dashboard', path: '/dashboard' },
   { icon: BarChart3, text: 'Analytics', path: '/dashboard/analytics' },
   { icon: Users, text: 'Competitors', path: '/dashboard/competitors' },
-  { icon: FileText, text: 'Reports', path: '/dashboard/reports' },
+
   { icon: Sparkles, text: 'Insights', path: '/dashboard/ai-suggestion' },
   { icon: TrendingUp, text: 'Predictive', path: '/dashboard/predictive-analytics' },
   { icon: Smile, text: 'Sentiment', path: '/dashboard/sentiment-analysis' },

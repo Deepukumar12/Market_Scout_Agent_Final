@@ -24,7 +24,6 @@ COMPANY_SUFFIXES = ["Systems", "Dynamics", "Labs", "Flow", "Logic", "Base", "Min
 # --- MODELS ---
 class GlobalMetrics(BaseModel):
     total_competitors: int
-    total_reports: int
     features_found: int
     articles_processed: int
     system_latency: float
@@ -329,10 +328,9 @@ async def get_global_metrics(current_user: User = Depends(get_current_user)):
         
         # 1. Run first wave of independent queries concurrently
         comp_count_task = db.db["competitors"].count_documents({"user_id": uid_str})
-        report_count_task = db.db["reports"].count_documents({"user_id": uid_str})
         cursor_task = db.db["competitors"].find({"user_id": uid_str}, {"name": 1}).to_list(length=100)
         
-        comp_count, report_count, comps = await asyncio.gather(comp_count_task, report_count_task, cursor_task)
+        comp_count, comps = await asyncio.gather(comp_count_task, cursor_task)
         comp_names = [c["name"] for c in comps]
         
         # 2. Run dependent queries concurrently
@@ -350,7 +348,6 @@ async def get_global_metrics(current_user: User = Depends(get_current_user)):
 
         return GlobalMetrics(
             total_competitors=comp_count,
-            total_reports=report_count,
             features_found=feature_count,
             articles_processed=article_count,
             system_latency=float(round(latency, 1)), 

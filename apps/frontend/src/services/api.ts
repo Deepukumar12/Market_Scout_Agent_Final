@@ -53,10 +53,7 @@ export const runCompetitorScan = async (competitorId: string) => {
     return response.data;
 };
 
-export const deleteReport = async (reportId: string) => {
-    const response = await api.delete(`/reports/${reportId}`);
-    return response.data;
-};
+
 
 export const runScan = async (payload: {
     company_name: string;
@@ -68,11 +65,7 @@ export const runScan = async (payload: {
     return response.data;
 };
 
-export const analyzeCompany = async (company: string) => {
-    // This calls the /analyze endpoint (now under /api/v1 prefix) 
-    const response = await api.post('/analyze', { company });
-    return response.data.report;
-};
+
 
 export const login = async (email: string, password: string) => {
     // OAuth2PasswordRequestForm expects application/x-www-form-urlencoded (not multipart)
