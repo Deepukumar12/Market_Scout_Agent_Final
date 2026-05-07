@@ -327,25 +327,20 @@ async def get_global_metrics(current_user: User = Depends(get_current_user)):
             
         uid_str = str(current_user.id)
         
-        # 1. Competitors Count
-        comp_count = await db.db["competitors"].count_documents({"user_id": uid_str})
+        # 1. Run first wave of independent queries concurrently
+        comp_count_task = db.db["competitors"].count_documents({"user_id": uid_str})
+        report_count_task = db.db["reports"].count_documents({"user_id": uid_str})
+        cursor_task = db.db["competitors"].find({"user_id": uid_str}, {"name": 1}).to_list(length=100)
         
-        # 2. Reports Count
-        report_count = await db.db["reports"].count_documents({"user_id": uid_str})
+        comp_count, report_count, comps = await asyncio.gather(comp_count_task, report_count_task, cursor_task)
+        comp_names = [c["name"] for c in comps]
         
-        # 3. Articles Processed (Article Summaries)
-        # First get competitor names to find relevant summaries
-        cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-        comp_names = [c["name"] for c in await cursor.to_list(length=100)]
-        
-        article_count = 0
+        # 2. Run dependent queries concurrently
+        article_count, feature_count = 0, 0
         if comp_names:
-            article_count = await db.db["article_summaries"].count_documents({"query_tag": {"$in": comp_names}})
-            
-        # 4. Features Found (Aggregation from feature_updates)
-        feature_count = 0
-        if comp_names:
-            feature_count = await db.db["feature_updates"].count_documents({"company_name": {"$in": comp_names}})
+            art_task = db.db["article_summaries"].count_documents({"query_tag": {"$in": comp_names}})
+            feat_task = db.db["feature_updates"].count_documents({"company_name": {"$in": comp_names}})
+            article_count, feature_count = await asyncio.gather(art_task, feat_task)
             
         if feature_count == 0 and article_count > 0:
             feature_count = article_count # Fallback if scans exist but delta not processed yet
@@ -461,24 +456,24 @@ async def run_predictive_pipeline(current_user: User = Depends(get_current_user)
             comp_id = str(comp["_id"])
             name_query = {"$regex": f"^{comp_name}$", "$options": "i"}
             
-            # 1. Count reports & signals (Last 30 days for velocity)
+            # 1. Concurrently count reports, signals, and features (Fixes N+1 scaling issue)
             now = get_now_ist()
             thirty_days_ago = now - timedelta(days=30)
             
-            reports_count = await db.db["reports"].count_documents({
+            reports_task = db.db["reports"].count_documents({
                 "$or": [{"company": name_query}, {"competitor": name_query}, {"competitor_id": comp_id}],
                 "created_at": {"$gte": thirty_days_ago}
             })
-            signals_count = await db.db["article_summaries"].count_documents({
+            signals_task = db.db["article_summaries"].count_documents({
                 "query_tag": name_query, 
                 "created_at": {"$gte": thirty_days_ago}
             })
-            
-            # 2. Count technical features found directly from feature_updates
-            feature_count = await db.db["feature_updates"].count_documents({
+            features_task = db.db["feature_updates"].count_documents({
                 "company_name": name_query,
                 "created_at": {"$gte": thirty_days_ago}
             })
+
+            reports_count, signals_count, feature_count = await asyncio.gather(reports_task, signals_task, features_task)
 
             # 3. Get aggregate sentiment
             pos, neu, neg = 0, 0, 0
