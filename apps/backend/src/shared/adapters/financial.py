@@ -12,7 +12,29 @@ class AlphaVantageAdapter(BaseAdapter):
     def __init__(self):
         super().__init__("AlphaVantage", settings.ALPHA_VANTAGE_API_KEY)
 
-    async def fetch(self, symbol: str, **kwargs) -> Optional[Dict[str, Any]]:
+    async def resolve_symbol(self, company_name: str) -> Optional[str]:
+        """Resolve a company name to a stock ticker symbol."""
+        url = f"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={company_name}&apikey={self.api_key}"
+        try:
+            response = await self.client.get(url)
+            if response.status_code == 200:
+                best_matches = response.json().get("bestMatches", [])
+                if best_matches:
+                    return best_matches[0].get("1. symbol")
+        except Exception as e:
+            logger.error(f"AlphaVantage symbol resolution failed: {e}")
+        return None
+
+    async def fetch(self, query: str, **kwargs) -> Optional[Dict[str, Any]]:
+        # If query is more than 5 chars or has spaces, it's likely a name, not a ticker
+        symbol = query
+        if len(query) > 5 or " " in query:
+            resolved = await self.resolve_symbol(query)
+            if resolved:
+                symbol = resolved
+            else:
+                return None
+
         # Default to OVERVIEW for fundamental data
         function = kwargs.get("function", "OVERVIEW")
         url = f"https://www.alphavantage.co/query?function={function}&symbol={symbol}&apikey={self.api_key}"
@@ -50,7 +72,15 @@ class FinnhubAdapter(BaseAdapter):
     def __init__(self):
         super().__init__("Finnhub", settings.FINNHUB_API_KEY)
 
-    async def fetch(self, symbol: str, **kwargs) -> Optional[Dict[str, Any]]:
+    async def fetch(self, query: str, **kwargs) -> Optional[Dict[str, Any]]:
+        symbol = query
+        # Resolve if needed (sharing AlphaVantage's logic or simple check)
+        if len(query) > 5 or " " in query:
+            # We assume the caller or the AlphaVantage task already handled resolution 
+            # if they are run in parallel, but for safety we check if we have a symbol in kwargs
+            symbol = kwargs.get("resolved_symbol") or query
+            if len(symbol) > 5: return None
+
         url = f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={self.api_key}"
         response = await self.client.get(url)
         if response.status_code == 200:

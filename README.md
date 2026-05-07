@@ -70,8 +70,12 @@ Market Scout Agent is an autonomous competitive intelligence SaaS platform.
 - **WebSocket Live Updates:** Real-time pipeline execution logs streamed directly to the dashboard via `/ws/logs`.
 - **Notification System:** SMTP-based email service for intelligence report delivery.
 - **PDF Report Generation:** Automated compilation of competitor intelligence into formatted PDF dossiers.
-- **GitHub Integrations:** Dynamic fetching of competitor open-source repository statistics, languages, and stargazer momentum.
-- **Search Pipelines:** Broad web traversal utilizing the Tavily Search API.
+- **GitHub Intelligence:** Dynamic fetching of competitor open-source repository statistics, languages, and stargazer momentum.
+- **Financial Intelligence:** Real-time stock movement, market cap, and revenue signals via Alpha Vantage and Finnhub.
+- **Company Firmographics:** Detailed profiles, funding data, and employee growth via Clearbit and Crunchbase.
+- **Community Signals:** Aggregation of social sentiment and developer discussions from Reddit and YouTube.
+- **Market News Hub:** Automated tracking of competitor press releases and acquisitions via NewsAPI.
+- **Search Visibility:** SEO ranking and ad density tracking utilizing SerpAPI.
 - **Scraping Pipelines:** Headless raw markdown extraction via Firecrawl and custom scrapers.
 - **Cache Services:** High-speed vector caching with ChromaDB and Redis.
 - **Telemetry and Logging:** Sentry DSN integration and centralized standard logging.
@@ -190,6 +194,15 @@ graph TD
 - Docker
 - Turborepo
 - GitHub Actions (Pipeline Ready)
+
+**Third-Party Intelligence Integrations:**
+- **Search Agents:** Tavily, SerpAPI, Google Search
+- **Scraping Infrastructure:** Firecrawl, Crawl4AI, Trafilatura
+- **Company Intelligence:** Clearbit, Crunchbase, People Data Labs
+- **Financial Data:** Alpha Vantage, Finnhub, Financial Modeling Prep
+- **Social & News:** NewsAPI, GNews, Reddit, YouTube Data API
+- **Version Control Intelligence:** GitHub REST API
+- **Monitoring:** Sentry
 
 ---
 

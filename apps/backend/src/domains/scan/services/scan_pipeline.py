@@ -166,8 +166,19 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     # 5.2 Create Concurrent Intelligence Tasks
     github_task = asyncio.create_task(fetch_company_github_data(company, max_repos=15))
     company_task = asyncio.create_task(company_adapter.get_data(company))
-    financial_task = asyncio.create_task(alpha_adapter.get_data(company)) # AlphaVantage often maps by company name too
-    finnhub_task = asyncio.create_task(finnhub_adapter.get_data(company))
+    
+    # Financial Resolution (Optimization: resolve once, use twice)
+    async def _fetch_financials():
+        symbol = await alpha_adapter.resolve_symbol(company)
+        if symbol:
+            alpha_data, finnhub_data = await asyncio.gather(
+                alpha_adapter.get_data(symbol),
+                finnhub_adapter.get_data(symbol)
+            )
+            return {**(alpha_data or {}), **(finnhub_data or {})}
+        return None
+
+    financial_task = asyncio.create_task(_fetch_financials())
     news_task = asyncio.create_task(news_adapter.get_data(company))
     serp_task = asyncio.create_task(serp_adapter.get_data(company))
     social_tasks = asyncio.create_task(asyncio.gather(
@@ -245,17 +256,12 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         pass
 
     # Await other intelligence domains
-    company_intel, fin_alpha, fin_quote, news_intel, serp_intel, social_intel = await asyncio.gather(
-        company_task, financial_task, finnhub_task, news_task, serp_task, social_tasks,
+    company_intel, financial_data, news_intel, serp_intel, social_intel = await asyncio.gather(
+        company_task, financial_task, news_task, serp_task, social_tasks,
         return_exceptions=True
     )
 
-    # Normalize Financials (Merge AlphaVantage & Finnhub)
-    financial_data = None
-    if not isinstance(fin_alpha, Exception) and fin_alpha:
-        financial_data = {**fin_alpha}
-        if not isinstance(fin_quote, Exception) and fin_quote:
-            financial_data.update(fin_quote)
+    # Note: financial_data is already merged in the sub-task
 
     # Final cleanup of adapters
     await asyncio.gather(
