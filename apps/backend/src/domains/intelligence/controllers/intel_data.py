@@ -810,8 +810,8 @@ async def get_signal_analytics(
             })
             real_count = h_arts + h_feats
             
-            # Simulate alive telemetry so the UI wave never sits totally at zero.
-            wave_val = real_count * 15 + random.randint(12, 40) if real_count > 0 else random.randint(2, 9)
+            # Purely data-driven volume, no random jitter.
+            wave_val = real_count * 15 if real_count > 0 else 0
             history.append(IntensityPoint(time=t.strftime("%H:%M"), value=wave_val))
 
         # 3. Category Distribution
@@ -821,15 +821,6 @@ async def get_signal_analytics(
         ]
         agg = await db.db["article_summaries"].aggregate(pipeline).to_list(length=10)
         total_cat = sum(item["count"] for item in agg)
-        if total_cat == 0:
-            if feats_count > 0:
-                dist = [
-                    CategoryDistribution(category="Core Features", count=int(feats_count * 0.6) or 1, percentage=60),
-                    CategoryDistribution(category="Security Patches", count=int(feats_count * 0.25) or 1, percentage=25),
-                    CategoryDistribution(category="API Integrations", count=int(feats_count * 0.15) or 1, percentage=15),
-                ]
-            else:
-                dist = []
         else:
             dist = [CategoryDistribution(category=item["_id"] or "General", count=item["count"], percentage=int((item["count"] / total_cat * 100)) if total_cat > 0 else 0) for item in agg]
 
@@ -858,7 +849,8 @@ async def get_signal_analytics(
             for t in top_agg:
                 if t["_id"]:
                     vol = t["count"]
-                    topics.append(TopicMetric(topic=t["_id"][:20], volume=vol, sentiment=random.choice([0.1, 0.6, -0.6])))
+                    # Sentiment 0.0 (Neutral) if no real analysis performed. 
+                    topics.append(TopicMetric(topic=t["_id"][:20], volume=vol, sentiment=0.0))
 
         geo_map = {} 
         active_regions = {}
@@ -875,7 +867,7 @@ async def get_signal_analytics(
             active_regions[region] = active_regions.get(region, 0) + 1
             
         if not active_regions:
-            active_regions = {"North America": random.randint(20, 50), "EMEA": random.randint(10, 25), "APAC": random.randint(5, 15)}
+            active_regions = {}
             
         geo_activity = []
         for r, c in active_regions.items():

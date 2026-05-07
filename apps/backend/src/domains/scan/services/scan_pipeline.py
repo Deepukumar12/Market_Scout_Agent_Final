@@ -18,6 +18,7 @@ from services.ai.gemini_client import GeminiClient, GeminiClientError
 from services.ai.ollama_sync import OllamaClient
 from src.domains.github.services.github_client import fetch_company_github_data, GitHubClientError
 from src.core.config import settings
+from src.core.logger import agent_logger
 
 logger = logging.getLogger(__name__)
 
@@ -46,14 +47,16 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     # -------------------------------------------------------------------------
     # STEP 1 – Query Planning (LLM)
     # -------------------------------------------------------------------------
+    await agent_logger.log(f"Phase 1: Planning targeted surveillance queries for {company}...", "SYSTEM")
     queries = None
     try:
         queries = await client.generate_search_queries(company, time_window_days)
         logger.info("scoutiq_db step=query_planning company=%s queries=%s", company, queries)
+        if queries:
+            await agent_logger.log(f"Targeting {len(queries)} high-intent documentation nodes.", "AGENT")
     except Exception as e:
         logger.warning(f"scoutiq_db step=query_planning failed for {provider}: {e}")
-        # If it's a critical logic error, return None. 
-        # But for Ollama we added a fallback in generate_search_queries.
+        await agent_logger.log(f"Strategic planning encountered an anomaly: {e}", "RISK_ENGINE")
         if not queries: return None
 
     if not queries:
@@ -71,6 +74,7 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     # -------------------------------------------------------------------------
     # STEP 2 – Real Search Execution via Zenserp
     # -------------------------------------------------------------------------
+    await agent_logger.log(f"Phase 2: Orchestrating global web search across {len(queries or [])} vectors...", "SYSTEM")
     seen_urls: set[str] = set()
     all_results: list[dict[str, Any]] = []
     
@@ -88,6 +92,7 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
                 all_results.append(r)
 
     logger.info("scoutiq_db step=search company=%s urls_collected=%d", company, len(all_results))
+    await agent_logger.log(f"Discovered {len(all_results)} candidate intelligence nodes.", "AGENT")
 
     # -------------------------------------------------------------------------
     # STEP 3 – Scraping + Date Extraction
@@ -107,6 +112,7 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     scraped_raw = await asyncio.gather(*tasks)
     scraped = [s for s in scraped_raw if s is not None]
 
+    await agent_logger.log(f"Phase 3: Extracting technical content from {len(scraped)} responsive sources...", "SYSTEM")
     filtered_by_date = filter_by_time_and_technical(scraped, time_window_days)
     logger.info(
         "scoutiq_db step=scrape company=%s scraped=%d after_date_filter=%d",
@@ -125,6 +131,7 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         "scoutiq_db step=content_filter company=%s after_content_filter=%d",
         company, len(filtered),
     )
+    await agent_logger.log(f"Phase 4: Audited {total_sources_scanned} sources. Identified {len(filtered)} high-signal technical updates.", "AGENT")
 
     if not filtered:
         return ScanResponse(
@@ -143,6 +150,7 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     # Initiate GitHub fetch concurrently with the heavy LLM analysis
     github_task = asyncio.create_task(fetch_company_github_data(company, max_repos=15))
 
+    await agent_logger.log(f"Phase 5: Synthesizing final intelligence report via {provider.upper()}...", "SYSTEM")
     try:
         out = await client.generate_scan_report(
             competitor_name=company,
@@ -150,8 +158,10 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
             scraped_items=filtered,
             scan_date_iso=scan_date_iso,
         )
+        await agent_logger.log(f"Synthesis complete. Mission objective achieved for {company}.", "SYSTEM")
     except Exception as e:
         logger.error(f"scoutiq_db step={provider}_analysis failed: {e}")
+        await agent_logger.log(f"Analysis failed during synthesis: {e}", "RISK_ENGINE")
         github_task.cancel()
         return None
 

@@ -100,11 +100,12 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
         except Exception as e:
             logger.error(f"DuckDuckGo fallback error: {e}")
 
-    # 3. Mock results ONLY if MOCK_MODE is True or everything failed and MOCK_MODE is True
-    if not results and settings.MOCK_MODE:
+    # 3. Mock results ONLY if MOCK_MODE is True
+    if settings.MOCK_MODE:
         logger.info(f"MOCK_MODE: Returning synthetic results for query '{query}'")
         for i in range(num_results):
             add_result(f"https://example.com/mock-news-{i}", f"Mock: {query}", "Synthetic result", "mock")
+        return results[:num_results]
 
     tavily_results = results[:num_results]
 
@@ -119,7 +120,16 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
 
 async def search_specialized(query: str, engine: str, num_results: int = 3) -> List[Dict[str, Any]]:
     """
-    Run specialized search (images, maps, youtube, shopping).
-    Currently returns empty as Zenserp is detached. Can be integrated with Tavily or Brave later.
+    Run specialized search (images, maps, youtube, shopping) by translating into high-intent queries.
     """
-    return []
+    if settings.MOCK_MODE:
+        return [{"url": f"https://mock-{engine}.com/{i}", "title": f"Mock {engine}", "snippet": "Synthetic"} for i in range(num_results)]
+
+    # Translate engine to query prefix for better intent
+    intent_query = query
+    if engine == "google_images": intent_query = f"official product images of {query}"
+    elif engine == "google_maps": intent_query = f"headquarters and office locations of {query}"
+    elif engine == "youtube": intent_query = f"official youtube channel and technical videos for {query}"
+    elif engine == "google_shopping": intent_query = f"pricing and product plans for {query}"
+
+    return await search_web_multi(intent_query, num_results=num_results)

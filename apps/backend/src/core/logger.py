@@ -1,5 +1,6 @@
-
 import asyncio
+import json
+from datetime import datetime, timezone
 from src.shared.websockets import manager
 
 class AgentLogger:
@@ -7,14 +8,22 @@ class AgentLogger:
     
     @staticmethod
     async def log(message: str, category: str = "AGENT"):
-        """Categorized logging that broadcasts to all connected clients."""
+        """Categorized logging that broadcasts structured JSON to all connected clients."""
+        now = datetime.now(timezone.utc).isoformat()
+        payload = {
+            "message": message,
+            "category": category,
+            "timestamp": now
+        }
         formatted = f"{category}: {message}"
-        # We use asyncio.run_coroutine_threadsafe if called from sync code,
-        # but the agent will now be primarily async.
+        
         try:
-            await manager.broadcast(formatted)
+            # Broadcast as JSON for the frontend to parse easily
+            await manager.broadcast(json.dumps(payload))
         except Exception:
             pass # Fail silently if no connections
+            
+        # Also print to stdout for backend debugging
         print(formatted)
 
 agent_logger = AgentLogger()

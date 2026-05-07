@@ -4,6 +4,12 @@ import { cn } from '@/utils/utils';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 
+interface LogEntry {
+  message: string;
+  category: string;
+  timestamp: string;
+}
+
 // WebSocket must connect to the backend. In dev, Vite proxies /ws to backend; fallback to direct backend URL.
 const getWsBase = () => {
   const env = (import.meta as any).env.VITE_WS_URL;
@@ -14,15 +20,13 @@ const getWsBase = () => {
 };
 
 export default function LogConsole() {
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isOpen, setIsOpen] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null);
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    // Connect regardless of token to show demo logs
-
     const wsBase = getWsBase();
     const url = token 
       ? `${wsBase}/ws/logs?token=${encodeURIComponent(token)}`
@@ -30,19 +34,45 @@ export default function LogConsole() {
     const socket = new WebSocket(url);
 
     socket.onopen = () => {
-      setLogs((prev) => [...prev, "SYSTEM: Connected to ScoutIQ Agent Network..."]);
+      const entry: LogEntry = {
+        message: "Connected to ScoutIQ Agent Network...",
+        category: "SYSTEM",
+        timestamp: new Date().toISOString()
+      };
+      setLogs((prev) => [...prev, entry]);
     };
 
     socket.onmessage = (event) => {
-      setLogs((prev) => [...prev.slice(-100), event.data]);
+      try {
+        const data = JSON.parse(event.data);
+        setLogs((prev) => [...prev.slice(-100), data]);
+      } catch (e) {
+        // Fallback for plain text messages
+        const entry: LogEntry = {
+          message: event.data,
+          category: "SYSTEM",
+          timestamp: new Date().toISOString()
+        };
+        setLogs((prev) => [...prev.slice(-100), entry]);
+      }
     };
 
     socket.onclose = () => {
-      setLogs((prev) => [...prev, "SYSTEM: Connection closed."]);
+      const entry: LogEntry = {
+        message: "Connection closed.",
+        category: "SYSTEM",
+        timestamp: new Date().toISOString()
+      };
+      setLogs((prev) => [...prev, entry]);
     };
 
     socket.onerror = () => {
-      setLogs((prev) => [...prev, "SYSTEM: WebSocket error."]);
+      const entry: LogEntry = {
+        message: "WebSocket error.",
+        category: "SYSTEM",
+        timestamp: new Date().toISOString()
+      };
+      setLogs((prev) => [...prev, entry]);
     };
 
     ws.current = socket;
@@ -95,13 +125,14 @@ export default function LogConsole() {
         {logs.map((log, i) => (
           <div key={i} className={cn(
             "break-all border-l-2 pl-2",
-            log.includes("SYSTEM") ? "border-blue-500 text-blue-400" :
-            log.includes("RISK_ENGINE") ? "border-red-500 text-red-400" :
-            log.includes("AGENT") ? "border-green-500 text-green-400" :
+            log.category === "SYSTEM" ? "border-blue-500 text-blue-400" :
+            log.category === "RISK_ENGINE" ? "border-red-500 text-red-400" :
+            log.category === "AGENT" ? "border-green-500 text-green-400" :
             "border-gray-700 text-gray-500"
           )}>
-            <span className="opacity-50 mr-2">[{new Date().toLocaleTimeString('en-IN')}]</span>
-            {log}
+            <span className="opacity-50 mr-2">[{new Date(log.timestamp).toLocaleTimeString('en-IN')}]</span>
+            <span className="font-bold mr-2">{log.category}:</span>
+            {log.message}
           </div>
         ))}
         <div ref={bottomRef} />
