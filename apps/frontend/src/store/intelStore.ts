@@ -63,6 +63,17 @@ export interface MarketComparisonMetric {
 }
 
 
+export interface SevenDaySignal {
+  company_name: string;
+  feature_name: string;
+  category: string;
+  release_date: string;
+  source_url?: string;
+  hash_id: string;
+  summary?: string;
+  source_type?: string;
+}
+
 export interface MissionBriefingData {
   executive_summary: string;
   technical_risks: string[];
@@ -99,6 +110,7 @@ interface IntelState {
   innovationTrends: any | null;
   globalMetrics: GlobalMetrics | null;
   comparisonMatrix: MarketComparisonMetric[];
+  lastSevenDays: SevenDaySignal[];
   missionBriefing: MissionBriefingData | null;
   strategicPlan: StrategicPlan | null;
   competitors: any[];
@@ -112,6 +124,7 @@ interface IntelState {
   fetchInnovationTrends: () => Promise<void>;
   fetchGlobalMetrics: () => Promise<void>;
   fetchMarketComparison: () => Promise<void>;
+  fetchLastSevenDays: (query?: string) => Promise<void>;
   fetchMissionBriefing: () => Promise<void>;
   fetchCompetitors: () => Promise<void>;
   fetchStrategicPlan: (competitorId: string, focusArea: string, riskLevel: string) => Promise<void>;
@@ -130,6 +143,7 @@ export const useIntelStore = create<IntelState>((set) => ({
   innovationTrends: null,
   globalMetrics: null,
   comparisonMatrix: [],
+  lastSevenDays: [],
   missionBriefing: null,
   strategicPlan: null,
   competitors: [],
@@ -304,6 +318,29 @@ export const useIntelStore = create<IntelState>((set) => ({
   },
 
 
+  fetchLastSevenDays: async (query?: string) => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        let url = `${apiUrl}/api/v1/intelligence/last-seven-days`;
+        if (query) url += `?competitor=${encodeURIComponent(query)}`;
+
+        const res = await fetch(url, {
+            headers: { 
+              Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ lastSevenDays: data });
+        }
+    } catch(err) {
+        console.error("Failed to fetch last 7 days releases:", err);
+    }
+  },
+
   fetchMissionBriefing: async () => {
     try {
         const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
@@ -362,5 +399,6 @@ export const useIntelStore = create<IntelState>((set) => ({
     globalMetrics: null, 
     strategicPlan: null, 
     competitors: [],
+    lastSevenDays: []
   }),
 }));
