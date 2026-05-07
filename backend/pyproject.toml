@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "market-scout-agent"
+version = "1.0.0"
+description = "Autonomous Technical Competitive Intelligence Platform"
+authors = ["Deepu Kumar"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = "test_*.py"
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
