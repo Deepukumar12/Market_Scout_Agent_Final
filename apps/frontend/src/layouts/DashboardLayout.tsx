@@ -21,6 +21,7 @@ const DashboardLayout = () => {
   const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'running' | 'completed' | 'error'>('idle');
   const [currentStep, setCurrentStep] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const progressSteps = [
     'Initializing AI Scout agents...',
@@ -79,6 +80,7 @@ const DashboardLayout = () => {
         onAnalyzeClick={() => setIsAnalyzeModalOpen(true)}
         onNotificationClick={() => setIsNotificationOpen(true)}
         onSearch={(q) => setSearchQuery(q)}
+        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
 
       <NotificationCenter 
@@ -87,9 +89,9 @@ const DashboardLayout = () => {
       />
 
       <div className="flex pt-20">
-        <Sidebar />
+        <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
         
-        <main className="flex-1 lg:ml-72 p-6 md:p-10 w-full overflow-hidden">
+        <main className="flex-1 lg:ml-72 p-4 md:p-10 w-full overflow-hidden">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

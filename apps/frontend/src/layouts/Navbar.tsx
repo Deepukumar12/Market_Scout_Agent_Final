@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown } from 'lucide-react';
+import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotificationStore } from '@/store/notificationStore';
@@ -12,9 +12,10 @@ interface NavbarProps {
   onNotificationClick: () => void;
   onSearch: (query: string) => void;
   user: any;
+  onMobileMenuToggle?: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, onSearch, user }) => {
+const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, onSearch, user, onMobileMenuToggle }) => {
   const { unreadCount } = useNotificationStore();
   const { logout } = useAuthStore();
   const navigate = useNavigate();
@@ -39,7 +40,12 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
 
   return (
     <header className="h-20 fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-[#E5E5EA] dark:border-white/10 flex items-center justify-between px-8">
-      <div className="flex items-center gap-12 flex-1">
+      <div className="flex items-center gap-4 lg:gap-12 flex-1">
+        {onMobileMenuToggle && (
+          <button onClick={onMobileMenuToggle} className="lg:hidden p-2 -ml-2 text-[#1D1D1F] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-lg">
+            <Menu size={24} />
+          </button>
+        )}
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -52,7 +58,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           <span className="text-xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">Market <span className="text-[#AF52DE]">Scout</span></span>
         </motion.div>
 
-        <div className="relative max-w-md w-full group">
+        <div className="relative max-w-md w-full group hidden md:block">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Search size={18} className="text-[#6E6E73] dark:text-[#86868B] group-focus-within:text-[#0071E3] transition-colors" />
           </div>

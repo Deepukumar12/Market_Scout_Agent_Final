@@ -30,10 +30,22 @@ const menuItems = [
 
 import ThemeToggle from './ThemeToggle';
 
-const Sidebar: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
+const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen, onClose }) => {
   return (
-    <aside className="w-72 h-screen bg-white/80 dark:bg-[#1D1D1F]/80 backdrop-blur-xl border-r border-[#E5E5EA] dark:border-white/10 pt-24 pb-12 flex flex-col fixed left-0 top-0 z-40">
-      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm transition-opacity"
+          onClick={onClose}
+        />
+      )}
+      
+      <aside className={cn(
+        "w-72 h-screen bg-white/90 dark:bg-[#1D1D1F]/90 backdrop-blur-2xl border-r border-[#E5E5EA] dark:border-white/10 pt-24 pb-12 flex flex-col fixed left-0 top-0 z-40 transition-transform duration-300 ease-in-out lg:translate-x-0",
+        isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+      )}>
+        <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
@@ -70,6 +82,7 @@ const Sidebar: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
         </div>
       </div>
     </aside>
+    </>
   );
 };
 
