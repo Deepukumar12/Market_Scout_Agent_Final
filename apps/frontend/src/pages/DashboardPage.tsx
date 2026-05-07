@@ -196,6 +196,7 @@ const DashboardPage = () => {
                 </div>
             </div>
           </div>
+        </div>
       </div>
 
       {/* 7-Day Innovation Releases Section */}

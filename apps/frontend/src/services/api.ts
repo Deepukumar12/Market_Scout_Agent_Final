@@ -65,6 +65,10 @@ export const runScan = async (payload: {
     return response.data;
 };
 
+export const analyzeCompany = async (companyName: string) => {
+    return runScan({ company_name: companyName });
+};
+
 
 
 export const login = async (email: string, password: string) => {

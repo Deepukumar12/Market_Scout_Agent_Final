@@ -118,6 +118,7 @@ interface IntelState {
   loading: boolean;
   error: string | null;
   runScan: (competitorId: string) => Promise<void>;
+  fetchHistory: (query?: string) => Promise<void>;
   fetchSignals: () => Promise<void>;
   fetchRecommendations: () => Promise<void>;
   fetchActivityTimeline: (query?: string) => Promise<void>;
@@ -181,6 +182,23 @@ export const useIntelStore = create<IntelState>((set) => ({
   },
 
 
+
+  fetchHistory: async (query?: string) => {
+    try {
+        const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+        let url = `${apiUrl}/api/v1/intelligence/stream?limit=50`;
+        if (query) url += `&q=${encodeURIComponent(query)}`;
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('scoutiq_token')}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            set({ history: data.signals || [] });
+        }
+    } catch(err) {
+        console.error("Failed to fetch history:", err);
+    }
+  },
 
   fetchSignals: async () => {
     try {

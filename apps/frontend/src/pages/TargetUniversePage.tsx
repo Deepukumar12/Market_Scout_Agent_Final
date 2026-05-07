@@ -40,7 +40,7 @@ const TargetUniversePage = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
             const resSignals = await fetch(`${apiUrl}/api/v1/intelligence/stream?limit=50`, {
                 headers: { Authorization: `Bearer ${token}` }
             });

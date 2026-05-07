@@ -9,7 +9,6 @@ from src.domains.notifications.services.email_service import send_email_report
 from src.domains.scan.services.scan_pipeline import run_scan
 from src.domains.scan.models.scan import ScanRequest, ScanFeature
 from services.data.delta_engine import get_cached_features
-from src.domains.reports.services.pdf_service import generate_user_pdf_report
 from src.core.database import db
 
 logger = logging.getLogger(__name__)
@@ -92,41 +91,9 @@ async def async_run_auto_scan():
                 logger.warning(f"⚠️ No reports generated for user {email}, skipping")
                 continue
 
-            # 4️⃣ Generate PDF Report
-            pdf_filename = f"Market_Scout_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
-            pdf_path = f"/tmp/{pdf_filename}"
-            
-            try:
-                generate_user_pdf_report(email, user_reports, pdf_path)
-
-                # 5️⃣ Send Email with PDF Attachment
-                subject = f"Market Scout AI: Daily Intelligence Report ({len(user_reports)} Companies)"
-                content = f"""
-Hello,
-
-Your daily Market Scout AI intelligence report is ready! 🚀
-
-We have consolidated the latest technical updates for all {len(user_reports)} companies you are tracking.
-Please find the detailed PDF report attached to this email.
-
-Best regards,
-Market Scout Agent Team
-"""
-                send_email_report(
-                    to_email=email,
-                    subject=subject,
-                    content=content,
-                    attachment_path=pdf_path
-                )
-
-                logger.info(f"📧 Sent consolidated PDF report to {email}")
-
-                # Cleanup
-                if os.path.exists(pdf_path):
-                    os.remove(pdf_path)
-
-            except Exception as e:
-                logger.error(f"❌ Failed to generate or send PDF for {email}: {e}")
+            # 4️⃣ Background processing completed.
+            # Removed PDF generation and email logic to maintain a dashboard-only, real-time intelligence interface.
+            logger.info(f"✅ Background intelligence synchronization completed for user {email}")
 
     except Exception as e:
         logger.critical(f"❌ Auto scan failed completely: {e}", exc_info=True)
