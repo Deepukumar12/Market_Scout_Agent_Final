@@ -1,16 +1,18 @@
+import os
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
-import logging
 
 from src.core.database import db
 from src.core.api import api_router
 from src.domains.auth.controllers.auth import router as auth_router
-# from services.ai.agent import run_agent # Removed as moved to router
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure enterprise logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -35,13 +37,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="MarketScout Agent Backend", lifespan=lifespan)
 
-# Security and CORS Middleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-import os
+# Performance: Compress large API responses
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Allow configurable CORS in production, default to all for local dev
+# Security: CORS Policy
 allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -50,7 +50,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Optional: Require allowed hosts in production
+# Security: Trusted Hosts
 allowed_hosts = os.getenv("ALLOWED_HOSTS", "*").split(",")
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
