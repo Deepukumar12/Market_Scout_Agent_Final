@@ -46,6 +46,7 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     # -------------------------------------------------------------------------
     # STEP 1 – Query Planning (LLM)
     # -------------------------------------------------------------------------
+    queries = None
     try:
         queries = await client.generate_search_queries(company, time_window_days)
         logger.info("scoutiq_db step=query_planning company=%s queries=%s", company, queries)

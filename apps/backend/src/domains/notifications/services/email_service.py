@@ -14,6 +14,10 @@ def send_email_report(to_email, subject, content, attachment_path=None):
         sender = os.getenv("EMAIL_USER")
         password = os.getenv("EMAIL_PASS")
 
+        if not sender or not password or sender == "your_email@gmail.com":
+            logger.warning("⚠️ EMAIL_USER or EMAIL_PASS not configured in .env. Skipping email sending.")
+            return
+
         msg = MIMEMultipart()
         msg["Subject"] = subject
         msg["From"] = sender

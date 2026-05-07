@@ -22,7 +22,7 @@ class ScanFeature(BaseModel):
     publish_date: str  # ISO date string
     source_url: str
     source_domain: str
-    category: Literal["API", "UI", "Infrastructure", "Security", "Platform", "AI", "SDK"]
+    category: str
     confidence_score: int = Field(ge=0, le=100)
 
 
