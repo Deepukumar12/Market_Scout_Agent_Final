@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Sparkles, BrainCircuit, 
+  Sparkles, BrainCircuit, RefreshCw,
   Target, TrendingUp, ShieldAlert, Clock, CheckCircle2 
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';

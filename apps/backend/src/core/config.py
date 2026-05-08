@@ -111,6 +111,7 @@ class Settings(BaseSettings):
     # ---------------------------------------------------
     TAVILY_API_KEY: str = ""
     SERPAPI_API_KEY: str = ""
+    EXA_API_KEY: str = ""
     GOOGLE_SEARCH_API_KEY: str = ""
     GOOGLE_SEARCH_CX: str = ""
 

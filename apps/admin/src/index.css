@@ -5,35 +5,37 @@
 @tailwind utilities;
 
 :root {
-  /* Dark Mode (Default) */
-  --bg-primary: #05070a;
-  --bg-secondary: #0a0d14;
-  --bg-accent: #11151f;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-blue: #6366f1;
-  --accent-purple: #8b5cf6;
-  --accent-emerald: #10b981;
-  --accent-rose: #f43f5e;
-  --glass-bg: rgba(15, 23, 42, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-}
-
-[data-theme='light'] {
-  --bg-primary: #f8fafc;
+  /* SCOUTIQ Light Mode */
+  --bg-primary: #FBFBFE;
   --bg-secondary: #ffffff;
   --bg-accent: #f1f5f9;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --glass-bg: rgba(255, 255, 255, 0.7);
+  --text-primary: #1D1D1F;
+  --text-secondary: #6E6E73;
+  --accent-blue: #0071E3;
+  --accent-purple: #AF52DE;
+  --accent-emerald: #34C759;
+  --accent-rose: #FF3B30;
+  --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(0, 0, 0, 0.05);
-  --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+}
+
+.dark {
+  /* SCOUTIQ Dark Mode - Premium Obsidian */
+  --bg-primary: #050505;
+  --bg-secondary: #0A0A0C;
+  --bg-accent: #11151f;
+  --text-primary: #F5F5F7;
+  --text-secondary: #86868B;
+  --glass-bg: rgba(10, 10, 12, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --card-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+  --accent-blue: #0071E3;
 }
 
 @layer base {
   body {
-    @apply transition-colors duration-300 antialiased selection:bg-indigo-500/30;
+    @apply transition-colors duration-700 antialiased selection:bg-blue-600/30;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-family: 'Inter', sans-serif;
@@ -46,22 +48,22 @@
 
 @layer components {
   .glass-card {
-    @apply backdrop-blur-xl border transition-all duration-300;
+    @apply backdrop-blur-3xl border transition-all duration-500 rounded-[2.5rem];
     background-color: var(--glass-bg);
     border-color: var(--glass-border);
     box-shadow: var(--card-shadow);
   }
   
-  .glass-button {
-    @apply relative overflow-hidden transition-all duration-300 active:scale-95;
-  }
-
   .nav-item-active {
-    @apply bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-600/20;
+    @apply bg-blue-600 text-white shadow-xl shadow-blue-600/20;
   }
 
   .premium-gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 bg-[length:200%_auto] animate-gradient-shift;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-[length:200%_auto] animate-gradient-shift;
+  }
+
+  .scout-input {
+    @apply bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all placeholder:text-[#86868B]/30 text-[var(--text-primary)] font-medium;
   }
 }
 
@@ -85,29 +87,27 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.2);
+  background: rgba(0, 113, 227, 0.1);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.4);
+  background: rgba(0, 113, 227, 0.3);
 }
 
-/* Animations */
 .fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
+  animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.glow-indigo {
-  box-shadow: 0 0 20px -5px rgba(99, 102, 241, 0.5);
+.glow-blue {
+  box-shadow: 0 0 30px -5px rgba(0, 113, 227, 0.4);
 }
 
-/* Fixed Overlay Issue - Ensure grid items don't shrink too much */
 .grid-auto-rows {
   grid-auto-rows: min-content;
 }

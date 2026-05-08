@@ -248,6 +248,7 @@ IMPORTANT:
         time_window_days: int,
         scraped_items: List[Dict[str, Any]],
         scan_date_iso: str,
+        intel_context: Dict[str, Any],
         max_retries: int = 2,
     ) -> Dict[str, Any]:
         """
@@ -280,6 +281,7 @@ Return only the JSON object. No additional text or explanation.
             "time_window_days": time_window_days,
             "scan_date": scan_date_iso,
             "scraped_sources": scraped_items,
+            "intel_context": intel_context,
         }
 
         payload: Dict[str, Any] = {

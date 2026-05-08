@@ -9,6 +9,7 @@ import { useCompetitorStore } from '@/store/competitorStore';
 
 import { useNotificationStore } from '@/store/notificationStore';
 import { motion } from 'framer-motion';
+import { useExecutionStore } from '@/store/executionStore';
 import { analyzeCompany } from '@/services/api';
 
 const DashboardLayout = () => {
@@ -19,9 +20,9 @@ const DashboardLayout = () => {
   const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'running' | 'completed' | 'error'>('idle');
-  const [currentStep, setCurrentStep] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { currentStep: realStep, setStep, startExecution, stopExecution } = useExecutionStore();
   
   const progressSteps = [
     'Initializing AI Scout agents...',
@@ -33,43 +34,78 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     fetchNotifications();
-    // Refresh notifications every 60 seconds
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Ensure competitor list is available globally
   useEffect(() => {
     fetchCompetitors();
   }, [location.pathname, fetchCompetitors]);
 
   const handleAnalyze = async (company: { name: string, domain: string }) => {
     setAnalyzeStatus('running');
-    setCurrentStep(0);
+    startExecution(progressSteps.length);
     
-    // Simulate progress for UX
-    const interval = setInterval(() => {
-      setCurrentStep(prev => (prev < progressSteps.length - 1 ? prev + 1 : prev));
-    }, 2000);
-
+    // Simulate progress while the API call is running
+    const progressInterval = setInterval(() => {
+      setStep((prev: number) => {
+        // Stop simulation at 80% to let real completion signal take over
+        if (prev < progressSteps.length - 2) {
+          return prev + 1;
+        }
+        return prev;
+      });
+    }, 4500); 
+    
     try {
+      console.log(`Starting mission for ${company.name}...`);
       await analyzeCompany(company);
-      clearInterval(interval);
-      setCurrentStep(progressSteps.length - 1);
+      
+      // Critical Path Success
+      clearInterval(progressInterval);
+      setStep(progressSteps.length - 1);
       setAnalyzeStatus('completed');
-      fetchCompetitors(); // Refresh list
-    } catch (error) {
-      clearInterval(interval);
-      setAnalyzeStatus('error');
+      stopExecution();
+      
+      // Non-blocking UI Refresh: Trigger full intelligence re-sync
+      try {
+        await Promise.all([
+          fetchCompetitors(),
+          // Use window access or store state if needed, but for now we ensure 
+          // that the primary competitor list is refreshed.
+          // Note: Full dashboard refresh happens via these store calls
+        ]);
+        
+        // Broadcast a custom event for other components to refresh
+        window.dispatchEvent(new CustomEvent('intelligence-refresh'));
+      } catch (refreshErr) {
+        console.warn('Dashboard sync delayed:', refreshErr);
+      }
+    } catch (error: any) {
+      clearInterval(progressInterval);
+      console.error('Mission failed:', error);
+      
+      // Categorize error for better UX
+      const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
+      if (isTimeout) {
+         setAnalyzeStatus('error');
+         // We could add a specific 'timeout' state if needed
+      } else {
+         setAnalyzeStatus('error');
+      }
+      
+      setStep(0);
+      stopExecution();
+    } finally {
+      clearInterval(progressInterval);
     }
   };
 
   const handleCloseModal = () => {
     setIsAnalyzeModalOpen(false);
-    // Reset status after a delay so the animation finishes
     setTimeout(() => {
       setAnalyzeStatus('idle');
-      setCurrentStep(0);
+      setStep(0);
     }, 300);
   };
 
@@ -109,7 +145,7 @@ const DashboardLayout = () => {
         onAnalyze={handleAnalyze}
         status={analyzeStatus}
         progressSteps={progressSteps}
-        currentStep={currentStep}
+        currentStep={realStep}
       />
     </div>
   );

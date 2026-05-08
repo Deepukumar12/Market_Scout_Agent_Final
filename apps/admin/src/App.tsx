@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, 
   Shield, 
@@ -33,8 +34,60 @@ import {
   Cell
 } from 'recharts';
 import { platformClient } from '@market-scout/platform';
+import { useTheme } from './context/ThemeContext';
+
+const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
+
+const ThemeToggle = () => {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <button
+      onClick={toggleTheme}
+      className="relative w-14 h-8 rounded-full p-1 bg-white/5 border border-white/10 hover:border-blue-500/30 transition-all overflow-hidden flex items-center group shadow-inner"
+    >
+      <motion.div
+        animate={{ 
+          x: theme === 'dark' ? 24 : 0,
+          backgroundColor: theme === 'dark' ? '#0071E3' : '#F5F5F7'
+        }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        className="w-6 h-6 rounded-full flex items-center justify-center shadow-lg relative z-10"
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {theme === 'dark' ? (
+            <motion.div
+              key="sun"
+              initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+              animate={{ opacity: 1, rotate: 0, scale: 1 }}
+              exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Sun size={14} className="text-white fill-current" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="moon"
+              initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+              animate={{ opacity: 1, rotate: 0, scale: 1 }}
+              exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Moon size={14} className="text-[#1D1D1F] fill-current" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+      <div className="absolute inset-0 flex justify-between px-2 items-center opacity-20 pointer-events-none group-hover:opacity-40 transition-opacity">
+        <Moon size={12} className={theme === 'dark' ? 'invisible' : ''} />
+        <Sun size={12} className={theme === 'light' ? 'invisible' : ''} />
+      </div>
+    </button>
+  );
+};
 
 const Gauge = ({ value, label, color }: any) => {
+  const { theme } = useTheme();
   const data = [
     { value: value },
     { value: 100 - value },
@@ -73,20 +126,11 @@ const Gauge = ({ value, label, color }: any) => {
   );
 };
 
-// Real-time analytics simulation (for charts)
-const generateLiveStats = () => [
-  { name: '00:00', requests: 400 + Math.random() * 100, errors: 24, latency: 120 },
-  { name: '04:00', requests: 300 + Math.random() * 100, errors: 13, latency: 150 },
-  { name: '08:00', requests: 900 + Math.random() * 200, errors: 45, latency: 180 },
-  { name: '12:00', requests: 1200 + Math.random() * 300, errors: 21, latency: 110 },
-  { name: '16:00', requests: 1500 + Math.random() * 400, errors: 67, latency: 140 },
-  { name: '20:00', requests: 1100 + Math.random() * 200, errors: 32, latency: 130 },
-  { name: '23:59', requests: 600 + Math.random() * 100, errors: 18, latency: 105 },
-];
+// Removed generateLiveStats mock
 
-const StatCard = ({ title, value, change, icon: Icon, trend, color = 'indigo' }: any) => {
+const StatCard = ({ title, value, change, icon: Icon, trend, color = 'blue' }: any) => {
   const colorMap: any = {
-    indigo: 'from-indigo-500/20 to-indigo-500/5 text-indigo-400 border-indigo-500/20',
+    blue: 'from-blue-500/20 to-blue-500/5 text-[#0071E3] border-blue-500/20',
     emerald: 'from-emerald-500/20 to-emerald-500/5 text-emerald-400 border-emerald-500/20',
     rose: 'from-rose-500/20 to-rose-500/5 text-rose-400 border-rose-500/20',
     amber: 'from-amber-500/20 to-amber-500/5 text-amber-400 border-amber-500/20',
@@ -118,57 +162,201 @@ const StatCard = ({ title, value, change, icon: Icon, trend, color = 'indigo' }:
   );
 };
 
+const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        await platformClient.login(email, password);
+      } else {
+        await platformClient.register({ email, password, full_name: fullName });
+      }
+      onLogin();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[var(--bg-primary)]">
+      {/* Background Effects */}
+      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/20 blur-[150px] rounded-full" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 blur-[150px] rounded-full" />
+      
+      <div className="glass-card w-full max-w-md p-10 rounded-[2.5rem] relative z-10 animate-fade-in">
+        <div className="flex flex-col items-center mb-10">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-600/40 mb-6 group hover:scale-110 transition-transform duration-500">
+            <Shield className="text-white w-8 h-8" />
+          </div>
+          <h1 className="text-4xl font-black text-[var(--text-primary)] tracking-tighter uppercase italic">SCOUT<span className="text-[#0071E3]">IQ</span></h1>
+          <p className="text-[var(--text-secondary)] text-[10px] uppercase tracking-[0.3em] font-black mt-2 italic">Administrative Command</p>
+        </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-xs font-bold flex items-center gap-3 animate-shake">
+            <AlertTriangle size={16} className="shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {!isLogin && (
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-bold ml-1">Full Name</label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Deepu Thakur"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all placeholder:text-[var(--text-secondary)]/30 text-[var(--text-primary)] font-bold italic"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-bold ml-1">Secure Email</label>
+            <div className="relative group">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@marketscout.ai"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all placeholder:text-[var(--text-secondary)]/30 text-[var(--text-primary)] font-bold italic"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-bold ml-1">Cipher Key</label>
+            <div className="relative group">
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all placeholder:text-[var(--text-secondary)]/30 text-[var(--text-primary)] font-bold italic"
+              />
+              <Lock className="absolute right-6 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]/30 group-focus-within:text-blue-400 transition-colors" size={18} />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-[#0071E3] hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 active:scale-95 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-3 mt-4 italic"
+          >
+            {loading ? (
+              <RefreshCw className="animate-spin w-5 h-5" />
+            ) : (
+              <>
+                {isLogin ? 'Initialize Access' : 'Create Admin ID'}
+                <ChevronRight size={18} />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-[10px] uppercase tracking-[0.2em] font-black text-blue-500 hover:text-blue-400 transition-colors italic"
+          >
+            {isLogin ? "Request Higher Access (Signup)" : "Return to Login Console"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const { theme, toggleTheme } = useTheme();
   const [stats, setStats] = useState<any>(null);
   const [competitors, setCompetitors] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [workers, setWorkers] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [chartData, setChartData] = useState(generateLiveStats());
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    // Check if user is already authenticated (token exists in localStorage via PlatformClient)
+    const token = localStorage.getItem('scout_token');
+    setIsAuthenticated(!!token);
+  }, []);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  const handleLogout = () => {
+    platformClient.setToken(null);
+    setIsAuthenticated(false);
   };
 
   const fetchData = async () => {
+    if (!isAuthenticated) return;
     try {
-      const [systemStats, compList] = await Promise.all([
+      const [systemStats, compList, auditLogs, workerNodes, signals] = await Promise.all([
         platformClient.getSystemStats(),
-        platformClient.getCompetitors()
+        platformClient.getCompetitors(),
+        platformClient.getAuditLogs(),
+        platformClient.getWorkers(),
+        platformClient.getChartData()
       ]);
       setStats(systemStats);
       setCompetitors(compList);
-      setChartData(generateLiveStats());
-    } catch (err) {
+      setLogs(auditLogs);
+      setWorkers(workerNodes);
+      setChartData(signals);
+    } catch (err: any) {
       console.error("Failed to fetch live admin data", err);
+      if (err.response?.status === 401) {
+        handleLogout();
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    if (isAuthenticated) {
+      fetchData();
+      const interval = setInterval(fetchData, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
+
+  if (isAuthenticated === null) return null; // Loading state
+  if (!isAuthenticated) return <AuthPortal onLogin={() => setIsAuthenticated(true)} />;
 
   return (
     <div className="min-h-screen flex overflow-hidden transition-colors duration-300">
       {/* Sidebar */}
       <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} glass-card border-r-0 border-white/5 transition-all duration-500 ease-in-out flex flex-col z-30`}>
         <div className="p-8 flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/30 group cursor-pointer shrink-0">
-            <Shield className="text-white w-7 h-7 group-hover:scale-110 transition-transform" />
+          <div className="w-12 h-12 bg-[#0071E3] rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30 group cursor-pointer shrink-0 transition-transform hover:scale-110">
+            <Shield className="text-white w-7 h-7" />
           </div>
           {isSidebarOpen && (
             <div className="flex flex-col overflow-hidden">
-              <span className="font-bold text-xl tracking-tight truncate text-[var(--text-primary)]">Market Scout</span>
-              <span className="text-[10px] uppercase tracking-[0.2em] text-indigo-400 font-bold">Admin Command</span>
+              <span className="font-black text-2xl tracking-tighter uppercase italic text-[var(--text-primary)]">SCOUT<span className="text-[#0071E3]">IQ</span></span>
+              <span className="text-[9px] uppercase tracking-[0.2em] text-[#0071E3] font-black italic">Mission Control</span>
             </div>
           )}
         </div>
@@ -191,7 +379,7 @@ const AdminDashboard = () => {
                   : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]'
               }`}
             >
-              <item.icon size={22} className={activeTab === item.id ? 'text-white' : 'group-hover:text-indigo-400 transition-colors shrink-0'} />
+              <item.icon size={22} className={activeTab === item.id ? 'text-white' : 'group-hover:text-blue-500 transition-colors shrink-0'} />
               {isSidebarOpen && <span className="font-medium">{item.label}</span>}
               {activeTab === item.id && isSidebarOpen && <ChevronRight size={16} className="ml-auto opacity-50" />}
             </button>
@@ -199,16 +387,16 @@ const AdminDashboard = () => {
         </nav>
 
         <div className="p-6 border-t border-white/5 mt-auto">
-          <div className={`flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 ${!isSidebarOpen && 'justify-center'}`}>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-[2px] shrink-0">
-               <div className="w-full h-full rounded-full bg-[var(--bg-primary)] flex items-center justify-center text-xs font-bold text-[var(--text-primary)]">AD</div>
+          <div className={`flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 ${!isSidebarOpen && 'justify-center'} group cursor-pointer hover:bg-rose-500/10 hover:border-rose-500/20 transition-all`} onClick={handleLogout}>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-rose-500 to-orange-500 p-[2px] shrink-0 group-hover:scale-110 transition-transform">
+               <div className="w-full h-full rounded-full bg-[var(--bg-primary)] flex items-center justify-center text-xs font-bold text-[var(--text-primary)]">LO</div>
             </div>
             {isSidebarOpen && (
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-bold truncate text-[var(--text-primary)]">Root Admin</p>
+                <p className="text-sm font-bold truncate text-[var(--text-primary)]">Terminate Session</p>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                  <p className="text-[10px] text-[var(--text-secondary)] uppercase font-bold tracking-wider">Level 10</p>
+                  <div className="w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                  <p className="text-[10px] text-rose-400 uppercase font-bold tracking-wider">Logout</p>
                 </div>
               </div>
             )}
@@ -219,7 +407,7 @@ const AdminDashboard = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {/* Abstract Background Gradients */}
-        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
 
         {/* Header */}
@@ -232,41 +420,39 @@ const AdminDashboard = () => {
               <Menu size={22} />
             </button>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight premium-gradient-text capitalize">{activeTab.replace('-', ' ')}</h1>
-              <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-[0.2em] font-bold">Real-time Feed</p>
+              <h1 className="text-3xl font-black tracking-tighter uppercase italic text-[var(--text-primary)]">{activeTab.replace('-', ' ')}</h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse" />
+                <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-[0.2em] font-black italic">Telemetry Live Feed</p>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-6">
             <div className="relative group hidden xl:block">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-indigo-400 transition-colors" size={18} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-blue-400 transition-colors" size={18} />
               <input 
                 type="text" 
                 placeholder="Search surveillance..." 
-                className="bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-6 w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all placeholder:text-[var(--text-secondary)] font-medium text-[var(--text-primary)]"
+                className="bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-6 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all placeholder:text-[var(--text-secondary)] font-bold italic text-[var(--text-primary)]"
               />
             </div>
             
             <div className="flex items-center gap-4">
               {/* Theme Toggle */}
-              <button 
-                onClick={toggleTheme}
-                className="p-3 glass-card rounded-xl text-[var(--text-secondary)] hover:text-indigo-400 transition-all"
-              >
-                {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
-              </button>
+              <ThemeToggle />
 
-               <button className="relative p-3 glass-card rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all hover:glow-indigo">
+               <button className="relative p-3 glass-card rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all hover:glow-blue">
                 <Bell size={22} />
                 <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-[var(--bg-primary)] animate-pulse" />
               </button>
               
-              <div className="flex flex-col items-end hidden sm:flex">
-                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[10px] font-bold border border-emerald-500/20 uppercase tracking-widest">
-                  <Zap size={12} className="animate-bounce shrink-0" />
-                  Sync Live
+            <div className="flex flex-col items-end hidden sm:flex">
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-[#0071E3] rounded-xl text-[10px] font-black border border-blue-500/20 uppercase tracking-widest italic">
+                  <Zap size={12} className="animate-pulse shrink-0 fill-current" />
+                  Sync Protocol Active
                 </div>
-                <span className="text-[9px] text-[var(--text-secondary)] mt-1 font-bold">Uptime: 100%</span>
+                <span className="text-[9px] text-[var(--text-secondary)] mt-1 font-black uppercase tracking-tighter italic">Precision: 99.9%</span>
               </div>
             </div>
           </div>
@@ -284,7 +470,7 @@ const AdminDashboard = () => {
                   change={stats?.scrapers_change || '+0%'} 
                   icon={Search} 
                   trend="up" 
-                  color="indigo"
+                  color="blue"
                 />
                 <StatCard 
                   title="Intelligence Nodes" 
@@ -317,7 +503,7 @@ const AdminDashboard = () => {
                 <div className="glass-card p-8 rounded-3xl flex flex-col items-center">
                   <h3 className="font-bold text-lg mb-6 self-start text-[var(--text-primary)]">Operational Pulse</h3>
                   <div className="flex justify-around w-full gap-2 sm:gap-4 overflow-x-auto no-scrollbar">
-                    <Gauge value={stats?.cpu_usage || 24} label="CPU Load" color="#6366f1" />
+                    <Gauge value={stats?.cpu_usage || 24} label="CPU Load" color="#0071E3" />
                     <Gauge value={stats?.memory_usage || 58} label="Memory" color="#8b5cf6" />
                     <Gauge value={stats?.success_rate || 98} label="Success" color="#10b981" />
                   </div>
@@ -328,7 +514,7 @@ const AdminDashboard = () => {
                     <h3 className="font-bold text-xl mb-2 text-[var(--text-primary)]">Autonomous Agent Status</h3>
                     <p className="text-[var(--text-secondary)] text-sm max-w-md">Processing {stats?.active_tasks || 0} active surveillance tasks with 100% accuracy.</p>
                     <div className="flex flex-wrap gap-4 mt-6">
-                      <div className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
+                      <div className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap italic">
                         Queue: Optimal
                       </div>
                       <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
@@ -337,7 +523,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                   <div className="absolute right-[-20px] top-[-20px] opacity-5 sm:opacity-10 pointer-events-none">
-                    <Cpu size={200} className="text-indigo-500" />
+                    <Cpu size={200} className="text-blue-500 opacity-20" />
                   </div>
                 </div>
               </div>
@@ -347,16 +533,16 @@ const AdminDashboard = () => {
                 <div className="lg:col-span-2 glass-card p-8 rounded-3xl min-h-[400px]">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                     <div>
-                      <h3 className="font-bold text-xl mb-1 text-[var(--text-primary)]">Global Surveillance Traffic</h3>
-                      <p className="text-xs text-[var(--text-secondary)] font-medium">Real-time throughput across all active nodes</p>
+                      <h3 className="font-black text-xl mb-1 text-[var(--text-primary)] uppercase italic tracking-tighter">Global Signal Throughput</h3>
+                      <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic">Real-time processing volume across active nodes</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                       <button className="flex-1 sm:flex-none bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl text-xs font-bold transition-all text-[var(--text-primary)]">Export</button>
-                       <select className="flex-1 sm:flex-none bg-indigo-600 border-none rounded-xl text-xs font-bold px-4 py-2 text-white focus:ring-2 focus:ring-indigo-400 cursor-pointer shadow-lg shadow-indigo-600/20 outline-none">
+                       <button className="flex-1 sm:flex-none bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-[var(--text-primary)] italic">Export Data</button>
+                       <select className="flex-1 sm:flex-none bg-[#0071E3] border-none rounded-xl text-[10px] font-black uppercase tracking-widest px-4 py-2 text-white focus:ring-2 focus:ring-blue-400 cursor-pointer shadow-lg shadow-blue-600/20 outline-none italic">
                         <option>Real-time</option>
                         <option>24 Hours</option>
                         <option>7 Days</option>
-                      </select>
+                       </select>
                     </div>
                   </div>
                   <div className="h-[300px] w-full">
@@ -364,25 +550,31 @@ const AdminDashboard = () => {
                       <AreaChart data={chartData}>
                         <defs>
                           <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
-                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#0071E3" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="#0071E3" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorErrors" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#FF3B30" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="#FF3B30" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,116,139,0.1)" vertical={false} />
-                        <XAxis dataKey="name" stroke="#475569" fontSize={11} fontWeight={600} tickLine={false} axisLine={false} dy={10} />
-                        <YAxis stroke="#475569" fontSize={11} fontWeight={600} tickLine={false} axisLine={false} />
+                        <XAxis dataKey="name" stroke="#475569" fontSize={11} fontWeight={900} tickLine={false} axisLine={false} dy={10} />
+                        <YAxis stroke="#475569" fontSize={11} fontWeight={900} tickLine={false} axisLine={false} />
                         <Tooltip 
                           contentStyle={{ 
-                            backgroundColor: theme === 'dark' ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)', 
+                            backgroundColor: theme === 'dark' ? 'rgba(10, 10, 12, 0.95)' : 'rgba(255, 255, 255, 0.95)', 
                             border: '1px solid var(--glass-border)', 
-                            borderRadius: '16px', 
-                            backdropFilter: 'blur(10px)', 
-                            boxShadow: 'var(--card-shadow)' 
+                            borderRadius: '24px', 
+                            backdropFilter: 'blur(20px)', 
+                            boxShadow: 'var(--card-shadow)',
+                            padding: '20px'
                           }}
-                          itemStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
-                          cursor={{ stroke: '#6366f1', strokeWidth: 2 }}
+                          itemStyle={{ color: 'var(--text-primary)', fontWeight: 900, textTransform: 'uppercase', fontSize: '10px', letterSpacing: '0.1em' }}
+                          cursor={{ stroke: '#0071E3', strokeWidth: 2 }}
                         />
-                        <Area type="monotone" dataKey="requests" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorRequests)" animationDuration={1000} />
+                        <Area type="monotone" dataKey="requests" name="Signals Processed" stroke="#0071E3" strokeWidth={4} fillOpacity={1} fill="url(#colorRequests)" animationDuration={1500} />
+                        <Area type="monotone" dataKey="errors" name="Anomalies" stroke="#FF3B30" strokeWidth={4} fillOpacity={1} fill="url(#colorErrors)" animationDuration={1500} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -390,37 +582,38 @@ const AdminDashboard = () => {
 
                 <div className="glass-card p-8 rounded-3xl flex flex-col min-h-[400px]">
                   <div className="flex items-center justify-between mb-8">
-                    <h3 className="font-bold text-xl text-[var(--text-primary)]">Critical Alerts</h3>
-                    <BarChart3 size={18} className="text-[var(--text-secondary)]" />
+                    <h3 className="font-black text-xl text-[var(--text-primary)] uppercase italic tracking-tighter">Security Pulse</h3>
+                    <Shield size={18} className="text-[#0071E3]" />
                   </div>
                   <div className="space-y-5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                    {[
-                      { type: 'warning', msg: 'Anomalous traffic on Node-04', time: '2m ago', priority: 'High' },
-                      { type: 'error', msg: 'Redis cache fragmentation @ 84%', time: '15m ago', priority: 'Critical' },
-                      { type: 'info', msg: 'New credential rotation complete', time: '1h ago', priority: 'Low' },
-                      { type: 'warning', msg: 'AI rate limit hit (SerpApi)', time: '3h ago', priority: 'High' },
-                    ].map((alert, i) => (
+                    {logs.length > 0 ? logs.map((alert, i) => (
                       <div key={i} className="flex gap-4 p-4 rounded-2xl hover:bg-white/5 transition-all group border border-transparent hover:border-white/5 cursor-pointer">
-                        <div className={`p-3 rounded-xl h-fit shadow-lg shrink-0 ${
-                          alert.type === 'error' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                          alert.type === 'warning' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                          'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                        }`}>
+                        <div className={cn(
+                          "p-3 rounded-xl h-fit shadow-lg shrink-0",
+                          alert.status === 'Blocked' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                          'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                        )}>
                           <AlertTriangle size={18} />
                         </div>
                         <div className="flex-1 overflow-hidden">
                           <div className="flex justify-between items-center mb-1">
-                            <span className={`text-[9px] font-bold uppercase tracking-wider ${
-                               alert.priority === 'Critical' ? 'text-rose-400' : 'text-[var(--text-secondary)]'
-                            }`}>{alert.priority}</span>
-                            <span className="text-[10px] text-[var(--text-secondary)] font-bold">{alert.time}</span>
+                            <span className={cn(
+                              "text-[9px] font-black uppercase tracking-[0.2em] italic",
+                               alert.status === 'Blocked' ? 'text-rose-400' : 'text-[var(--text-secondary)]'
+                            )}>{alert.status === 'Blocked' ? 'Critical' : 'Info'}</span>
+                            <span className="text-[10px] text-[var(--text-secondary)] font-bold">{new Date(alert.timestamp).toLocaleTimeString()}</span>
                           </div>
-                          <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{alert.msg}</p>
+                          <p className="text-sm font-bold text-[var(--text-primary)] truncate italic">{alert.event}: {alert.user}</p>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <div className="h-full flex flex-col items-center justify-center opacity-20">
+                         <Shield size={40} />
+                         <p className="text-[10px] font-black uppercase tracking-widest mt-4">No Recent Alerts</p>
+                      </div>
+                    )}
                   </div>
-                  <button className="w-full mt-8 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-all border border-white/5 uppercase tracking-widest">
+                  <button className="w-full mt-8 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-all border border-white/5 italic">
                     Clear Secure Logs
                   </button>
                 </div>
@@ -430,26 +623,26 @@ const AdminDashboard = () => {
               <div className="glass-card rounded-3xl overflow-hidden shadow-2xl">
                 <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5">
                   <div>
-                    <h3 className="font-bold text-xl mb-1 text-[var(--text-primary)]">Surveillance Targets</h3>
-                    <p className="text-xs text-[var(--text-secondary)] font-medium">Monitoring {competitors.length} intelligence streams</p>
+                    <h3 className="font-black text-xl mb-1 text-[var(--text-primary)] uppercase italic tracking-tighter">Surveillance Grid</h3>
+                    <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic">Monitoring {competitors.length} active intelligence streams</p>
                   </div>
                   <button 
                     onClick={fetchData}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 bg-[#0071E3] hover:bg-blue-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 active:scale-95 italic"
                   >
                     <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                    Sync Intel
+                    Sync Intel Feed
                   </button>
                 </div>
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left min-w-[700px]">
-                    <thead className="bg-black/5 text-[var(--text-secondary)] text-[10px] uppercase tracking-[0.2em] font-bold">
+                    <thead className="bg-black/5 text-[var(--text-secondary)] text-[10px] uppercase tracking-[0.2em] font-black italic">
                       <tr>
-                        <th className="px-8 py-5">Node Name</th>
-                        <th className="px-8 py-5">Status</th>
-                        <th className="px-8 py-5">Accuracy</th>
-                        <th className="px-8 py-5">Last Scanned</th>
-                        <th className="px-8 py-5">Action</th>
+                        <th className="px-8 py-5">Node Identity</th>
+                        <th className="px-8 py-5">Operational Status</th>
+                        <th className="px-8 py-5">Precision Index</th>
+                        <th className="px-8 py-5">Last Activity</th>
+                        <th className="px-8 py-5 text-right">Intercept</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-sm">
@@ -457,36 +650,36 @@ const AdminDashboard = () => {
                         <tr key={i} className="hover:bg-white/[0.02] transition-colors group">
                           <td className="px-8 py-6">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20 group-hover:scale-110 transition-transform shrink-0">
+                              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <Globe size={16} />
                               </div>
-                              <span className="font-bold text-[var(--text-primary)]">{row.name}</span>
+                              <span className="font-bold text-[var(--text-primary)] italic uppercase tracking-tight">{row.name}</span>
                             </div>
                           </td>
                           <td className="px-8 py-6">
-                            <span className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border ${
+                            <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border italic ${
                               row.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
                               row.status === 'error' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
                               'bg-slate-500/10 text-slate-400 border-white/5'
                             }`}>
-                              {row.status}
+                              {row.status || 'ACTIVE'}
                             </span>
                           </td>
                           <td className="px-8 py-6">
-                             <div className="flex items-center gap-2">
-                                <div className="flex-1 h-1.5 w-20 bg-white/5 rounded-full overflow-hidden">
-                                   <div className="h-full bg-emerald-500 rounded-full" style={{ width: row.success_rate || '100%' }} />
+                             <div className="flex items-center gap-4">
+                                <div className="flex-1 h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
+                                   <div className="h-full bg-[#0071E3] rounded-full animate-pulse" style={{ width: '99%' }} />
                                 </div>
-                                <span className="font-mono text-[10px] text-[var(--text-secondary)]">100%</span>
+                                <span className="font-mono text-[10px] text-[var(--text-secondary)] font-black italic">99.9%</span>
                              </div>
                           </td>
-                          <td className="px-8 py-6 text-[var(--text-secondary)] font-medium">{row.last_scanned || 'Ready'}</td>
+                          <td className="px-8 py-6 text-[var(--text-secondary)] font-black uppercase text-[10px] italic tracking-widest">{row.last_scanned || 'Verified'}</td>
                           <td className="px-8 py-6 text-right">
                             <button 
                               onClick={() => platformClient.triggerScan(row.id)}
-                              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-indigo-600 hover:text-white text-indigo-400 text-xs font-bold transition-all border border-white/5 whitespace-nowrap"
+                              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-[#0071E3] hover:text-white text-[#0071E3] text-[10px] font-black uppercase tracking-widest transition-all border border-white/5 whitespace-nowrap italic shadow-sm"
                             >
-                              Scan Now
+                              Deep Scan
                             </button>
                           </td>
                         </tr>
@@ -494,8 +687,8 @@ const AdminDashboard = () => {
                         <tr>
                           <td colSpan={5} className="px-8 py-20 text-center">
                             <div className="flex flex-col items-center gap-4">
-                               <RefreshCw size={40} className="text-[var(--text-secondary)] animate-spin opacity-20" />
-                               <p className="text-[var(--text-secondary)] font-bold uppercase tracking-widest text-[10px]">Awaiting Intel Feed...</p>
+                               <RefreshCw size={40} className="text-[#0071E3] animate-spin opacity-20" />
+                               <p className="text-[var(--text-secondary)] font-black uppercase tracking-[0.3em] text-[10px] italic">Awaiting Satellite Feed...</p>
                             </div>
                           </td>
                         </tr>
@@ -503,6 +696,266 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'security' && (
+            <div className="space-y-10 fade-in">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                {/* Vault Overview */}
+                <div className="lg:col-span-2 space-y-10">
+                  <div className="glass-card p-10 rounded-[48px] relative overflow-hidden group">
+                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full -mr-32 -mt-32" />
+                     <h3 className="text-2xl font-black text-[var(--text-primary)] uppercase italic tracking-tighter mb-10 flex items-center gap-4">
+                        <Lock className="text-[#0071E3]" size={32} />
+                        Encrypted <span className="text-[#0071E3]">Credential Vault</span>
+                     </h3>
+
+                     <div className="space-y-6">
+                        {[
+                          { name: 'GROQ_API_KEY', status: 'Secured', lastUsed: '4m ago', value: 'sk-proj-••••••••••••••••••••' },
+                          { name: 'MONGODB_URL', status: 'Secured', lastUsed: 'Active', value: 'mongodb+srv://••••••••••••••••••••' },
+                          { name: 'REDIS_TOKEN', status: 'Active', lastUsed: '12s ago', value: 'red-••••••••••••••••••••' },
+                          { name: 'NEWS_API_V2', status: 'Secured', lastUsed: '1h ago', value: 'na-••••••••••••••••••••' },
+                        ].map((key, i) => (
+                          <div key={i} className="p-6 rounded-[32px] bg-white/5 border border-white/5 hover:border-blue-500/30 transition-all group/item flex items-center justify-between">
+                            <div className="space-y-1">
+                               <div className="flex items-center gap-3">
+                                  <span className="text-sm font-black text-[var(--text-primary)] uppercase italic tracking-tight">{key.name}</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase tracking-widest border border-emerald-500/20">{key.status}</span>
+                               </div>
+                               <p className="text-xs font-mono text-[var(--text-secondary)] opacity-50">{key.value}</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                               <span className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic">{key.lastUsed}</span>
+                               <button className="p-3 rounded-2xl bg-white/5 hover:bg-blue-600 text-[var(--text-secondary)] hover:text-white transition-all shadow-sm">
+                                  <RefreshCw size={14} />
+                               </button>
+                            </div>
+                          </div>
+                        ))}
+                     </div>
+
+                     <div className="mt-10 flex gap-4">
+                        <button className="flex-1 py-5 bg-[#0071E3] hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs italic shadow-xl shadow-blue-600/20 transition-all active:scale-95">
+                           Rotate All Credentials
+                        </button>
+                        <button className="px-8 py-5 bg-white/5 hover:bg-white/10 text-[var(--text-primary)] rounded-[24px] font-black uppercase tracking-widest text-xs italic border border-white/10 transition-all">
+                           New Entry
+                        </button>
+                     </div>
+                  </div>
+
+                  <div className="glass-card p-10 rounded-[48px]">
+                     <h3 className="text-xl font-black text-[var(--text-primary)] uppercase italic tracking-tighter mb-8 flex items-center gap-4">
+                        <Activity className="text-emerald-500" size={24} />
+                        Access Log <span className="text-emerald-500">Telemetry</span>
+                     </h3>
+                     <div className="space-y-4">
+                        {logs.length > 0 ? logs.map((log, i) => (
+                          <div key={i} className="flex items-center justify-between p-5 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors cursor-default border border-transparent hover:border-white/5">
+                            <div className="flex items-center gap-6">
+                               <div className={cn(
+                                 "w-2 h-2 rounded-full",
+                                 log.status === 'Success' ? "bg-emerald-500" : "bg-rose-500 animate-pulse"
+                               )} />
+                               <div>
+                                  <p className="text-sm font-black text-[var(--text-primary)] uppercase italic tracking-tight">{log.event}</p>
+                                  <p className="text-[10px] text-[var(--text-secondary)] font-mono uppercase tracking-widest">{log.user} • {log.ip}</p>
+                               </div>
+                            </div>
+                            <span className={cn(
+                              "text-[10px] font-black uppercase tracking-widest italic",
+                              log.status === 'Success' ? "text-emerald-400" : "text-rose-400"
+                            )}>{log.status}</span>
+                          </div>
+                        )) : (
+                          <p className="text-center py-10 text-[var(--text-secondary)] font-black uppercase tracking-widest text-[10px] italic opacity-20">No Security Events Logged</p>
+                        )}
+                     </div>
+                  </div>
+                </div>
+
+                {/* Security sidebar */}
+                <div className="space-y-10">
+                   <div className="glass-card p-8 rounded-[40px] bg-gradient-to-b from-[#0071E3]/10 to-transparent border border-blue-500/20">
+                      <Shield className="w-12 h-12 text-[#0071E3] mb-6" />
+                      <h4 className="text-lg font-black text-[var(--text-primary)] uppercase italic tracking-tighter mb-4">Security Posture</h4>
+                      <div className="space-y-6">
+                         <div className="space-y-2">
+                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest italic">
+                               <span className="text-[var(--text-secondary)]">Threat Shield</span>
+                               <span className="text-[#0071E3]">Active</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                               <div className="h-full bg-[#0071E3] rounded-full w-full" />
+                            </div>
+                         </div>
+                         <div className="space-y-2">
+                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest italic">
+                               <span className="text-[var(--text-secondary)]">Encryption</span>
+                               <span className="text-emerald-400">AES-256</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                               <div className="h-full bg-emerald-500 rounded-full w-full" />
+                            </div>
+                         </div>
+                      </div>
+                      <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic mt-8 leading-relaxed">
+                         System is currently operating under <span className="text-[#0071E3]">Protocol Omega</span>. All signals are encrypted and audited.
+                      </p>
+                   </div>
+
+                   <div className="glass-card p-8 rounded-[40px] border border-rose-500/20">
+                      <h4 className="text-sm font-black text-rose-400 uppercase italic tracking-tighter mb-6 flex items-center gap-2">
+                         <AlertTriangle size={16} />
+                         Danger Zone
+                      </h4>
+                      <div className="space-y-4">
+                         <button className="w-full py-4 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest italic transition-all">
+                            Purge Global Cache
+                         </button>
+                         <button className="w-full py-4 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest italic transition-all">
+                            Initialize System Reset
+                         </button>
+                      </div>
+                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {activeTab === 'database' && (
+            <div className="space-y-10 fade-in">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                 {/* MongoDB Cluster */}
+                 <div className="glass-card p-10 rounded-[48px] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full -mr-32 -mt-32" />
+                    <div className="flex justify-between items-start mb-10">
+                       <div>
+                          <h3 className="text-2xl font-black text-[var(--text-primary)] uppercase italic tracking-tighter">Primary <span className="text-emerald-500">Data Cluster</span></h3>
+                          <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic mt-1">MongoDB Atlas Shard: scout-prod-01</p>
+                       </div>
+                       <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-[10px] font-black uppercase tracking-widest italic">Healthy</div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6 mb-10">
+                       <div className="p-6 rounded-[32px] bg-white/5 border border-white/5">
+                          <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic mb-2">Total Documents</p>
+                          <p className="text-2xl font-black text-[var(--text-primary)] italic">{stats?.total_competitors || '4.2k'}</p>
+                       </div>
+                       <div className="p-6 rounded-[32px] bg-white/5 border border-white/5">
+                          <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic mb-2">Storage Used</p>
+                          <p className="text-2xl font-black text-[var(--text-primary)] italic">842 MB</p>
+                       </div>
+                       <div className="p-6 rounded-[32px] bg-white/5 border border-white/5">
+                          <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic mb-2">Connections</p>
+                          <p className="text-2xl font-black text-[var(--text-primary)] italic">124</p>
+                       </div>
+                       <div className="p-6 rounded-[32px] bg-white/5 border border-white/5">
+                          <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic mb-2">IOPS</p>
+                          <p className="text-2xl font-black text-[var(--text-primary)] italic">1.2k</p>
+                       </div>
+                    </div>
+
+                    <button className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-[24px] font-black uppercase tracking-widest text-xs italic shadow-xl shadow-emerald-600/20 transition-all active:scale-95">
+                       Optimize Index Structures
+                    </button>
+                 </div>
+
+                 {/* Redis Cache Cluster */}
+                 <div className="glass-card p-10 rounded-[48px] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 blur-[100px] rounded-full -mr-32 -mt-32" />
+                    <div className="flex justify-between items-start mb-10">
+                       <div>
+                          <h3 className="text-2xl font-black text-[var(--text-primary)] uppercase italic tracking-tighter">In-Memory <span className="text-rose-500">Acceleration</span></h3>
+                          <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic mt-1">Redis Enterprise: cloud-cache-scout</p>
+                       </div>
+                       <div className="px-4 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-[10px] font-black uppercase tracking-widest italic">Optimized</div>
+                    </div>
+
+                    <div className="space-y-6 mb-10">
+                       <div className="space-y-2">
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest italic">
+                             <span className="text-[var(--text-secondary)]">Cache Hit Rate</span>
+                             <span className="text-rose-400">94.2%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                             <div className="h-full bg-rose-500 rounded-full w-[94%]" />
+                          </div>
+                       </div>
+                       <div className="space-y-2">
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest italic">
+                             <span className="text-[var(--text-secondary)]">Memory Fragmentation</span>
+                             <span className="text-emerald-400">Low (1.02)</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                             <div className="h-full bg-emerald-500 rounded-full w-[10%]" />
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                       <button className="flex-1 py-5 bg-rose-500 hover:bg-rose-400 text-white rounded-[24px] font-black uppercase tracking-widest text-xs italic transition-all shadow-xl shadow-rose-600/20 active:scale-95">
+                          Flush Cache
+                       </button>
+                       <button className="flex-1 py-5 bg-white/5 hover:bg-white/10 text-[var(--text-primary)] rounded-[24px] font-black uppercase tracking-widest text-xs italic border border-white/10 transition-all">
+                          Scale Cluster
+                       </button>
+                    </div>
+                 </div>
+              </div>
+            </div>
+          )}
+          {activeTab === 'workers' && (
+            <div className="space-y-10 fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {workers.length > 0 ? workers.map((node, i) => (
+                  <div key={i} className="glass-card p-8 rounded-[40px] relative overflow-hidden group hover:scale-[1.02] transition-all">
+                    <div className="flex justify-between items-start mb-6">
+                       <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
+                          <Cpu size={24} />
+                       </div>
+                       <span className={cn(
+                          "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest italic border",
+                          node.status === 'High Load' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
+                          node.status === 'Active' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                          "bg-white/5 text-[var(--text-secondary)] border-white/5"
+                       )}>{node.status}</span>
+                    </div>
+                    
+                    <h4 className="text-lg font-black text-[var(--text-primary)] uppercase italic tracking-tighter mb-1">{node.id}</h4>
+                    <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-[0.2em] italic mb-6">{node.region}</p>
+                    
+                    <div className="space-y-4">
+                       <div className="space-y-2">
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest italic">
+                             <span className="text-[var(--text-secondary)]">Compute Load</span>
+                             <span className={node.load > 80 ? "text-rose-400" : "text-blue-400"}>{node.load}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                             <div 
+                               className={cn("h-full rounded-full transition-all duration-1000", node.load > 80 ? "bg-rose-500" : "bg-[#0071E3]")} 
+                               style={{ width: `${node.load}%` }} 
+                             />
+                          </div>
+                       </div>
+                       <div className="flex justify-between items-center py-2 border-t border-white/5">
+                          <span className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic">Active Tasks</span>
+                          <span className="text-sm font-black text-[var(--text-primary)]">{node.tasks}</span>
+                       </div>
+                    </div>
+
+                    <button className="w-full mt-6 py-3 bg-white/5 hover:bg-[#0071E3] hover:text-white text-[var(--text-secondary)] text-[10px] font-black uppercase tracking-widest italic rounded-2xl transition-all border border-white/10">
+                       Rebalance Node
+                    </button>
+                  </div>
+                )) : (
+                  <div className="col-span-full py-20 text-center opacity-20">
+                     <Cpu size={60} className="mx-auto mb-4 animate-pulse" />
+                     <p className="text-[10px] font-black uppercase tracking-[0.3em] italic">No Satellite Nodes Connected</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

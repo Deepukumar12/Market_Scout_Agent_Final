@@ -62,9 +62,21 @@ async def post_scan(
                     "market_cap": (result.financials or {}).get("market_cap")
                 }
             }
+            upsert_data = {
+                "$set": update_data,
+                "$setOnInsert": {
+                    "name": body.company_name,
+                    "url": body.website or "",
+                    "user_id": str(current_user.id),
+                    "monitoring_enabled": True,
+                    "scan_frequency": "Daily",
+                    "created_at": now
+                }
+            }
             await db.db["competitors"].update_one(
                 {"name": {"$regex": f"^{body.company_name}$", "$options": "i"}},
-                {"$set": update_data}
+                upsert_data,
+                upsert=True
             )
 
         report_doc = result.model_dump()

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Loader2, CheckCircle2, ChevronRight } from 'lucide-react';
+import { X, Search, Loader2, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { searchCompanies } from '@/services/api';
 
@@ -249,43 +249,74 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                     />
                   </div>
                   
-                  <div className="space-y-4">
-                    {progressSteps.map((step, index) => (
-                      <div 
-                        key={index}
-                        className={cn(
-                          "flex items-center gap-4 transition-opacity",
-                          index > currentStep ? "opacity-30" : "opacity-100"
-                        )}
-                      >
-                        {status === 'completed' || index < currentStep ? (
-                          <CheckCircle2 size={24} className="text-[#34C759]" />
-                        ) : index === currentStep ? (
-                          <Loader2 size={24} className="text-[#0071E3] animate-spin" />
-                        ) : (
-                          <div className="w-6 h-6 border-2 border-[#E5E5EA] dark:border-white/10 rounded-full" />
-                        )}
-                        <span className={cn(
-                          "text-base font-bold italic tracking-tight uppercase",
-                          index === currentStep ? "text-[#1D1D1F] dark:text-white" : "text-[#6E6E73] dark:text-[#86868B]"
-                        )}>
-                          {step}
-                        </span>
+                  {status === 'error' ? (
+                    <div className="p-10 text-center space-y-6">
+                      <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto text-rose-500">
+                        <AlertCircle size={40} />
                       </div>
-                    ))}
-                  </div>
-
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">System Error</h3>
+                        <p className="text-sm text-[#86868B] font-medium leading-relaxed">
+                          The intelligence pipeline encountered an anomaly while synthesizing data. Please verify your connection or try a different company.
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={() => {
+                          onAnalyze({ name: company, domain: '', logo: '' });
+                        }}
+                        className="w-full h-14 rounded-2xl bg-[#0071E3] text-white font-bold"
+                      >
+                        Retry Mission
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {progressSteps.map((step, index) => (
+                        <div 
+                          key={index}
+                          className={cn(
+                            "flex items-center gap-4 transition-opacity",
+                            index > currentStep ? "opacity-30" : "opacity-100"
+                          )}
+                        >
+                          {status === 'completed' || index < currentStep ? (
+                            <CheckCircle2 size={24} className="text-[#34C759]" />
+                          ) : index === currentStep ? (
+                            <Loader2 size={24} className="text-[#0071E3] animate-spin" />
+                          ) : (
+                            <div className="w-6 h-6 border-2 border-[#E5E5EA] dark:border-white/10 rounded-full" />
+                          )}
+                          <span className={cn(
+                            "text-base font-bold italic tracking-tight uppercase",
+                            index === currentStep ? "text-[#1D1D1F] dark:text-white" : "text-[#6E6E73] dark:text-[#86868B]"
+                          )}>
+                            {step}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
                   {status === 'completed' && (
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="pt-6"
+                      className="pt-6 space-y-4"
                     >
+                      <div className="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex items-center gap-4">
+                        <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0">
+                          <CheckCircle2 size={24} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#1D1D1F] dark:text-white">Intelligence Secured</p>
+                          <p className="text-xs text-[#86868B]">A new technical report has been generated for {company}.</p>
+                        </div>
+                      </div>
                       <Button 
                         onClick={onClose}
-                        className="w-full h-14 rounded-2xl bg-[#34C759] hover:bg-[#2FB350] text-white font-bold"
+                        className="w-full h-14 rounded-2xl bg-[#0071E3] hover:bg-[#0077ED] text-white font-bold"
                       >
-                        View Full Report
+                        Access Command Center
                       </Button>
                     </motion.div>
                   )}

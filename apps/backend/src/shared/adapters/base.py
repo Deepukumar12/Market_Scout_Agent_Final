@@ -32,8 +32,9 @@ class BaseAdapter(ABC):
         """
         Orchestrator method with retries and error handling.
         """
-        if not self.api_key:
-            logger.warning(f"Skipping {self.provider_name}: API key missing.")
+        is_placeholder = not self.api_key or "your_" in self.api_key.lower() or "placeholder" in self.api_key.lower()
+        if is_placeholder:
+            logger.warning(f"Skipping {self.provider_name}: API key not configured or is placeholder.")
             return None
 
         max_retries = 3
