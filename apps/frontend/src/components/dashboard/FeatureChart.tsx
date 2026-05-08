@@ -58,16 +58,19 @@ const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
             />
             <Tooltip 
               contentStyle={{ 
-                backgroundColor: 'rgba(255,255,255,0.9)', 
-                backdropFilter: 'blur(12px)',
-                borderRadius: '16px', 
-                border: '1px solid #E5E5EA',
-                boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+                backgroundColor: 'rgba(255,255,255,0.95)', 
+                borderColor: 'rgba(229, 229, 234, 0.5)',
+                color: '#1D1D1F',
+                borderRadius: '24px', 
+                border: '1px solid rgba(229, 229, 234, 0.5)',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
                 fontSize: '12px',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
               }}
-              itemStyle={{ fontWeight: 'bold' }}
-              labelStyle={{ color: '#86868B', marginBottom: '4px', textTransform: 'uppercase', fontSize: '10px' }}
+              itemStyle={{ fontWeight: '900', color: '#1D1D1F' }}
+              labelStyle={{ color: '#86868B', marginBottom: '8px', textTransform: 'uppercase', fontSize: '10px', fontWeight: '900', letterSpacing: '0.1em' }}
             />
             <Legend 
               verticalAlign="top" 

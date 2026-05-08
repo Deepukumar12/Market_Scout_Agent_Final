@@ -53,7 +53,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
       } else {
         setSuggestions([]);
       }
-    }, 300);
+    }, 200); // Faster debounce for real-time feel
 
     return () => clearTimeout(timer);
   }, [company, showSuggestions]);
@@ -263,11 +263,11 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                         ) : index === currentStep ? (
                           <Loader2 size={24} className="text-[#0071E3] animate-spin" />
                         ) : (
-                          <div className="w-6 h-6 border-2 border-[#E5E5EA] rounded-full" />
+                          <div className="w-6 h-6 border-2 border-[#E5E5EA] dark:border-white/10 rounded-full" />
                         )}
                         <span className={cn(
-                          "text-base font-semibold",
-                          index === currentStep ? "text-[#1D1D1F] dark:text-white" : "text-[#6E6E73]"
+                          "text-base font-bold italic tracking-tight uppercase",
+                          index === currentStep ? "text-[#1D1D1F] dark:text-white" : "text-[#6E6E73] dark:text-[#86868B]"
                         )}>
                           {step}
                         </span>

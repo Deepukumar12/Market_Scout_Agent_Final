@@ -29,7 +29,7 @@ const ActivityTimeline = ({ days }: ActivityTimelineProps) => {
       case 'price': return <Zap className="text-amber-500" size={16} />;
       case 'risk': return <Shield className="text-rose-500" size={16} />;
       case 'sentiment': return <TrendingUp className="text-purple-500" size={16} />;
-      default: return <Circle className="text-slate-400" size={16} />;
+      default: return <Circle className="text-[#86868B] dark:text-[#A1A1A6]" size={16} />;
     }
   };
 

@@ -71,10 +71,10 @@ const AddCompetitorPage = () => {
     <div className="max-w-4xl mx-auto py-12 px-6">
       <div className="text-center mb-16">
         <h1 className="text-5xl font-black text-[#1D1D1F] dark:text-white tracking-tighter mb-4 uppercase italic">Add <span className="text-[#0071E3]">Competitor</span></h1>
-        <p className="text-lg text-[#6E6E73] font-medium italic">ScoutIQ will analyze the digital footprint and extract strategic signals.</p>
+        <p className="text-lg text-[#6E6E73] dark:text-[#86868B] font-medium italic">ScoutIQ will analyze the digital footprint and extract strategic signals.</p>
       </div>
 
-      <div className="bg-white/70 backdrop-blur-xl rounded-[48px] p-12 shadow-apple border border-[#E5E5EA] shadow-sm">
+      <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl rounded-[48px] p-12 shadow-apple border border-[#E5E5EA] dark:border-white/10 shadow-sm transition-colors duration-500">
         <form onSubmit={handleAdd} className="space-y-8">
           <div className="relative group">
             <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-[#86868B] dark:text-[#A1A1A6] group-focus-within:text-[#0071E3] transition-colors">
@@ -85,7 +85,7 @@ const AddCompetitorPage = () => {
               placeholder="https://competitor.com"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="h-20 pl-16 pr-8 rounded-3xl bg-[#F5F5F7] border-transparent focus:border-[#0071E3] focus:ring-4 focus:ring-[#0071E3]/10 text-xl font-medium transition-all"
+              className="h-20 pl-16 pr-8 rounded-3xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border-transparent dark:text-white focus:border-[#0071E3] focus:ring-4 focus:ring-[#0071E3]/10 text-xl font-medium transition-all"
               required
             />
           </div>
@@ -115,7 +115,7 @@ const AddCompetitorPage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mt-8 p-6 rounded-2xl bg-[#FFF2F2] border border-[#FF3B30]/20 text-[#FF3B30] font-bold text-center"
+              className="mt-8 p-6 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-center italic uppercase text-xs tracking-widest"
             >
               {error}
             </motion.div>
@@ -126,13 +126,13 @@ const AddCompetitorPage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mt-8 p-8 rounded-[32px] bg-[#EBFBF0] border border-[#34C759]/20 text-center"
+              className="mt-8 p-8 rounded-[32px] bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-center"
             >
-              <div className="w-16 h-16 rounded-full bg-[#34C759] flex items-center justify-center text-white mx-auto mb-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-emerald-500/30">
                 <CheckCircle2 size={32} />
               </div>
-              <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-white mb-1">Analysis Complete</h3>
-              <p className="text-[#34C759] font-bold uppercase tracking-widest text-xs">Competitor added to watchlist</p>
+              <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-white mb-1 uppercase tracking-tighter italic">Analysis Complete</h3>
+              <p className="text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-[0.2em] text-[10px] italic">Competitor added to watchlist</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -144,12 +144,12 @@ const AddCompetitorPage = () => {
           { icon: Zap, title: "Real-time Signals", desc: "Monitors product launches and market movements." },
           { icon: Shield, title: "Risk Assessment", desc: "Evaluates competitive threats and market positioning." }
         ].map((item, i) => (
-          <div key={i} className="p-10 rounded-[40px] bg-white/70 backdrop-blur-xl border border-[#E5E5EA] shadow-apple shadow-sm text-center">
-            <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA] flex items-center justify-center text-[#0071E3] mx-auto mb-6">
+          <div key={i} className="p-10 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple shadow-sm text-center transition-all hover:scale-105">
+            <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 flex items-center justify-center text-[#0071E3] mx-auto mb-6 shadow-sm">
               <item.icon size={24} />
             </div>
             <h4 className="text-lg font-black text-[#1D1D1F] dark:text-white mb-2 uppercase italic tracking-tighter">{item.title}</h4>
-            <p className="text-sm text-[#6E6E73] font-medium leading-relaxed">{item.desc}</p>
+            <p className="text-sm text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed italic">{item.desc}</p>
           </div>
         ))}
       </div>

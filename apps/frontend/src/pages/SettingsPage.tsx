@@ -201,18 +201,18 @@ const SettingsPage = () => {
         <div className="lg:col-span-1 space-y-6">
           <SectionCard title="Profile Information" icon={<User className="w-5 h-5 text-[#0071E3]" />}>
              <div className="flex flex-col items-center py-6 text-center space-y-4">
-                 <div className="w-24 h-24 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 flex items-center justify-center text-3xl font-black text-[#0071E3] shadow-inner uppercase italic">
+                 <div className="w-24 h-24 rounded-full bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 flex items-center justify-center text-3xl font-black text-[#0071E3] shadow-inner uppercase italic">
                     {user?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
                  </div>
                  <div>
                     <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">{user?.full_name || 'User'}</h3>
-                    <p className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase tracking-[0.2em]">{user?.email}</p>
+                    <p className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-black uppercase tracking-[0.2em] italic">{user?.email}</p>
                  </div>
                  <div className="flex gap-2 pt-2">
-                    <span className="px-3 py-1 rounded-full bg-[#0071E3]/10 border border-[#0071E3]/20 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
+                    <span className="px-3 py-1 rounded-full bg-[#0071E3]/10 border border-[#0071E3]/20 text-[9px] font-black text-[#0071E3] uppercase tracking-widest italic">
                        {user?.role || 'Intelligence Plan'}
                     </span>
-                    <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1 italic">
                        <Check className="w-3 h-3" /> Verified
                     </span>
                  </div>
@@ -271,7 +271,7 @@ const SettingsPage = () => {
                         type="text"
                         value={profileForm.full_name}
                         onChange={(e) => setProfileForm({...profileForm, full_name: e.target.value})}
-                        className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                        className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                         placeholder="Your full name"
                       />
                    </div>
@@ -281,7 +281,7 @@ const SettingsPage = () => {
                         type="email"
                         value={profileForm.email}
                         onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
-                        className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                        className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                         placeholder="Your email"
                       />
                    </div>
@@ -462,7 +462,7 @@ const SettingsPage = () => {
                         type="password"
                         value={apiConfig.geminiKey}
                         onChange={(e) => setApiConfig({...apiConfig, geminiKey: e.target.value})}
-                        className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                        className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                       />
                    </div>
                    <div className="space-y-3">
@@ -471,7 +471,7 @@ const SettingsPage = () => {
                         type="password"
                         value={apiConfig.groqKey}
                         onChange={(e) => setApiConfig({...apiConfig, groqKey: e.target.value})}
-                        className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
+                        className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-[#1D1D1F] dark:text-white outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
                       />
                    </div>
                 </div>

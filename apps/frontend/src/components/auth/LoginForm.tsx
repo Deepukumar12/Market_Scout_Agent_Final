@@ -37,13 +37,12 @@ export function LoginForm() {
 
   return (
     <div className="w-full max-w-sm mx-auto">
-      {/* Apple-style Logo Header */}
       <div className="text-center mb-12">
-        <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#1D1D1F] text-white shadow-apple-large mb-8 transition-transform hover:scale-105 active:scale-95">
+        <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#1D1D1F] dark:bg-white text-white dark:text-black shadow-apple-large mb-8 transition-transform hover:scale-105 active:scale-95">
           <Zap className="w-8 h-8" />
         </Link>
         <h1 className="text-4xl font-bold tracking-tight text-[#1D1D1F] dark:text-white mb-3">Sign in.</h1>
-        <p className="text-sm font-medium text-[#6E6E73]">Use your ScoutIQ credentials.</p>
+        <p className="text-sm font-medium text-[#6E6E73] dark:text-[#86868B]">Use your ScoutIQ credentials.</p>
       </div>
 
       <Form {...form}>
@@ -54,14 +53,14 @@ export function LoginForm() {
             render={({ field }) => (
               <FormItem className="space-y-0">
                 <FormControl>
-                   <div className="relative group">
-                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868B] dark:text-[#A1A1A6] transition-colors group-focus-within:text-[#0071E3]" />
-                     <Input 
-                      placeholder="Email Address" 
-                      {...field} 
-                      className="bg-white border-[#E5E5EA] text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
-                    />
-                   </div>
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868B] dark:text-[#A1A1A6] transition-colors group-focus-within:text-[#0071E3]" />
+                      <Input 
+                       placeholder="Email Address" 
+                       {...field} 
+                       className="bg-white dark:bg-white/5 border-[#E5E5EA] dark:border-white/10 text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
+                     />
+                    </div>
                 </FormControl>
                 <FormMessage className="text-[10px] font-bold text-rose-500 mt-2 ml-2" />
               </FormItem>
@@ -79,7 +78,7 @@ export function LoginForm() {
                       type="password" 
                       placeholder="Access Key" 
                       {...field} 
-                      className="bg-white border-[#E5E5EA] text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
+                      className="bg-white dark:bg-white/5 border-[#E5E5EA] dark:border-white/10 text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
                     />
                   </div>
                 </FormControl>
@@ -92,7 +91,7 @@ export function LoginForm() {
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-[11px] font-bold uppercase tracking-tight italic flex items-center gap-2"
+              className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-bold uppercase tracking-tight italic flex items-center gap-2"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
               {error}
@@ -111,17 +110,17 @@ export function LoginForm() {
           
           <div className="relative py-4">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-[#E5E5EA]" />
+              <span className="w-full border-t border-[#E5E5EA] dark:border-white/10" />
             </div>
             <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-black italic">
-              <span className="bg-[#F5F5F7] px-4 text-[#86868B]">OR</span>
+              <span className="bg-white dark:bg-black px-4 text-[#86868B] dark:text-[#A1A1A6]">OR</span>
             </div>
           </div>
 
           <Button 
             type="button" 
             variant="ghost" 
-            className="w-full text-[#1D1D1F] dark:text-white hover:bg-white rounded-full h-14 font-bold text-sm"
+            className="w-full text-[#1D1D1F] dark:text-white hover:bg-white dark:hover:bg-white/10 rounded-full h-14 font-bold text-sm"
             onClick={() => {
                 form.setValue("email", "demo@scoutiq.ai");
                 form.setValue("password", "demo123");

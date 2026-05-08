@@ -14,9 +14,9 @@ export function AuthLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] dark:text-white flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000] text-[#1D1D1F] dark:text-white flex flex-col lg:flex-row overflow-hidden transition-colors duration-500">
        {/* Left Side: Branding & Visuals (Hidden on small screens) */}
-       <div className="hidden lg:flex lg:w-1/2 relative bg-white border-r border-[#E5E5EA] flex-col overflow-hidden">
+       <div className="hidden lg:flex lg:w-1/2 relative bg-white dark:bg-[#1C1C1E] border-r border-[#E5E5EA] dark:border-white/10 flex-col overflow-hidden">
           {/* Decorative Background */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#0071E3]/5 rounded-full blur-[100px]" />
@@ -38,7 +38,7 @@ export function AuthLayout() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-[#E5E5EA] shadow-apple-sm mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm mb-6">
                 <Sparkles size={14} className="text-[#0071E3]" />
                 <span className="text-[10px] font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider">Secure Access</span>
               </div>
@@ -55,7 +55,6 @@ export function AuthLayout() {
           {/* Globe Canvas */}
           <div className="flex-1 relative">
             <Canvas camera={{ position: [0, 0, 7], fov: 45 }} className="w-full h-full cursor-grab active:cursor-grabbing">
-              <color attach="background" args={['#FFFFFF']} />
               <ambientLight intensity={0.8} />
               <pointLight position={[10, 10, 10]} intensity={1.5} />
               
@@ -68,14 +67,14 @@ export function AuthLayout() {
 
             {/* Float UI Mockup */}
             <div className="absolute bottom-12 left-12 right-12 grid grid-cols-2 gap-6 pb-4">
-               <div className="p-5 bg-white/70 backdrop-blur-xl rounded-[24px] border border-[#E5E5EA] shadow-apple">
+               <div className="p-5 bg-white/70 dark:bg-black/70 backdrop-blur-xl rounded-[24px] border border-[#E5E5EA] dark:border-white/10 shadow-apple">
                   <div className="flex items-center gap-3 mb-2">
                     <Activity size={16} className="text-[#0071E3]" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6]">Signal Flow</span>
                   </div>
                   <div className="text-2xl font-black text-[#1D1D1F] dark:text-white">ACTIVE</div>
                </div>
-               <div className="p-5 bg-white/70 backdrop-blur-xl rounded-[24px] border border-[#E5E5EA] shadow-apple">
+               <div className="p-5 bg-white/70 dark:bg-black/70 backdrop-blur-xl rounded-[24px] border border-[#E5E5EA] dark:border-white/10 shadow-apple">
                   <div className="flex items-center gap-3 mb-2">
                     <Shield size={16} className="text-[#34C759]" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6]">Verified</span>
@@ -87,7 +86,7 @@ export function AuthLayout() {
        </div>
 
        {/* Right Side: Form Content */}
-       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#F5F5F7] lg:bg-white/30 relative">
+       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#F5F5F7] dark:bg-[#000] lg:bg-white/30 dark:lg:bg-[#000]/30 relative transition-colors duration-500">
           {/* Background Gradient for mobile */}
           <div className="lg:hidden absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-[#0071E3]/5 rounded-full blur-[100px]" />

@@ -95,7 +95,7 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
             </h3>
             <span className="text-[10px] font-black text-[#86868B] uppercase tracking-widest">Live API Feed</span>
           </div>
-          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200">
+          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
             {report.news && report.news.length > 0 ? report.news.map((item, i) => (
               <motion.a 
                 key={i}
@@ -105,20 +105,20 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="block p-6 rounded-3xl bg-white border border-[#E5E5EA] dark:bg-[#1D1D1F] dark:border-white/10 hover:border-[#0071E3]/30 hover:shadow-apple-sm transition-all group"
+                className="block p-6 rounded-3xl bg-white/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 hover:border-[#0071E3]/30 hover:shadow-apple-sm transition-all group"
               >
-                <div className="text-[9px] font-black text-[#86868B] uppercase tracking-widest mb-2 flex items-center gap-2">
-                  {item.source} • {new Date(item.published_at).toLocaleDateString()}
+                <div className="text-[9px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-3 flex items-center gap-2 italic">
+                  {item.source} • {new Date(item.published_at).toLocaleDateString('en-IN')}
                 </div>
-                <h4 className="text-sm font-bold text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors line-clamp-2">
+                <h4 className="text-sm font-black text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors line-clamp-2 uppercase italic tracking-tight">
                   {item.title}
                 </h4>
-                <p className="text-xs text-[#6E6E73] dark:text-[#A1A1A6] mt-2 line-clamp-2 leading-relaxed">
+                <p className="text-xs text-[#6E6E73] dark:text-[#86868B] mt-3 line-clamp-2 leading-relaxed font-medium italic">
                   {item.description}
                 </p>
               </motion.a>
             )) : (
-              <div className="py-20 text-center text-[#86868B] italic">No real-time news articles detected.</div>
+              <div className="py-20 text-center text-[#86868B] dark:text-[#A1A1A6] font-black uppercase tracking-widest italic">No real-time news articles detected.</div>
             )}
           </div>
         </div>

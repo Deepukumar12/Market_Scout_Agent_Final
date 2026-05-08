@@ -96,224 +96,104 @@ export default function LandingPage() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-[#F5F5F7] dark:bg-background text-[#1D1D1F] dark:text-white selection:bg-[#0071E3]/20 font-sans antialiased overflow-x-hidden">
+    <div ref={containerRef} className="min-h-screen bg-white dark:bg-[#000] text-[#1D1D1F] dark:text-white selection:bg-[#0071E3] selection:text-white transition-colors duration-500 overflow-x-hidden">
       
-      {/* Navigation */}
-      <motion.nav 
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="fixed top-0 w-full z-50 px-6 py-6"
-      >
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between backdrop-blur-2xl bg-white/80 rounded-full border border-[#E5E5EA] dark:border-white/10 px-8 py-4 shadow-apple">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#0071E3] flex items-center justify-center shadow-apple">
-                <Zap className="w-5 h-5 text-white" />
+      {/* Navigation Layer */}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-b border-[#F5F5F7] dark:border-white/5">
+        <div className="max-w-[1440px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="w-8 h-8 bg-[#0071E3] rounded-lg flex items-center justify-center group-hover:rotate-12 transition-transform shadow-lg shadow-[#0071E3]/30">
+                <Globe className="text-white w-5 h-5" />
               </div>
-              <span className="text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-white">
-                Scout<span className="text-[#0071E3]"> Agent</span>
-              </span>
+              <span className="text-lg font-black uppercase tracking-tighter italic">Market Scout</span>
             </Link>
-
-            <div className="hidden md:flex items-center gap-10">
-              {['Features', 'Intelligence', 'Security'].map((item) => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="text-sm font-bold text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] dark:text-white transition-colors uppercase tracking-widest text-[10px]">
-                  {item}
-                </a>
+            
+            <div className="hidden md:flex items-center gap-6">
+              {['Features', 'Intelligence', 'Sectors', 'Network'].map(item => (
+                <a key={item} href={`#${item.toLowerCase()}`} className="text-sm font-bold text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white transition-colors uppercase tracking-widest italic">{item}</a>
               ))}
             </div>
+          </div>
 
-            <div className="flex items-center gap-4">
-              <button
-                onClick={toggleTheme}
-                className="p-2.5 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white hover:bg-[#E5E5EA] dark:hover:bg-[#3A3A3C] transition-all"
-              >
-                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-              </button>
-              {token ? (
-                <Link to="/dashboard">
-                  <Button className="bg-[#0071E3] hover:bg-[#0077ED] text-white px-8 py-2.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-apple transition-all">
-                    Dashboard
-                  </Button>
-                </Link>
-              ) : (
-                <>
-                  <Link to="/login" className="text-[10px] font-black text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] dark:text-white dark:hover:text-white px-4 uppercase tracking-widest italic">Sign In</Link>
-                  <Link to="/register">
-                    <Button className="bg-[#1D1D1F] dark:bg-white dark:text-[#1D1D1F] dark:text-white hover:bg-[#323235] dark:hover:bg-gray-200 text-white px-8 py-2.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-apple transition-all">
-                      Get Started
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-white/10 text-[#6E6E73] dark:text-[#86868B] transition-colors"
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+            <Link to="/login" className="text-sm font-bold text-[#1D1D1F] dark:text-white hover:opacity-70 transition-opacity uppercase tracking-widest italic">Login</Link>
+            <Link to="/register">
+              <Button size="sm" className="bg-[#1D1D1F] dark:bg-white text-white dark:text-black font-black uppercase tracking-widest h-10 px-6 rounded-full italic shadow-apple hover:scale-105 transition-all">
+                Join Network
+              </Button>
+            </Link>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* Hero Section */}
-      <motion.section 
-        style={{ scale: heroScale, opacity: heroOpacity }}
-        className="relative min-h-screen flex items-center justify-center text-center px-8"
-      >
-        <div className="max-w-5xl mx-auto z-10 space-y-8">
-           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-           >
-             <FeatureLabel>Version 1.0 Stable</FeatureLabel>
-             <h1 className="text-8xl md:text-[160px] font-black tracking-tighter leading-[0.8] uppercase italic text-[#1D1D1F] dark:text-white">
-                Autonomous <br />
-                <span className="text-[#0071E3]">Signals.</span>
-             </h1>
-             <p className="mt-12 text-xl md:text-2xl text-[#6E6E73] dark:text-[#86868B] font-medium italic max-w-2xl mx-auto leading-relaxed">
-                The world's first autonomous competitive intelligence network. Built for the era of hyper-velocity technical shifts.
-             </p>
-           </motion.div>
-
-           <motion.div 
-             initial={{ opacity: 0, y: 20 }}
-             animate={{ opacity: 1, y: 0 }}
-             transition={{ duration: 0.8, delay: 0.2 }}
-             className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-12"
-           >
-              <Link to={token ? "/dashboard" : "/register"}>
-                <Button size="lg" className="h-16 px-12 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white text-[12px] font-black uppercase tracking-widest shadow-apple-large group">
-                  {token ? "Resume Intelligence" : "Initiate Exploration"}
-                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Button size="lg" variant="outline" className="h-16 px-12 rounded-full border-[#E5E5EA] dark:border-white/10 text-[#1D1D1F] dark:text-white text-[12px] font-black uppercase tracking-widest hover:bg-white shadow-apple-sm">
-                Watch Technical Briefing
-              </Button>
-           </motion.div>
+      <section className="relative pt-48 pb-32 px-6 bg-[#F5F5F7] dark:bg-[#000]">
+         <div className="max-w-[1440px] mx-auto text-center space-y-12">
+            <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-white dark:bg-white/10 border border-[#E5E5EA] dark:border-white/10 shadow-apple animate-fade-in">
+               <span className="w-2 h-2 rounded-full bg-[#34C759] animate-pulse" />
+               <span className="text-[10px] font-black uppercase tracking-[0.2em] italic text-[#1D1D1F] dark:text-white">Neural Surveillance Online</span>
+            </div>
+            
+            <div className="space-y-4">
+               <h1 className="text-7xl md:text-[160px] font-black tracking-tight uppercase italic leading-[0.85] text-[#1D1D1F] dark:text-white animate-fade-in-up">
+                  The <br /><span className="text-[#0071E3]">Future</span> <br /> Seen.
+               </h1>
+               <p className="max-w-2xl mx-auto text-xl md:text-2xl text-[#6E6E73] dark:text-[#86868B] font-medium italic animate-fade-in" style={{ animationDelay: '200ms' }}>
+                  Real-time technical intelligence for global category leaders. <br />
+                  Zero mock data. 100% verified evidence.
+               </p>
+            </div>
         </div>
-
-        {/* Visionary Background */}
-        <div className="absolute inset-0 -z-10 bg-white dark:bg-background">
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-40">
-              <Canvas camera={{ position: [0, 0, 5] }}>
-                <ambientLight intensity={0.5} />
-                <Float speed={4} rotationIntensity={1} floatIntensity={1}>
-                   <mesh>
-                      <sphereGeometry args={[2, 64, 64]} />
-                      <MeshDistortMaterial color="#0071E3" speed={2} distort={0.4} radius={1} transparent opacity={0.05} />
-                   </mesh>
-                </Float>
-              </Canvas>
-           </div>
-        </div>
-      </motion.section>
+      </section>
 
       {/* Bento Feature Grid */}
-      <section className="py-40 px-8 bg-white dark:bg-background border-y border-[#E5E5EA] dark:border-white/10" id="features">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-32">
-             <FeatureLabel color="#AF52DE">The Bento Architecture</FeatureLabel>
-             <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.9]">
-                Engineered for <br /><span className="text-[#0071E3]">Omniscience.</span>
-             </h2>
-          </div>
+      <section id="features" className="py-40 px-6 bg-white dark:bg-[#000]">
+         <div className="max-w-[1440px] mx-auto space-y-32">
+            <div className="flex flex-col md:flex-row items-end justify-between gap-8 border-b border-[#F5F5F7] dark:border-white/5 pb-16">
+               <div className="space-y-6 max-w-2xl">
+                  <h2 className="text-6xl font-black uppercase italic leading-none text-[#1D1D1F] dark:text-white">
+                     Engineered for <br /><span className="text-[#0071E3]">Superiority</span>
+                  </h2>
+               </div>
+               <p className="text-lg text-[#6E6E73] dark:text-[#86868B] font-medium italic max-w-xs">
+                  A high-fidelity intelligence mesh designed for instantaneous technical synthesis.
+               </p>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 auto-rows-[450px]">
-             {/* Large Item */}
-             <BentoCard 
-               className="md:col-span-2" 
-               title="Autonomous Agent Swarming" 
-               description="Our agents don't just search; they perform deep technical audits. Comparing commit histories, patent filings, and job trajectories in real-time."
-               icon={Cpu}
-             >
-                <div className="h-full w-full bg-[#F5F5F7] dark:bg-background rounded-[32px] border border-[#E5E5EA] dark:border-white/10 flex items-center justify-center relative overflow-hidden">
-                   <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent p-8 flex flex-col justify-end">
-                      <div className="flex items-center gap-4 mb-4">
-                         <div className="flex -space-x-3">
-                            {[1,2,3,4].map(i => <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-[#0071E3] flex items-center justify-center text-[10px] font-black text-white">A{i}</div>)}
-                         </div>
-                         <span className="text-[10px] font-black text-[#34C759] uppercase tracking-widest italic animate-pulse">Syncing...</span>
-                      </div>
-                      <div className="h-2 w-full bg-black/10 rounded-full overflow-hidden">
-                         <motion.div 
-                           initial={{ width: 0 }}
-                           whileInView={{ width: "75%" }}
-                           className="h-full bg-[#0071E3]" 
-                         />
-                      </div>
-                   </div>
-                   <Activity className="w-24 h-24 text-[#0071E3]/20" />
-                </div>
-             </BentoCard>
-
-             {/* Small Item */}
-             <BentoCard 
-               title="Global Pulse" 
-               description="Monitor movements across 195 countries with 99.9% precision."
-               icon={Globe}
-               variant="dark"
-             >
-                <div className="flex flex-col gap-4">
-                   <div className="flex justify-between items-end border-b border-white/10 pb-4">
-                      <span className="text-[10px] uppercase font-black tracking-widest opacity-50">Latency</span>
-                      <span className="text-2xl font-black italic text-[#34C759]">{globalMetrics?.system_latency || '22'}ms</span>
-                   </div>
-                   <div className="flex justify-between items-end">
-                      <span className="text-[10px] uppercase font-black tracking-widest opacity-50">Signals</span>
-                      <span className="text-2xl font-black italic">{globalMetrics?.articles_processed ? `${(globalMetrics.articles_processed / 1000).toFixed(1)}k+` : '10k+'}</span>
-                   </div>
-                </div>
-             </BentoCard>
-
-             {/* Small Item 2 */}
-             <BentoCard 
-               title="Risk Scoring" 
-               description="ML-driven threat assessments for intellectual property and market share."
-               icon={Shield}
-             >
-                <div className="flex items-center justify-center">
-                   <div className="relative w-40 h-40">
-                      <svg className="w-full h-full transform -rotate-90">
-                         <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-[#F5F5F7]" />
-                         <motion.circle 
-                           cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" 
-                           strokeDasharray="440"
-                           initial={{ strokeDashoffset: 440 }}
-                           whileInView={{ strokeDashoffset: 110 }}
-                           className="text-[#FF3B30]" 
-                         />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                         <span className="text-3xl font-black italic">HIGH</span>
-                         <span className="text-[8px] font-black uppercase tracking-widest opacity-50">Threat Level</span>
-                      </div>
-                   </div>
-                </div>
-             </BentoCard>
-
-             {/* Dynamic Item */}
-             <BentoCard 
-               className="md:col-span-2" 
-               title="Real-time Visual Intelligence" 
-               description="Watch as our agents map the competitive landscape. Every connection is a real signal, every node is a verified technical event."
-               icon={LayoutGrid}
-               variant="dark"
-             >
-                <div className="absolute right-0 bottom-0 top-0 w-1/2 p-4 hidden md:block">
-                   <div className="w-full h-full bg-black/40 backdrop-blur-xl rounded-l-[40px] border-l border-white/10 p-8 flex flex-col justify-center">
-                      <div className="space-y-6">
-                         {[1,2,3].map(i => (
-                           <div key={i} className="flex items-center gap-4">
-                              <div className="w-2 h-2 rounded-full bg-[#0071E3]" />
-                              <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden">
-                                 <motion.div initial={{ x: "-100%" }} animate={{ x: "0%" }} transition={{ delay: i * 0.2, duration: 1.5, repeat: Infinity }} className="w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                              </div>
-                           </div>
-                         ))}
-                      </div>
-                   </div>
-                </div>
-             </BentoCard>
-          </div>
-        </div>
+            <div className="grid md:grid-cols-3 gap-8">
+               <BentoCard 
+                  icon={Zap}
+                  title="Flash Scan"
+                  desc="Parallelized technical mapping across thousands of global sources in <2s."
+                  className="md:col-span-2 bg-[#F5F5F7] dark:bg-white/5"
+               />
+               <BentoCard 
+                  icon={Shield}
+                  title="Verified Evidence"
+                  desc="Every insight is linked to live source citations with temporal filtering."
+                  className="bg-[#1D1D1F] text-white"
+               />
+               <BentoCard 
+                  icon={Activity}
+                  title="Pulse Monitoring"
+                  desc="Adaptive frequency scanning that evolves with technical momentum."
+                  className="bg-white dark:bg-white/5 border border-[#F5F5F7] dark:border-white/10 shadow-apple"
+               />
+               <BentoCard 
+                  icon={Cpu}
+                  title="Neural Synthesis"
+                  desc="Proprietary RAG engines performing cross-sector technical correlation."
+                  className="md:col-span-2 bg-[#0071E3] text-white"
+               />
+            </div>
+         </div>
       </section>
 
       {/* Intelligence Showcase */}
@@ -341,7 +221,7 @@ export default function LandingPage() {
                </div>
             </div>
 
-            <div className="relative aspect-square bg-white rounded-[60px] border border-[#E5E5EA] dark:border-white/10 shadow-apple-large p-12 overflow-hidden group">
+            <div className="relative aspect-square bg-white dark:bg-[#1D1D1F] rounded-[60px] border border-[#E5E5EA] dark:border-white/10 shadow-apple-large p-12 overflow-hidden group">
                <div className="absolute inset-0 cursor-grab active:cursor-grabbing">
                   <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
                     <ambientLight intensity={0.8} />
@@ -355,7 +235,7 @@ export default function LandingPage() {
                </div>
                
                {/* Live Overlay */}
-               <div className="absolute top-10 left-10 p-6 bg-white/70 backdrop-blur-xl rounded-[24px] border border-white shadow-apple">
+               <div className="absolute top-10 left-10 p-6 bg-white/70 dark:bg-black/70 backdrop-blur-xl rounded-[24px] border border-white/20 shadow-apple">
                   <div className="text-[10px] font-black text-[#6E6E73] dark:text-[#86868B] uppercase tracking-widest mb-1">Global Load</div>
                   <div className="text-2xl font-black italic text-[#1D1D1F] dark:text-white">NORMAL</div>
                </div>
@@ -371,7 +251,7 @@ export default function LandingPage() {
                <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.9]">
                   Ironclad <br /><span className="text-[#0071E3]">Confidentiality.</span>
                </h2>
-               <p className="text-xl md:text-2xl text-[#86868B] dark:text-[#A1A1A6] font-medium leading-relaxed italic">
+               <p className="text-xl md:text-2xl text-[#86868B] font-medium leading-relaxed italic">
                   Your tracking criteria is yours and yours alone. Scout Agent uses end-to-end encrypted pipelines to ensure your competitive strategy remains a secret.
                </p>
                
@@ -403,7 +283,7 @@ export default function LandingPage() {
       </section>
 
       {/* Final Call to Action */}
-      <section className="py-60 px-8 text-center bg-white">
+      <section className="py-60 px-8 text-center bg-white dark:bg-[#000]">
          <div className="max-w-4xl mx-auto space-y-16">
             <h2 className="text-7xl md:text-[140px] font-black tracking-tight uppercase italic leading-[0.8] text-[#1D1D1F] dark:text-white">
                Ready to <br /><span className="text-[#0071E3]">Evolve?</span>
@@ -413,7 +293,7 @@ export default function LandingPage() {
             </p>
             <div className="flex justify-center pt-8">
                <Link to="/register">
-                 <Button size="lg" className="h-24 px-16 rounded-full bg-[#1D1D1F] hover:bg-[#000] text-white text-xl font-black uppercase tracking-widest shadow-apple-large transition-all transform hover:scale-105">
+                 <Button size="lg" className="h-24 px-16 rounded-full bg-[#1D1D1F] dark:bg-white hover:bg-[#000] dark:hover:bg-[#F5F5F7] text-white dark:text-black text-xl font-black uppercase tracking-widest shadow-apple-large transition-all transform hover:scale-105">
                     Register Protocol
                  </Button>
                </Link>

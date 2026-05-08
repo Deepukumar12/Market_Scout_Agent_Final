@@ -268,10 +268,10 @@ const AnalyticsPage = () => {
 
         {/* Right: Topic Resonance */}
          <div className="xl:col-span-1">
-            <div className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple sticky top-24">
-                <div className="flex items-center gap-2 mb-8">
-                    <TrendingUp className="w-5 h-5 text-[#34C759]" />
-                    <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Topic <span className="text-[#34C759]">Resonance</span></h3>
+            <div className="p-8 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple sticky top-24 transition-all duration-500">
+                <div className="flex items-center gap-3 mb-10">
+                    <TrendingUp className="w-6 h-6 text-emerald-500" />
+                    <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Topic <span className="text-emerald-500">Resonance</span></h3>
                 </div>
                 <div className="flex flex-wrap gap-3">
                     {data?.trending_topics.map((t, i) => (
@@ -281,10 +281,10 @@ const AnalyticsPage = () => {
                           animate={{ opacity:1, scale:1 }}
                           transition={{ delay: i * 0.05 }}
                           className={cn(
-                              "px-5 py-2.5 rounded-full border text-xs font-bold transition-all cursor-default",
-                              t.sentiment > 0.5 ? "bg-[#EBFBF0] border-[#34C759]/20 text-[#34C759]" :
-                              t.sentiment < -0.5 ? "bg-[#FFF2F2] border-[#FF3B30]/20 text-[#FF3B30]" :
-                              "bg-[#F5F5F7] border-[#E5E5EA] text-[#6E6E73] dark:text-[#86868B]"
+                              "px-5 py-2.5 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all cursor-default italic",
+                              t.sentiment > 0.5 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" :
+                              t.sentiment < -0.5 ? "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400" :
+                              "bg-[#F5F5F7] dark:bg-white/5 border-[#E5E5EA] dark:border-white/10 text-[#6E6E73] dark:text-[#86868B]"
                           )}
                         >
                             {t.topic}
@@ -292,16 +292,17 @@ const AnalyticsPage = () => {
                     ))}
                 </div>
                 
-                <div className="mt-12 p-8 rounded-3xl bg-[#0071E3] text-white">
-                    <h4 className="text-lg font-bold mb-2 italic">Neural Insights</h4>
-                    <p className="text-white/80 text-sm leading-relaxed font-medium italic">
+                <div className="mt-12 p-10 rounded-[32px] bg-[#0071E3] dark:bg-[#1C1C1E] text-white relative overflow-hidden shadow-apple-large group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl rounded-full -mr-16 -mt-16 animate-pulse" />
+                    <h4 className="text-xl font-black mb-3 italic uppercase tracking-tighter relative z-10">Neural Insights</h4>
+                    <p className="text-white/80 dark:text-[#86868B] text-sm leading-relaxed font-medium italic relative z-10">
                         {data && data.trending_topics.length > 0 
                             ? `Real-time clustering suggests a breakout in ${data.trending_topics[0].topic} across the active intelligence network.`
                             : "Awaiting sufficient signal density to generate cross-competitor neural insights."
                         }
                     </p>
-                    <button className="mt-6 text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:translate-x-1 transition-transform">
-                        Explore Cluster <ArrowUpRight size={14} />
+                    <button className="mt-8 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 hover:gap-5 transition-all relative z-10 italic">
+                        Explore Cluster <ArrowUpRight size={14} strokeWidth={3} />
                     </button>
                 </div>
             </div>

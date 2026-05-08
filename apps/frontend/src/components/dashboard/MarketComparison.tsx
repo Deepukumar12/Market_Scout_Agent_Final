@@ -69,12 +69,15 @@ const MarketComparison = ({ data }: MarketComparisonProps) => {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex justify-center">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest italic flex items-center gap-1.5 ${
-                        row.risk_level === 'Low' ? 'bg-[#EBFBF0] text-[#34C759]' :
-                        row.risk_level === 'Medium' ? 'bg-[#FFF9E6] text-[#FFCC00]' :
-                        'bg-[#FFF2F2] text-[#FF3B30]'
-                      }`}>
-                        <Shield size={10} /> {row.risk_level}
+                      <span className={cn(
+                        "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] italic flex items-center gap-2 border",
+                        row.risk_level === 'Low' 
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                          : row.risk_level === 'Medium' 
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
+                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      )}>
+                        <Shield size={10} className="fill-current" /> {row.risk_level}
                       </span>
                     </div>
                   </td>

@@ -139,7 +139,7 @@ const PredictiveAnalyticsPage = () => {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="relative w-64 h-40 bg-white/70 border border-[#E5E5EA] rounded-[40px] backdrop-blur-xl flex items-center justify-center overflow-hidden group shadow-apple"
+            className="relative w-64 h-40 bg-white/70 dark:bg-[#1D1D1F]/70 border border-[#E5E5EA] dark:border-white/10 rounded-[40px] backdrop-blur-3xl flex items-center justify-center overflow-hidden group shadow-apple"
         >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent opacity-50" />
             <div className="absolute inset-0 bg-grid-white/[0.02]" />
@@ -191,15 +191,15 @@ const PredictiveAnalyticsPage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         
                         {/* Top Performers (High Change Velocity) */}
-                        <div className="bg-white/70 border border-[#E5E5EA] rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-emerald-500/20 transition-all shadow-apple shadow-sm">
+                        <div className="bg-white/70 dark:bg-[#1D1D1F]/70 border border-[#E5E5EA] dark:border-white/10 rounded-[48px] p-10 backdrop-blur-3xl relative overflow-hidden group hover:border-emerald-500/20 transition-all shadow-apple-large shadow-sm">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] rounded-full pointer-events-none" />
                              <div className="flex items-center gap-3 mb-6">
                                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                                     <Trophy className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider">Top Performers</h3>
-                                    <p className="text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase tracking-widest">High Change Velocity</p>
+                                    <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider italic">Top Performers</h3>
+                                    <p className="text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-black uppercase tracking-[0.2em] italic">High Change Velocity</p>
                                 </div>
                              </div>
                              
@@ -210,7 +210,7 @@ const PredictiveAnalyticsPage = () => {
                                             <span>{company.name}</span>
                                             <span className="text-emerald-600 font-black">{company.change_velocity_score}%</span>
                                         </div>
-                                        <div className="h-1.5 w-full bg-[#F5F5F7] rounded-full overflow-hidden">
+                                        <div className="h-1.5 w-full bg-[#F5F5F7] dark:bg-white/5 rounded-full overflow-hidden">
                                             <motion.div 
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${company.change_velocity_score}%` }}
@@ -228,15 +228,15 @@ const PredictiveAnalyticsPage = () => {
                         </div>
 
                         {/* Stable Performers (Low Change Velocity) */}
-                         <div className="bg-white/70 border border-[#E5E5EA] rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-[#0071E3]/20 transition-all shadow-apple shadow-sm">
+                         <div className="bg-white/70 dark:bg-[#1D1D1F]/70 border border-[#E5E5EA] dark:border-white/10 rounded-[48px] p-10 backdrop-blur-3xl relative overflow-hidden group hover:border-[#0071E3]/20 transition-all shadow-apple-large shadow-sm">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-[#0071E3]/5 blur-[50px] rounded-full pointer-events-none" />
                              <div className="flex items-center gap-3 mb-6">
                                 <div className="w-10 h-10 rounded-xl bg-[#0071E3]/10 flex items-center justify-center border border-[#0071E3]/20">
                                     <BarChart3 className="w-5 h-5 text-[#0071E3]" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider">Consistent Core</h3>
-                                    <p className="text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase tracking-widest">Steady Execution</p>
+                                    <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider italic">Consistent Core</h3>
+                                    <p className="text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-black uppercase tracking-[0.2em] italic">Steady Execution</p>
                                 </div>
                              </div>
                              
@@ -247,7 +247,7 @@ const PredictiveAnalyticsPage = () => {
                                             <span>{company.name}</span>
                                             <span className="text-[#0071E3] font-black">{company.change_velocity_score}%</span>
                                         </div>
-                                        <div className="h-1.5 w-full bg-[#F5F5F7] rounded-full overflow-hidden">
+                                        <div className="h-1.5 w-full bg-[#F5F5F7] dark:bg-white/5 rounded-full overflow-hidden">
                                             <motion.div 
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${company.change_velocity_score}%` }}
@@ -270,15 +270,15 @@ const PredictiveAnalyticsPage = () => {
                         </div>
 
                         {/* Trending Predictions */}
-                        <div className="bg-white/70 border border-[#E5E5EA] rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden group hover:border-[#AF52DE]/20 transition-all shadow-apple shadow-sm">
+                        <div className="bg-white/70 dark:bg-[#1D1D1F]/70 border border-[#E5E5EA] dark:border-white/10 rounded-[48px] p-10 backdrop-blur-3xl relative overflow-hidden group hover:border-[#AF52DE]/20 transition-all shadow-apple-large shadow-sm">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-[#AF52DE]/5 blur-[50px] rounded-full pointer-events-none" />
                              <div className="flex items-center gap-3 mb-6">
                                 <div className="w-10 h-10 rounded-xl bg-[#AF52DE]/10 flex items-center justify-center border border-[#AF52DE]/20">
                                     <Zap className="w-5 h-5 text-[#AF52DE]" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider">Predicted Trending</h3>
-                                    <p className="text-[9px] text-[#86868B] font-mono uppercase tracking-widest">Future Breakouts</p>
+                                    <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider italic">Predicted Trending</h3>
+                                    <p className="text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-black uppercase tracking-[0.2em] italic">Future Breakouts</p>
                                 </div>
                              </div>
                              
@@ -454,7 +454,7 @@ const PredictiveAnalyticsPage = () => {
         </Button>
       </div>
 
-      <div className="pt-10 border-t border-white/5 flex flex-wrap justify-center gap-10 text-[9px] text-slate-600 font-mono uppercase tracking-[0.2em] font-black">
+      <div className="pt-10 border-t border-[#E5E5EA] dark:border-white/5 flex flex-wrap justify-center gap-10 text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-black uppercase tracking-[0.2em] italic">
           <div>Engine: Dynamic Prediction Matrix</div>
           <div>Mode: Real-time Analysis</div>
           <div>Intelligence: Audited Signals Only</div>

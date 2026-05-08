@@ -60,7 +60,7 @@ const CompetitorsPage = () => {
               placeholder="SEARCH UNIVERSE..."
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
-              className="bg-white/50 dark:bg-[#1D1D1F]/50 border border-[#E5E5EA] dark:border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-xs font-bold text-[#1D1D1F] dark:text-white uppercase tracking-widest placeholder:text-[#86868B] dark:text-[#A1A1A6] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:border-[#0071E3]/30 transition-all w-full backdrop-blur-xl"
+              className="bg-white/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-xs font-black text-[#1D1D1F] dark:text-white uppercase tracking-[0.2em] placeholder:text-[#86868B] dark:placeholder:text-[#A1A1A6] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:border-[#0071E3]/30 transition-all w-full backdrop-blur-3xl italic"
             />
           </div>
           <Button

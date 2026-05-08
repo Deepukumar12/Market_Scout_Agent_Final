@@ -65,7 +65,7 @@ const RiskPage = () => {
           <select 
             value={selectedCompetitorId || ''} 
             onChange={(e) => setSelectedCompetitorId(e.target.value)}
-            className="h-10 px-4 rounded-full border border-[#E5E5EA] bg-white text-sm font-bold text-[#1D1D1F] dark:text-white focus:outline-none shadow-apple-sm"
+            className="h-10 px-4 rounded-full border border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#1D1D1F] text-sm font-bold text-[#1D1D1F] dark:text-white focus:outline-none shadow-apple-sm"
           >
             <option value="" disabled>Select a competitor</option>
             {competitors.map(c => (
@@ -83,12 +83,12 @@ const RiskPage = () => {
         <>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             {/* Risk Meter Card */}
-            <div className="lg:col-span-1 p-10 rounded-[40px] bg-white/70 backdrop-blur-xl border border-[#E5E5EA] shadow-apple flex flex-col items-center text-center shadow-sm">
+            <div className="lg:col-span-1 p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple flex flex-col items-center text-center shadow-sm">
                <div className={cn(
                  "w-24 h-24 rounded-full flex items-center justify-center mb-8 shadow-apple-sm",
-                 data.threat_level === 'Low' ? "bg-emerald-50 text-[#34C759]" :
-                 data.threat_level === 'Medium' ? "bg-yellow-50 text-[#FFD60A]" :
-                 "bg-rose-50 text-[#FF3B30]"
+                 data.threat_level === 'Low' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
+                 data.threat_level === 'Medium' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                 "bg-rose-500/10 text-rose-600 dark:text-rose-400"
                )}>
                  {data.threat_level === 'Low' ? <ShieldCheck size={48} /> : 
                   data.threat_level === 'Medium' ? <AlertTriangle size={48} /> : <ShieldAlert size={48} />}
@@ -101,23 +101,23 @@ const RiskPage = () => {
                  <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Risk Index</p>
                </div>
 
-               <div className="w-full mt-10 p-6 rounded-3xl bg-[#F5F5F7]">
-                  <p className="text-lg font-bold text-[#1D1D1F] dark:text-white mb-1">{data.threat_level} Priority</p>
+               <div className="w-full mt-10 p-8 rounded-3xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10">
+                  <p className="text-xl font-black text-[#1D1D1F] dark:text-white mb-2 uppercase italic tracking-tighter">{data.threat_level} Priority</p>
                   <p className="text-xs text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed italic">Strategic intervention recommended within 14 days.</p>
                </div>
             </div>
 
             {/* Potential Threats */}
             <div className="lg:col-span-2 space-y-10">
-              <div className="p-10 rounded-[40px] bg-white/70 backdrop-blur-xl border border-[#E5E5EA] shadow-apple shadow-sm">
+              <div className="p-10 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple shadow-sm">
                 <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
                   <Lock className="text-[#0071E3]" size={20} />
                   Market <span className="text-[#FF3B30]">Vulnerabilities</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {data.vulnerabilities.map((v, i) => (
-                    <div key={i} className="p-6 rounded-3xl bg-[#F5F5F7] border border-[#E5E5EA] flex items-center gap-4 group">
-                       <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-[#FF3B30] shadow-apple-sm group-hover:scale-110 transition-transform">
+                    <div key={i} className="p-6 rounded-3xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 flex items-center gap-4 group">
+                       <div className="w-10 h-10 rounded-2xl bg-white dark:bg-[#1D1D1F] flex items-center justify-center text-[#FF3B30] shadow-apple-sm group-hover:scale-110 transition-transform">
                           <Zap size={18} />
                        </div>
                        <span className="text-sm font-bold text-[#1D1D1F] dark:text-white">{v}</span>
@@ -126,25 +126,26 @@ const RiskPage = () => {
                 </div>
               </div>
 
-              <div className="p-10 rounded-[40px] bg-white/70 backdrop-blur-xl border border-[#E5E5EA] shadow-apple shadow-sm">
+              <div className="p-10 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple shadow-sm">
                 <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
                    <Eye className="text-[#AF52DE]" size={20} />
                   Competitive <span className="text-[#AF52DE]">Threat Matrix</span>
                 </h3>
                 <div className="space-y-4">
                    {data.competitive_threats.map((t, i) => (
-                     <div key={i} className="flex items-center justify-between p-6 rounded-3xl bg-[#F5F5F7] hover:bg-[#F5F5F7]/80 transition-all">
+                     <div key={i} className="flex items-center justify-between p-6 rounded-3xl bg-[#F5F5F7] dark:bg-white/5 hover:bg-[#F5F5F7]/80 transition-all">
                         <div className="flex flex-col">
                            <span className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest mb-1">{t.competitor}</span>
                            <span className="text-sm font-bold text-[#1D1D1F] dark:text-white">{t.threat}</span>
                         </div>
-                        <div className={cn(
-                          "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-                          t.impact === 'High' ? "bg-rose-50 text-[#FF3B30]" :
-                          t.impact === 'Medium' ? "bg-yellow-50 text-[#FFD60A]" : "bg-emerald-50 text-[#34C759]"
-                        )}>
-                          {t.impact} Impact
-                        </div>
+                          <div className={cn(
+                            "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                            t.impact === 'High' ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" :
+                            t.impact === 'Medium' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" : 
+                            "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          )}>
+                            {t.impact} Impact
+                          </div>
                      </div>
                    ))}
                 </div>

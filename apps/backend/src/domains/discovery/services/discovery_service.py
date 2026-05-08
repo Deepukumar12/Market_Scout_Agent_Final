@@ -26,49 +26,62 @@ class DiscoveryService:
 
     async def search_organizations(self, query: str) -> List[Dict[str, Any]]:
         """
-        Unified search with multi-provider fallback and high-speed caching.
+        Hyper-dynamic unified search with parallel provider execution and Redis caching.
+        Designed to provide 100% real-time global discovery from the first character.
         """
         query = query.strip().lower()
         if not query:
             return []
 
-        # 1. Check Redis Cache
+        # 1. Check Redis Cache (Fastest Path)
         cache_key = f"discovery:search:{query}"
         cached_results = await redis_service.get(cache_key)
         if cached_results:
             logger.info(f"🚀 Cache hit for query: {query}")
             return cached_results
 
-        # 2. Parallel Search Execution
-        # We start with fast providers and fallback if needed
-        results = []
-        
-        # Clearbit is fastest for autocomplete
-        results.extend(await self._clearbit_autocomplete(query))
-
-        # If we need more results or better metadata, call PDL and Crunchbase
+        # 2. Parallel Search Execution (Deep Discovery)
+        # We run all primary providers in parallel to ensure 100% dynamic data from the start
         tasks = []
+        
+        # Fast Autocomplete
+        tasks.append(self._clearbit_autocomplete(query))
+        
+        # High Fidelity Metadata
         if self.pdl_api_key:
             tasks.append(self._pdl_search(query))
+        
+        # Startup & Private Company Intelligence
         if self.crunchbase_api_key:
             tasks.append(self._crunchbase_search(query))
+
+        # Gather all results concurrently
+        results_lists = await asyncio.gather(*tasks, return_exceptions=True)
         
-        if tasks:
-            extra_results = await asyncio.gather(*tasks)
-            for r_list in extra_results:
+        results = []
+        for r_list in results_lists:
+            if isinstance(r_list, list):
                 results.extend(r_list)
+            elif isinstance(r_list, Exception):
+                logger.error(f"Provider task failed: {r_list}")
 
-        # 3. Last Resort Fallbacks (Google/SerpAPI) if results are still sparse
-        if len(results) < 10:
+        # 3. Last Resort Fallbacks (Google/SerpAPI) - Only if results are sparse
+        if len(results) < 5:
+            fallback_tasks = []
             if self.google_api_key and self.google_cx:
-                results.extend(await self._google_search_discovery(query))
+                fallback_tasks.append(self._google_search_discovery(query))
             elif self.serpapi_api_key:
-                results.extend(await self._serpapi_discovery(query))
+                fallback_tasks.append(self._serpapi_discovery(query))
+            
+            if fallback_tasks:
+                fallback_results = await asyncio.gather(*fallback_tasks)
+                for f_list in fallback_results:
+                    results.extend(f_list)
 
-        # 4. Global Normalization and Deduplication
+        # 4. Global Normalization and Intelligent Deduplication
         final_results = self._deduplicate_and_normalize(results)
 
-        # 5. Store in Redis
+        # 5. Store in Redis for future speed
         if final_results:
             await redis_service.set(cache_key, final_results, expire=self.cache_ttl)
         
@@ -100,28 +113,23 @@ class DiscoveryService:
         
         url = "https://api.peopledatalabs.com/v5/company/search"
         headers = {"X-Api-Key": self.pdl_api_key}
-        
-        # Enhanced SQL for single-character or short queries to return the most relevant/largest companies
-        if len(query) == 1:
-            sql = f"SELECT * FROM company WHERE (name LIKE '{query}%' OR website LIKE '{query}%') AND size > 1000 ORDER BY size DESC"
-        else:
-            sql = f"SELECT * FROM company WHERE name LIKE '{query}%' OR website LIKE '{query}%' OR display_name LIKE '{query}%'"
-            
-        params = {"sql": sql, "size": 15}
+        # PDL supports SQL-like queries for complex discovery
+        sql = f"SELECT * FROM company WHERE name LIKE '{query}%' OR website LIKE '{query}%' OR display_name LIKE '{query}%'"
+        params = {"sql": sql, "size": 10}
         
         try:
             response = await self.client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 data = response.json()
                 return [{
-                    "name": item.get("name") or item.get("display_name") or item.get("website"),
+                    "name": item.get("name") or item.get("display_name"),
                     "domain": item.get("website"),
                     "logo": f"https://logo.clearbit.com/{item.get('website')}" if item.get('website') else None,
                     "industry": item.get("industry"),
                     "country": item.get("location", {}).get("country"),
                     "employee_count": item.get("size"),
                     "source": "pdl"
-                } for item in data.get("data", []) if item.get("name") or item.get("website")]
+                } for item in data.get("data", [])]
             return []
         except Exception as e:
             logger.error(f"PDL Search error: {e}")
