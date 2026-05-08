@@ -47,20 +47,19 @@ class DiscoveryService:
         results.extend(await self._clearbit_autocomplete(query))
 
         # If we need more results or better metadata, call PDL and Crunchbase
-        if len(results) < 5:
-            tasks = []
-            if self.pdl_api_key:
-                tasks.append(self._pdl_search(query))
-            if self.crunchbase_api_key:
-                tasks.append(self._crunchbase_search(query))
-            
-            if tasks:
-                extra_results = await asyncio.gather(*tasks)
-                for r_list in extra_results:
-                    results.extend(r_list)
+        tasks = []
+        if self.pdl_api_key:
+            tasks.append(self._pdl_search(query))
+        if self.crunchbase_api_key:
+            tasks.append(self._crunchbase_search(query))
+        
+        if tasks:
+            extra_results = await asyncio.gather(*tasks)
+            for r_list in extra_results:
+                results.extend(r_list)
 
-        # 3. Last Resort Fallbacks (Google/SerpAPI)
-        if len(results) < 3:
+        # 3. Last Resort Fallbacks (Google/SerpAPI) if results are still sparse
+        if len(results) < 10:
             if self.google_api_key and self.google_cx:
                 results.extend(await self._google_search_discovery(query))
             elif self.serpapi_api_key:
@@ -101,23 +100,28 @@ class DiscoveryService:
         
         url = "https://api.peopledatalabs.com/v5/company/search"
         headers = {"X-Api-Key": self.pdl_api_key}
-        # PDL supports SQL-like queries for complex discovery
-        sql = f"SELECT * FROM company WHERE name LIKE '{query}%' OR website LIKE '{query}%' OR display_name LIKE '{query}%'"
-        params = {"sql": sql, "size": 10}
+        
+        # Enhanced SQL for single-character or short queries to return the most relevant/largest companies
+        if len(query) == 1:
+            sql = f"SELECT * FROM company WHERE (name LIKE '{query}%' OR website LIKE '{query}%') AND size > 1000 ORDER BY size DESC"
+        else:
+            sql = f"SELECT * FROM company WHERE name LIKE '{query}%' OR website LIKE '{query}%' OR display_name LIKE '{query}%'"
+            
+        params = {"sql": sql, "size": 15}
         
         try:
             response = await self.client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 data = response.json()
                 return [{
-                    "name": item.get("name") or item.get("display_name"),
+                    "name": item.get("name") or item.get("display_name") or item.get("website"),
                     "domain": item.get("website"),
                     "logo": f"https://logo.clearbit.com/{item.get('website')}" if item.get('website') else None,
                     "industry": item.get("industry"),
                     "country": item.get("location", {}).get("country"),
                     "employee_count": item.get("size"),
                     "source": "pdl"
-                } for item in data.get("data", [])]
+                } for item in data.get("data", []) if item.get("name") or item.get("website")]
             return []
         except Exception as e:
             logger.error(f"PDL Search error: {e}")
