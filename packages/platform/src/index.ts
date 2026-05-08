@@ -66,6 +66,28 @@ export class PlatformClient {
   }
 }
 
+const getBackendUrl = () => {
+  try {
+    // Check for Node.js / Next.js environment
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_BACKEND_URL) {
+      // @ts-ignore
+      return process.env.NEXT_PUBLIC_BACKEND_URL;
+    }
+    // Check for Vite environment
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) {
+      // @ts-ignore
+      return import.meta.env.VITE_BACKEND_URL;
+    }
+  } catch (e) {
+    // Fallback if environment access fails
+  }
+  return 'http://localhost:8000';
+};
+
+
 export const platformClient = new PlatformClient({
-  backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000',
+  backendUrl: getBackendUrl(),
 });
+

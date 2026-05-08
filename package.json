@@ -14,7 +14,10 @@
     "install:backend": "cd apps/backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
   },
   "devDependencies": {
-    "turbo": "latest",
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "turbo": "latest"
+  },
+  "dependencies": {
+    "caniuse-lite": "^1.0.30001792"
   }
 }
