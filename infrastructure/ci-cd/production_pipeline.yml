@@ -1,0 +1,42 @@
+name: Production CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install -r apps/backend/requirements.txt
+          pip install -r apps/worker/requirements.txt
+          pip install pytest
+          
+      - name: Run Integration Tests
+        run: |
+          # Note: In a real CI, you'd start Redis/Mongo using services
+          pytest tests/integration_suite.py
+
+  build-and-deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build Docker Images
+        run: |
+          docker build -t market-scout-backend -f infrastructure/docker/backend.Dockerfile apps/backend
+          docker build -t market-scout-worker -f infrastructure/docker/worker.Dockerfile apps/worker
+          docker build -t market-scout-admin -f infrastructure/docker/admin.Dockerfile apps/admin

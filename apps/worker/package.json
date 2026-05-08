@@ -1,0 +1,12 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m src.celery_app worker --loglevel=info",
+    "dev": "watchmedo auto-restart --recursive --pattern='*.py' --directory='.' python3 -m src.celery_app worker --loglevel=info"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
