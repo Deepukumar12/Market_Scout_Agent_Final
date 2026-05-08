@@ -8,7 +8,7 @@ from src.domains.users.services.user_service import get_user_email
 from src.domains.notifications.services.email_service import send_email_report
 from src.domains.scan.services.scan_pipeline import run_scan
 from src.domains.scan.models.scan import ScanRequest, ScanFeature
-from services.data.delta_engine import get_cached_features
+from src.services.data.delta_engine import get_cached_features
 from src.core.database import db
 
 logger = logging.getLogger(__name__)

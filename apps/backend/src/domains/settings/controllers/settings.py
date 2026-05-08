@@ -4,7 +4,7 @@ from typing import Literal
 from datetime import datetime
 
 from src.domains.scan.services.scheduler import scheduler
-from services.ai.auto_scan_agent import run_auto_scan
+from src.services.ai.auto_scan_agent import run_auto_scan
 from src.core.database import db
 
 router = APIRouter()

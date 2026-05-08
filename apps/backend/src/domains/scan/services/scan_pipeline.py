@@ -8,14 +8,14 @@ from datetime import datetime, timezone
 from typing import Any, Optional, Union, List, Dict
 
 from src.domains.scan.models.scan import ScanRequest, ScanResponse, ScanFeature
-from services.data.search_service import search_web_multi
-from services.data.scraper_service import (
+from src.services.data.search_service import search_web_multi
+from src.services.data.scraper_service import (
     scrape_url,
     filter_by_time_and_technical,
     filter_content_technical_only,
 )
-from services.ai.gemini_client import GeminiClient, GeminiClientError
-from services.ai.ollama_sync import OllamaClient
+from src.services.ai.gemini_client import GeminiClient, GeminiClientError
+from src.services.ai.ollama_sync import OllamaClient
 from src.domains.github.services.github_client import fetch_company_github_data, GitHubClientError
 from src.core.config import settings
 from src.core.logger import agent_logger

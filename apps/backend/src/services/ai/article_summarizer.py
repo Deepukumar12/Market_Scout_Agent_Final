@@ -8,10 +8,10 @@ import re
 from typing import List, Tuple
 
 from src.core.config import settings
-from services.ai.groq_sync import generate_text_groq
-from services.ai.gemini_sync import generate_text as generate_text_gemini
-from services.ai.ollama_sync import generate_text_ollama
-from services.ai.token_guard import estimate_tokens, truncate_to_token_limit
+from src.services.ai.groq_sync import generate_text_groq
+from src.services.ai.gemini_sync import generate_text as generate_text_gemini
+from src.services.ai.ollama_sync import generate_text_ollama
+from src.services.ai.token_guard import estimate_tokens, truncate_to_token_limit
 
 logger = logging.getLogger(__name__)
 

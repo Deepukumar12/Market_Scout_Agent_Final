@@ -68,7 +68,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
             type="text"
             placeholder="Search competitor..."
             onChange={(e) => onSearch(e.target.value)}
-            className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-transparent focus:border-[#0071E3] focus:bg-white dark:focus:bg-[#1D1D1F] rounded-xl py-2.5 pl-11 pr-4 text-sm text-[#1D1D1F] dark:text-white outline-none transition-all placeholder:text-[#6E6E73] dark:placeholder:text-[#86868B]"
+            className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-transparent focus:border-[#0071E3] focus:bg-white dark:focus:bg-white/10 rounded-xl py-2.5 pl-11 pr-4 text-sm text-[#1D1D1F] dark:text-white outline-none transition-all placeholder:text-[#6E6E73] dark:placeholder:text-[#86868B]"
           />
         </div>
       </div>
@@ -92,7 +92,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
         <div className="flex items-center gap-2 pl-4 border-l border-[#E5E5EA] dark:border-white/10 relative">
           <button 
             onClick={onNotificationClick}
-            className="p-2.5 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] text-[#6E6E73] dark:text-[#A1A1A6] transition-colors relative"
+            className="p-2.5 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-white/5 text-[#6E6E73] dark:text-[#A1A1A6] transition-colors relative"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -126,7 +126,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="absolute right-0 mt-3 w-56 bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl rounded-2xl border border-[#E5E5EA] dark:border-white/10 shadow-2xl overflow-hidden shadow-black/10 py-2"
+                  className="absolute right-0 mt-3 w-56 bg-white/95 dark:bg-black/95 backdrop-blur-2xl rounded-2xl border border-[#E5E5EA] dark:border-white/10 shadow-2xl overflow-hidden shadow-black/10 py-2"
                 >
                   <div className="px-4 py-3 border-b border-[#F5F5F7] dark:border-white/5 mb-2">
                     <p className="text-xs font-black uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6] mb-1">Session Identity</p>

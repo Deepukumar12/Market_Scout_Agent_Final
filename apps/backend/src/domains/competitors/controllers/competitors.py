@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 
 from src.core.database import db
-from services.data.delta_engine import FREQUENCY_DEFAULT_HOURS
+from src.services.data.delta_engine import FREQUENCY_DEFAULT_HOURS
 from src.core.security import get_current_user
 from src.domains.competitors.models.competitor import (
     Competitor,

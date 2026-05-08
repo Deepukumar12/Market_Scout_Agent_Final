@@ -46,12 +46,12 @@ const NotificationItem = ({ notification }: { notification: Notification }) => {
             <h4 className={cn("text-xs font-bold uppercase tracking-wider", notification.read ? "text-slate-500" : "text-slate-200")}>
               {notification.title}
             </h4>
-            <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-mono">
+            <div className="flex items-center gap-1.5 text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-mono">
               <Clock className="w-3 h-3" />
               {new Date(notification.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed pr-4">
+          <p className="text-xs text-[#6E6E73] dark:text-[#86868B] leading-relaxed pr-4">
             {notification.message}
           </p>
         </div>
@@ -82,7 +82,7 @@ const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-[400px] bg-[#020617] border-l border-white/5 z-50 flex flex-col shadow-2xl"
+            className="fixed right-0 top-0 bottom-0 w-full max-w-[400px] bg-white dark:bg-black border-l border-[#E5E5EA] dark:border-white/10 z-50 flex flex-col shadow-2xl"
           >
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">

@@ -2,14 +2,14 @@
 Legacy Search Tool wrapper. Now routes to Zenserp-based SearchService.
 """
 from typing import List
-from services.data.search_service import search_web_multi
+from src.services.data.search_service import search_web_multi
 
 async def search_web(queries: List[str]) -> List[str]:
     """
     Executes multiple search queries using Zenserp API.
     Uses specialized engines for the latter half of the queries (Visual, Maps, Video, Shopping).
     """
-    from services.data.search_service import search_specialized
+    from src.services.data.search_service import search_specialized
     
     all_urls = set()
     

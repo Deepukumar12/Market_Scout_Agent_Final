@@ -12,13 +12,13 @@ from src.core.security import get_current_user
 from src.domains.scan.models.scan import ScanRequest, ScanResponse
 from src.domains.users.models.user import User
 from src.domains.scan.services.scan_pipeline import run_scan
-from services.data.search_service import SearchServiceError
-from services.ai.gemini_client import GeminiClientError
+from src.services.data.search_service import SearchServiceError
+from src.services.ai.gemini_client import GeminiClientError
 import os
 from datetime import datetime, timezone
 from src.core.database import db
 from src.domains.notifications.controllers.notifications import create_notification, NotificationType
-from services.data.delta_engine import get_cached_features, store_new_features
+from src.services.data.delta_engine import get_cached_features, store_new_features
 from src.domains.scan.models.scan import ScanFeature
 
 logger = logging.getLogger(__name__)

@@ -2,8 +2,8 @@ import asyncio
 
 from src.core.logger import agent_logger
 from src.core.config import settings
-from services.ai.planner import generate_search_queries
-from services.data.search_tool import search_web
+from src.services.ai.planner import generate_search_queries
+from src.services.data.search_tool import search_web
 from src.domains.intelligence.services.hybrid_pipeline import run_hybrid_pipeline
 
 
@@ -32,7 +32,7 @@ async def run_agent(company_name: str) -> str:
     cached_articles = []
     if not urls:
         await agent_logger.log("Search failed or offline. Querying vector cache...", "RISK_ENGINE")
-        from services.data.vector_cache import search_cached_articles
+        from src.services.data.vector_cache import search_cached_articles
         for q in queries[:3]: # Search cache for top 3 queries
             cached = await search_cached_articles(q, n_results=4)
             cached_articles.extend(cached)

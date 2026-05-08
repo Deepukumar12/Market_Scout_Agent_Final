@@ -6,7 +6,7 @@ from src.core.security import get_current_user
 from src.core.database import get_database
 from src.domains.users.models.user import User
 from src.domains.competitors.models.competitor import CompetitorStatus
-from services.ai.agent import run_agent
+from src.services.ai.agent import run_agent
 import logging
 
 logger = logging.getLogger(__name__)

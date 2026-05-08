@@ -1,6 +1,6 @@
 from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from services.ai.auto_scan_agent import run_auto_scan
+from src.services.ai.auto_scan_agent import run_auto_scan
 
 # Standardize on AsyncIOScheduler to share the same event loop as FastAPI/Motor
 scheduler = AsyncIOScheduler()

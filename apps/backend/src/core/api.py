@@ -7,7 +7,7 @@ from src.domains.scan.controllers.scan import router as scan_router
 from src.domains.intelligence.controllers.intel_data import router as intel_router
 
 
-from services.ai.agent_markdown import router as agent_markdown_router
+from src.services.ai.agent_markdown import router as agent_markdown_router
 from src.domains.github.controllers.github import router as github_router
 from src.domains.notifications.controllers.notifications import router as notifications_router
 from src.domains.telemetry.controllers.meta import router as meta_router

@@ -1,7 +1,7 @@
 import asyncio
 import logging
-from services.ai.groq_sync import generate_text_groq, _groq_generate_text
-from services.ai.gemini_sync import generate_text, _gemini_generate_text
+from src.services.ai.groq_sync import generate_text_groq, _groq_generate_text
+from src.services.ai.gemini_sync import generate_text, _gemini_generate_text
 from src.core.config import settings
 
 logging.basicConfig(level=logging.INFO)

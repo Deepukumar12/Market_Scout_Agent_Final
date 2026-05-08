@@ -74,7 +74,7 @@ const DashboardLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-background text-[#1D1D1F] dark:text-white dark:text-foreground font-sans selection:bg-[#0071E3]/20 overflow-x-hidden">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-black text-[#1D1D1F] dark:text-white font-sans selection:bg-[#0071E3]/20 overflow-x-hidden transition-colors duration-500">
       <Navbar 
         user={user} 
         onAnalyzeClick={() => setIsAnalyzeModalOpen(true)}

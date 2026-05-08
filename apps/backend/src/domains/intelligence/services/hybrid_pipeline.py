@@ -13,13 +13,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from src.core.database import get_database
-from services.data.content_cleaner import clean_soup
-from services.data.structured_extractor import extract_structured, get_remaining_body_after_paragraphs
-from services.data.lsa_compressor import compress_with_lsa
-from services.ai.article_summarizer import summarize_article, summarize_articles_batch, BATCH_SIZE
-from services.data.article_cache import store_article_summary
+from src.services.data.content_cleaner import clean_soup
+from src.services.data.structured_extractor import extract_structured, get_remaining_body_after_paragraphs
+from src.services.data.lsa_compressor import compress_with_lsa
+from src.services.ai.article_summarizer import summarize_article, summarize_articles_batch, BATCH_SIZE
+from src.services.data.article_cache import store_article_summary
 from src.domains.reports.services.final_report_generator import generate_final_report
-from services.ai.token_guard import estimate_tokens, truncate_to_token_limit
+from src.services.ai.token_guard import estimate_tokens, truncate_to_token_limit
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +71,8 @@ async def run_hybrid_pipeline(company_name: str, urls: List[str], cached_article
         return f"No URLs provided for {company_name}."
 
     # 1) Data gathering: Cache check -> Scrape -> Storing
-    from services.data.multi_scraper import scrape_url_multi
-    from services.data.vector_cache import check_url_cached, store_article
+    from src.services.data.multi_scraper import scrape_url_multi
+    from src.services.data.vector_cache import check_url_cached, store_article
     
     article_inputs: List[Tuple[str, str]] = []
     

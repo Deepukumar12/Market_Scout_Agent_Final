@@ -6,9 +6,9 @@ from src.core.config import settings
 from src.core.datetime_utils import get_now_ist
 
 logger = logging.getLogger(__name__)
-from services.ai.groq_sync import generate_text_groq
-from services.ai.gemini_sync import generate_text as generate_text_gemini
-from services.ai.ollama_sync import generate_text_ollama
+from src.services.ai.groq_sync import generate_text_groq
+from src.services.ai.gemini_sync import generate_text as generate_text_gemini
+from src.services.ai.ollama_sync import generate_text_ollama
 
 
 def generate_search_queries(company_name: str, days: int = 7) -> list[str]:

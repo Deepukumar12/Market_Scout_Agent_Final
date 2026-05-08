@@ -1645,11 +1645,11 @@ async def generate_strategic_plan(
         }}
         """
         
-        from services.ai.groq_sync import generate_text_groq
+        from src.services.ai.groq_sync import generate_text_groq
         raw_json = generate_text_groq(prompt, system="Output JSON only.", max_tokens=2048)
         
         if not raw_json:
-            from services.ai.gemini_sync import generate_text
+            from src.services.ai.gemini_sync import generate_text
             raw_json = generate_text(prompt, system="Output JSON only.", max_tokens=2048)
             
         # Clean JSON

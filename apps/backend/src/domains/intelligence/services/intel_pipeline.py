@@ -11,8 +11,8 @@ from typing import Optional, Union
 from src.core.database import db
 from src.domains.competitors.models.competitor import Competitor
 from src.domains.scan.models.scan import ScanRequest, ScanResponse, ScanFeature
-from services.data.cache_manager import compute_next_check, store_report_cache
-from services.data.delta_engine import (
+from src.services.data.cache_manager import compute_next_check, store_report_cache
+from src.services.data.delta_engine import (
     EMPTY_SCAN_THRESHOLD,
     FREQUENCY_ACTIVE_HOURS,
     FREQUENCY_AFTER_EMPTY_HOURS,

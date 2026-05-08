@@ -2,8 +2,8 @@
 import re
 from datetime import datetime, timezone, timedelta
 
-from services.ai.gemini_sync import generate_text
-from services.ai.ollama_sync import generate_text_ollama
+from src.services.ai.gemini_sync import generate_text
+from src.services.ai.ollama_sync import generate_text_ollama
 
 DISCLAIMER_PATTERNS = [
     r"\s*Please note[^.]*\.(\s|$)",
@@ -88,7 +88,7 @@ INTELLIGENCE CONTEXT:
     raw = generate_text_ollama(prompt, system=system, max_tokens=2048)
     
     if not raw:
-        from services.ai.groq_sync import generate_text_groq
+        from src.services.ai.groq_sync import generate_text_groq
         raw = generate_text_groq(prompt, system=system, max_tokens=2048)
         
     if not raw:
