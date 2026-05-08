@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useAuthStore } from '@/store/authStore';
+import { getPredictivePipeline } from '@/services/api';
 import { cn } from '@/utils/utils';
 
 interface PerformerMetric {
@@ -46,29 +47,18 @@ const PredictiveAnalyticsPage = () => {
       setLoading(true);
       setAnalysisResult(null);
       try {
-          // @ts-ignore - import.meta.env is provided by Vite
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-          const res = await fetch(`${apiUrl}/api/v1/intelligence/predictive-pipeline`, {
-               headers: { Authorization: `Bearer ${token}` }
-          });
-          if (res.ok) {
-              const data = await res.json();
-              // Default mock sectors are removed to ensure only real data is shown.
-              // This check ensures that if the API returns an empty or invalid result,
-              // we don't display it as a valid analysis.
-              if (!data || (data.top_performers?.length === 0 && data.stable_performers?.length === 0 && data.trending_predictions?.length === 0)) {
-                  setAnalysisResult(null); // Explicitly set to null if data is empty/invalid
-                  setLoading(false);
-                  return;
-              }
-              // Add delay for effect
-              setTimeout(() => {
-                  setAnalysisResult(data);
-                  setLoading(false);
-              }, 1500);
-          } else {
+          const data = await getPredictivePipeline();
+          
+          if (!data || (data.top_performers?.length === 0 && data.stable_performers?.length === 0 && data.trending_predictions?.length === 0)) {
+              setAnalysisResult(null);
               setLoading(false);
+              return;
           }
+          
+          setTimeout(() => {
+              setAnalysisResult(data);
+              setLoading(false);
+          }, 1500);
       } catch (e) {
           console.error(e);
           setLoading(false);
@@ -129,7 +119,7 @@ const PredictiveAnalyticsPage = () => {
           <motion.h1 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-5xl lg:text-6xl font-black tracking-tighter text-[#1D1D1F] uppercase italic leading-tight"
+            className="text-5xl lg:text-6xl font-black tracking-tighter text-[#1D1D1F] dark:text-white uppercase italic leading-tight"
           >
             Predictive <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#AF52DE] to-[#5AC8FA]">Futures</span>
           </motion.h1>
@@ -140,7 +130,7 @@ const PredictiveAnalyticsPage = () => {
             className="text-[#6E6E73] dark:text-[#86868B] mt-2 max-w-2xl font-medium leading-relaxed italic"
           >
             Leveraging autonomous modeling threads to anticipate competitor pivots and market fluctuations. 
-            Analyzing <span className="text-[#1D1D1F]">{competitors.length} intelligence nodes</span> for high-confidence strategy mapping.
+            Analyzing <span className="text-[#1D1D1F] dark:text-white">{competitors.length} intelligence nodes</span> for high-confidence strategy mapping.
           </motion.p>
         </div>
         
@@ -174,7 +164,7 @@ const PredictiveAnalyticsPage = () => {
                     className="flex flex-col items-center justify-center py-20 bg-white/40 dark:bg-black/20 border border-dashed border-[#E5E5EA] rounded-[40px] backdrop-blur-sm"
                 >
                     <Activity className="w-12 h-12 text-[#86868B] mb-4 opacity-20" />
-                    <h3 className="text-xl font-black text-[#1D1D1F] uppercase italic tracking-tighter">No Analysis Available</h3>
+                    <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">No Analysis Available</h3>
                     <p className="text-[10px] text-[#86868B] font-mono mt-2 uppercase tracking-widest max-w-xs text-center">
                         Initialize the pipeline to model futures based on your current intelligence nodes.
                     </p>
@@ -189,7 +179,7 @@ const PredictiveAnalyticsPage = () => {
                     className="space-y-10 overflow-hidden"
                 >
                     <div className="flex items-center gap-4 py-4 border-b border-[#E5E5EA]">
-                        <h2 className="text-2xl font-black text-[#1D1D1F] uppercase italic tracking-tighter flex items-center gap-3">
+                        <h2 className="text-2xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter flex items-center gap-3">
                             <Target className="w-6 h-6 text-emerald-500" />
                             Pipeline Output
                         </h2>
@@ -208,7 +198,7 @@ const PredictiveAnalyticsPage = () => {
                                     <Trophy className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-[#1D1D1F] uppercase tracking-wider">Top Performers</h3>
+                                    <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider">Top Performers</h3>
                                     <p className="text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase tracking-widest">High Change Velocity</p>
                                 </div>
                              </div>
@@ -216,7 +206,7 @@ const PredictiveAnalyticsPage = () => {
                              <div className="space-y-4">
                                 {analysisResult.top_performers.map((company, idx) => (
                                     <div key={idx} className="space-y-2">
-                                        <div className="flex justify-between items-center text-xs font-bold text-[#1D1D1F]">
+                                        <div className="flex justify-between items-center text-xs font-bold text-[#1D1D1F] dark:text-white">
                                             <span>{company.name}</span>
                                             <span className="text-emerald-600 font-black">{company.change_velocity_score}%</span>
                                         </div>
@@ -245,7 +235,7 @@ const PredictiveAnalyticsPage = () => {
                                     <BarChart3 className="w-5 h-5 text-[#0071E3]" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-[#1D1D1F] uppercase tracking-wider">Consistent Core</h3>
+                                    <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider">Consistent Core</h3>
                                     <p className="text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase tracking-widest">Steady Execution</p>
                                 </div>
                              </div>
@@ -253,7 +243,7 @@ const PredictiveAnalyticsPage = () => {
                              <div className="space-y-4">
                                 {analysisResult.stable_performers.map((company, idx) => (
                                     <div key={idx} className="space-y-2">
-                                        <div className="flex justify-between items-center text-xs font-bold text-[#1D1D1F]">
+                                        <div className="flex justify-between items-center text-xs font-bold text-[#1D1D1F] dark:text-white">
                                             <span>{company.name}</span>
                                             <span className="text-[#0071E3] font-black">{company.change_velocity_score}%</span>
                                         </div>
@@ -287,7 +277,7 @@ const PredictiveAnalyticsPage = () => {
                                     <Zap className="w-5 h-5 text-[#AF52DE]" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-[#1D1D1F] uppercase tracking-wider">Predicted Trending</h3>
+                                    <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider">Predicted Trending</h3>
                                     <p className="text-[9px] text-[#86868B] font-mono uppercase tracking-widest">Future Breakouts</p>
                                 </div>
                              </div>
@@ -303,7 +293,7 @@ const PredictiveAnalyticsPage = () => {
                                     >
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                 <div className="text-xs font-black text-[#1D1D1F] uppercase italic">{company.name}</div>
+                                                 <div className="text-xs font-black text-[#1D1D1F] dark:text-white uppercase italic">{company.name}</div>
                                                  <div className="text-[9px] text-[#86868B] font-mono mt-0.5">Prob: {(company.trend_probability * 100).toFixed(0)}%</div>
                                             </div>
                                             <span className="text-[9px] font-black text-[#AF52DE] bg-[#AF52DE]/10 px-2 py-0.5 rounded border border-[#AF52DE]/20 uppercase tracking-wider">
@@ -331,7 +321,7 @@ const PredictiveAnalyticsPage = () => {
             className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group hover:border-[#AF52DE]/30 transition-all shadow-apple shadow-sm"
         >
             <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-[#1D1D1F] flex items-center gap-3 uppercase italic tracking-tighter">
+                <h3 className="font-black text-[#1D1D1F] dark:text-white flex items-center gap-3 uppercase italic tracking-tighter">
                     <TrendingUp className="w-5 h-5 text-[#AF52DE]" /> Traction Forecast
                 </h3>
                 <span className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-black tracking-widest">
@@ -375,7 +365,7 @@ const PredictiveAnalyticsPage = () => {
             className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group hover:border-[#FF9500]/30 transition-all shadow-apple shadow-sm"
         >
             <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-[#1D1D1F] flex items-center gap-3 uppercase italic tracking-tighter">
+                <h3 className="font-black text-[#1D1D1F] dark:text-white flex items-center gap-3 uppercase italic tracking-tighter">
                     <Target className="w-5 h-5 text-[#FF9500]" /> Vector Analysis
                 </h3>
                 <span className={cn(
@@ -421,7 +411,7 @@ const PredictiveAnalyticsPage = () => {
             className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group hover:border-[#5AC8FA]/30 transition-all shadow-apple shadow-sm"
         >
             <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-[#1D1D1F] flex items-center gap-3 uppercase italic tracking-tighter">
+                <h3 className="font-black text-[#1D1D1F] dark:text-white flex items-center gap-3 uppercase italic tracking-tighter">
                     <Activity className="w-5 h-5 text-[#5AC8FA]" /> Signal Gaps
                 </h3>
                 <span className="text-[10px] px-2.5 py-1 rounded-lg bg-[#5AC8FA]/10 text-[#5AC8FA] border border-[#5AC8FA]/20 font-black tracking-widest">

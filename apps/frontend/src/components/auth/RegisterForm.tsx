@@ -48,7 +48,7 @@ export function RegisterForm() {
         <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#1D1D1F] text-white shadow-apple-large mb-8 transition-transform hover:scale-105 active:scale-95">
           <Zap className="w-8 h-8 text-[#0071E3]" />
         </Link>
-        <h1 className="text-4xl font-bold tracking-tight text-[#1D1D1F] mb-3">Create ID.</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-[#1D1D1F] dark:text-white mb-3">Create ID.</h1>
         <p className="text-sm font-medium text-[#6E6E73]">Join the autonomous intelligence network.</p>
       </div>
 
@@ -65,7 +65,7 @@ export function RegisterForm() {
                     <Input 
                         placeholder="Full Name" 
                         {...field} 
-                        className="bg-white border-[#E5E5EA] text-[#1D1D1F] rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
+                        className="bg-white border-[#E5E5EA] text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
                     />
                   </div>
                 </FormControl>
@@ -84,7 +84,7 @@ export function RegisterForm() {
                     <Input 
                         placeholder="Email Address" 
                         {...field} 
-                        className="bg-white border-[#E5E5EA] text-[#1D1D1F] rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
+                        className="bg-white border-[#E5E5EA] text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
                     />
                   </div>
                 </FormControl>
@@ -104,7 +104,7 @@ export function RegisterForm() {
                         type="password" 
                         placeholder="Access Key" 
                         {...field} 
-                        className="bg-white border-[#E5E5EA] text-[#1D1D1F] rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
+                        className="bg-white border-[#E5E5EA] text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
                     />
                   </div>
                 </FormControl>
@@ -124,7 +124,7 @@ export function RegisterForm() {
                         type="password" 
                         placeholder="Verify Access Key" 
                         {...field} 
-                        className="bg-white border-[#E5E5EA] text-[#1D1D1F] rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
+                        className="bg-white border-[#E5E5EA] text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
                     />
                   </div>
                 </FormControl>

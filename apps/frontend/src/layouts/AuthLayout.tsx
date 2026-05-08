@@ -14,7 +14,7 @@ export function AuthLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] dark:text-white flex flex-col lg:flex-row overflow-hidden">
        {/* Left Side: Branding & Visuals (Hidden on small screens) */}
        <div className="hidden lg:flex lg:w-1/2 relative bg-white border-r border-[#E5E5EA] flex-col overflow-hidden">
           {/* Decorative Background */}
@@ -28,7 +28,7 @@ export function AuthLayout() {
               <div className="w-10 h-10 rounded-xl bg-[#0071E3] flex items-center justify-center shadow-apple">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold tracking-tight text-[#1D1D1F]">
+              <span className="text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-white">
                 Scout<span className="text-[#0071E3]"> Agent</span>
               </span>
             </Link>
@@ -40,9 +40,9 @@ export function AuthLayout() {
             >
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-[#E5E5EA] shadow-apple-sm mb-6">
                 <Sparkles size={14} className="text-[#0071E3]" />
-                <span className="text-[10px] font-black text-[#1D1D1F] uppercase tracking-wider">Secure Access</span>
+                <span className="text-[10px] font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider">Secure Access</span>
               </div>
-              <h2 className="text-6xl font-black text-[#1D1D1F] leading-[0.9] uppercase italic tracking-tighter mb-6">
+              <h2 className="text-6xl font-black text-[#1D1D1F] dark:text-white leading-[0.9] uppercase italic tracking-tighter mb-6">
                 Global <br />
                 <span className="text-[#0071E3]">Intelligence.</span>
               </h2>
@@ -73,14 +73,14 @@ export function AuthLayout() {
                     <Activity size={16} className="text-[#0071E3]" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6]">Signal Flow</span>
                   </div>
-                  <div className="text-2xl font-black text-[#1D1D1F]">ACTIVE</div>
+                  <div className="text-2xl font-black text-[#1D1D1F] dark:text-white">ACTIVE</div>
                </div>
                <div className="p-5 bg-white/70 backdrop-blur-xl rounded-[24px] border border-[#E5E5EA] shadow-apple">
                   <div className="flex items-center gap-3 mb-2">
                     <Shield size={16} className="text-[#34C759]" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6]">Verified</span>
                   </div>
-                  <div className="text-2xl font-black text-[#1D1D1F]">100%</div>
+                  <div className="text-2xl font-black text-[#1D1D1F] dark:text-white">100%</div>
                </div>
             </div>
           </div>

@@ -70,7 +70,7 @@ const AddCompetitorPage = () => {
   return (
     <div className="max-w-4xl mx-auto py-12 px-6">
       <div className="text-center mb-16">
-        <h1 className="text-5xl font-black text-[#1D1D1F] tracking-tighter mb-4 uppercase italic">Add <span className="text-[#0071E3]">Competitor</span></h1>
+        <h1 className="text-5xl font-black text-[#1D1D1F] dark:text-white tracking-tighter mb-4 uppercase italic">Add <span className="text-[#0071E3]">Competitor</span></h1>
         <p className="text-lg text-[#6E6E73] font-medium italic">ScoutIQ will analyze the digital footprint and extract strategic signals.</p>
       </div>
 
@@ -131,7 +131,7 @@ const AddCompetitorPage = () => {
               <div className="w-16 h-16 rounded-full bg-[#34C759] flex items-center justify-center text-white mx-auto mb-4">
                 <CheckCircle2 size={32} />
               </div>
-              <h3 className="text-xl font-bold text-[#1D1D1F] mb-1">Analysis Complete</h3>
+              <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-white mb-1">Analysis Complete</h3>
               <p className="text-[#34C759] font-bold uppercase tracking-widest text-xs">Competitor added to watchlist</p>
             </motion.div>
           )}
@@ -148,7 +148,7 @@ const AddCompetitorPage = () => {
             <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA] flex items-center justify-center text-[#0071E3] mx-auto mb-6">
               <item.icon size={24} />
             </div>
-            <h4 className="text-lg font-black text-[#1D1D1F] mb-2 uppercase italic tracking-tighter">{item.title}</h4>
+            <h4 className="text-lg font-black text-[#1D1D1F] dark:text-white mb-2 uppercase italic tracking-tighter">{item.title}</h4>
             <p className="text-sm text-[#6E6E73] font-medium leading-relaxed">{item.desc}</p>
           </div>
         ))}

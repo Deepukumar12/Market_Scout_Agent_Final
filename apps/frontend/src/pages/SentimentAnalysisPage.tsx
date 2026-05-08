@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/utils';
 import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';
+import { getSentimentAnalysis } from '@/services/api';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 interface SentimentData {
@@ -49,14 +50,8 @@ const SentimentAnalysisPage = () => {
       if (!selectedCompetitorId) return;
       setLoading(true);
       try {
-        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${apiUrl}/api/v1/intelligence/sentiment-analysis?competitor_id=${selectedCompetitorId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        }
+        const json = await getSentimentAnalysis(selectedCompetitorId);
+        setData(json);
       } catch (e) {
         console.error(e);
       } finally {
@@ -64,7 +59,7 @@ const SentimentAnalysisPage = () => {
       }
     };
     fetchData();
-  }, [selectedCompetitorId, token]);
+  }, [selectedCompetitorId]);
 
   const pieData = data ? [
     { name: 'Positive', value: data.breakdown.positive, color: '#34C759' },
@@ -77,7 +72,7 @@ const SentimentAnalysisPage = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black text-[#1D1D1F] uppercase italic tracking-tighter">Market <span className="text-[#AF52DE]">Sentiment</span></h1>
+          <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Market <span className="text-[#AF52DE]">Sentiment</span></h1>
           <p className="text-[#6E6E73] dark:text-[#86868B] mt-2 font-medium italic">Customer perception and emotional response tracking.</p>
         </div>
 
@@ -85,7 +80,7 @@ const SentimentAnalysisPage = () => {
           <select 
             value={selectedCompetitorId || ''} 
             onChange={(e) => setSelectedCompetitorId(e.target.value)}
-            className="h-10 px-4 rounded-full border border-[#E5E5EA] bg-white text-sm font-bold text-[#1D1D1F] focus:outline-none shadow-apple-sm"
+            className="h-10 px-4 rounded-full border border-[#E5E5EA] bg-white text-sm font-bold text-[#1D1D1F] dark:text-white focus:outline-none shadow-apple-sm"
           >
             {competitors.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
@@ -115,7 +110,7 @@ const SentimentAnalysisPage = () => {
                  {data.sentiment_label === 'Positive' ? <Smile size={48} /> : 
                   data.sentiment_label === 'Negative' ? <Frown size={48} /> : <Meh size={48} />}
                </div>
-               <h3 className="text-4xl font-black text-[#1D1D1F] tracking-tighter mb-1 uppercase italic leading-none">
+               <h3 className="text-4xl font-black text-[#1D1D1F] dark:text-white tracking-tighter mb-1 uppercase italic leading-none">
                  {data.overall_score}%
                </h3>
                <p className="text-sm font-black text-[#86868B] dark:text-[#A1A1A6] mb-6 uppercase tracking-widest italic">{data.sentiment_label} Reception</p>
@@ -145,13 +140,13 @@ const SentimentAnalysisPage = () => {
             {/* Drivers & Mentions */}
             <div className="lg:col-span-2 space-y-10">
               <div className="p-10 rounded-[40px] bg-white/70 backdrop-blur-xl border border-[#E5E5EA] shadow-apple shadow-sm">
-                <h3 className="text-xl font-black text-[#1D1D1F] mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
+                <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
                   <Star className="text-[#0071E3]" size={20} />
                   Narrative Drivers
                 </h3>
                 <div className="flex flex-wrap gap-4">
                   {data.key_drivers.map((driver, i) => (
-                    <div key={i} className="px-6 py-3 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA] text-sm font-bold text-[#1D1D1F] flex items-center gap-3">
+                    <div key={i} className="px-6 py-3 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA] text-sm font-bold text-[#1D1D1F] dark:text-white flex items-center gap-3">
                        <Zap size={14} className="text-[#0071E3]" />
                        {driver}
                     </div>
@@ -160,7 +155,7 @@ const SentimentAnalysisPage = () => {
               </div>
 
               <div className="p-10 rounded-[40px] bg-white/70 backdrop-blur-xl border border-[#E5E5EA] shadow-apple shadow-sm">
-                <h3 className="text-xl font-black text-[#1D1D1F] mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
+                <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
                   <MessageSquare className="text-[#AF52DE]" size={20} />
                   Voice of Market
                 </h3>
@@ -171,7 +166,7 @@ const SentimentAnalysisPage = () => {
                          <span className="text-[10px] font-black text-[#86868B] uppercase tracking-widest">{mention.source}</span>
                          {mention.sentiment > 0.5 ? <TrendingUp size={16} className="text-[#34C759]" /> : <TrendingDown size={16} className="text-[#FF3B30]" />}
                       </div>
-                      <p className="text-[#1D1D1F] font-medium leading-relaxed italic">"{mention.text}"</p>
+                      <p className="text-[#1D1D1F] dark:text-white font-medium leading-relaxed italic">"{mention.text}"</p>
                     </div>
                   ))}
                 </div>

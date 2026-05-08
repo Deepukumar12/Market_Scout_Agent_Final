@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown, Menu } from 'lucide-react';
+import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown, Menu, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useTheme } from '@/context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useAuthStore } from '@/store/authStore';
@@ -18,6 +19,7 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, onSearch, user, onMobileMenuToggle }) => {
   const { unreadCount } = useNotificationStore();
   const { logout } = useAuthStore();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -79,6 +81,13 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           <Plus size={16} strokeWidth={3} />
           Analyze Company
         </Button>
+        
+        <button
+          onClick={toggleTheme}
+          className="p-2.5 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] text-[#6E6E73] dark:text-[#A1A1A6] transition-colors"
+        >
+          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+        </button>
 
         <div className="flex items-center gap-2 pl-4 border-l border-[#E5E5EA] dark:border-white/10 relative">
           <button 

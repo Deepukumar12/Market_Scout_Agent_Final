@@ -43,7 +43,7 @@ const DashboardLayout = () => {
     fetchCompetitors();
   }, [location.pathname, fetchCompetitors]);
 
-  const handleAnalyze = async (company: string) => {
+  const handleAnalyze = async (company: { name: string, domain: string }) => {
     setAnalyzeStatus('running');
     setCurrentStep(0);
     
@@ -74,7 +74,7 @@ const DashboardLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-background text-[#1D1D1F] dark:text-foreground font-sans selection:bg-[#0071E3]/20 overflow-x-hidden">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-background text-[#1D1D1F] dark:text-white dark:text-foreground font-sans selection:bg-[#0071E3]/20 overflow-x-hidden">
       <Navbar 
         user={user} 
         onAnalyzeClick={() => setIsAnalyzeModalOpen(true)}

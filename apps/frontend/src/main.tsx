@@ -37,7 +37,7 @@ const ProtectedDashboard = () => {
   
   if (loading) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#F5F5F7] text-[#1D1D1F]">
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#F5F5F7] text-[#1D1D1F] dark:text-white">
         <div className="w-12 h-12 border-4 border-[#0071E3]/20 border-t-[#0071E3] rounded-full animate-spin mb-4" />
         <p className="text-[10px] font-black uppercase tracking-widest italic opacity-50">Calibrating Console...</p>
       </div>
@@ -57,7 +57,7 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       {
-        path: "/",
+        index: true,
         element: <LandingPage />,
       },
       {

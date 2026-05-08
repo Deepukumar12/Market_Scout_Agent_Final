@@ -2,25 +2,26 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Loader2, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { searchCompanies } from '@/services/api';
+
+interface CompanySuggestion {
+  name: string;
+  domain: string;
+  logo: string;
+  industry?: string;
+  country?: string;
+  employee_count?: number;
+  source?: string;
+}
 
 interface AnalyzeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAnalyze: (company: string) => Promise<void>;
+  onAnalyze: (suggestion: CompanySuggestion) => Promise<void>;
   status: 'idle' | 'running' | 'completed' | 'error';
   progressSteps: string[];
   currentStep: number;
 }
-
-const POPULAR_COMPANIES = [
-  "Apple", "Amazon", "Alphabet", "Anthropic", "Adobe", "AMD", "Airbnb", "Atlassian",
-  "Meta", "Microsoft", "Mistral", "Netflix", "Nvidia", "Notion", "OpenAI",
-  "Google", "Github", "Gitlab", "Stripe", "SpaceX", "Slack", "Shopify", "Snowflake",
-  "Tesla", "TikTok", "Uber", "Vercel", "Zoom", "IIT Bombay", "IBM", "Intel",
-  "Oracle", "Salesforce", "Samsung", "Sony", "Spotify", "Square", "Snap", "Splunk",
-  "Palantir", "Pinterest", "Plaid", "Perplexity", "Qualcomm", "Reddit", "Roblox",
-  "Databricks", "Datadog", "DigitalOcean", "Discord", "Docker"
-];
 
 const AnalyzeModal: React.FC<AnalyzeModalProps> = ({ 
   isOpen, 
@@ -31,25 +32,45 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
   currentStep
 }) => {
   const [company, setCompany] = useState('');
+  const [suggestions, setSuggestions] = useState<CompanySuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const filteredSuggestions = company.trim() 
-    ? POPULAR_COMPANIES.filter(c => c.toLowerCase().startsWith(company.toLowerCase()) && c.toLowerCase() !== company.toLowerCase()).slice(0, 15)
-    : [];
+  React.useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (company.trim().length >= 1 && showSuggestions) {
+        setIsSearching(true);
+        try {
+          const results = await searchCompanies(company);
+          setSuggestions(results);
+        } catch (error) {
+          console.error('Search failed:', error);
+          setSuggestions([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSuggestions([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [company, showSuggestions]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showSuggestions || filteredSuggestions.length === 0) return;
+    if (!showSuggestions || suggestions.length === 0) return;
     
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setFocusedIndex(prev => (prev < filteredSuggestions.length - 1 ? prev + 1 : prev));
+      setFocusedIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setFocusedIndex(prev => (prev > 0 ? prev - 1 : -1));
     } else if (e.key === 'Enter' && focusedIndex >= 0) {
       e.preventDefault();
-      setCompany(filteredSuggestions[focusedIndex]);
+      const selected = suggestions[focusedIndex];
+      setCompany(selected.name);
       setShowSuggestions(false);
       setFocusedIndex(-1);
     } else if (e.key === 'Escape') {
@@ -61,7 +82,8 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (company.trim()) {
-      onAnalyze(company);
+      const selected = suggestions.find(s => s.name === company) || { name: company, domain: '', logo: '' };
+      onAnalyze(selected);
     }
   };
 
@@ -77,18 +99,18 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
           />
           
-          <motion.div
+            <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative w-full max-w-xl bg-white rounded-[32px] shadow-2xl"
+            className="relative w-full max-w-xl bg-white dark:bg-[#1C1C1E] rounded-[32px] shadow-2xl border border-transparent dark:border-white/10"
           >
             <div className="p-8">
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold text-[#1D1D1F]">Analyze New Company</h2>
+                <h2 className="text-2xl font-bold text-[#1D1D1F] dark:text-white">Analyze New Company</h2>
                 <button 
                   onClick={onClose}
-                  className="p-2 rounded-full hover:bg-[#F5F5F7] text-[#6E6E73] transition-colors"
+                  className="p-2 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-white/10 text-[#6E6E73] dark:text-[#86868B] transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -98,11 +120,15 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                      <Search size={20} className="text-[#6E6E73] group-focus-within:text-[#0071E3] transition-colors" />
+                      {isSearching ? (
+                        <Loader2 size={20} className="text-[#0071E3] animate-spin" />
+                      ) : (
+                        <Search size={20} className="text-[#6E6E73] group-focus-within:text-[#0071E3] transition-colors" />
+                      )}
                     </div>
                     <input
                       type="text"
-                      placeholder="Enter company name (e.g. OpenAI)"
+                      placeholder="Search global companies (e.g. Apple, Stripe...)"
                       value={company}
                       onChange={(e) => {
                         setCompany(e.target.value);
@@ -112,31 +138,90 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                       onKeyDown={handleKeyDown}
                       onFocus={() => setShowSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                      className="w-full bg-[#F5F5F7] border border-transparent focus:border-[#0071E3] focus:bg-white rounded-2xl py-5 pl-14 pr-6 text-[#1D1D1F] text-lg font-medium outline-none transition-all"
+                      className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-transparent focus:border-[#0071E3] focus:bg-white dark:focus:bg-[#1D1D1F] rounded-2xl py-5 pl-14 pr-6 text-[#1D1D1F] dark:text-white text-lg font-medium outline-none transition-all placeholder:text-[#6E6E73] dark:placeholder:text-[#86868B]"
                       autoFocus
                     />
                     
                     <AnimatePresence>
-                      {showSuggestions && filteredSuggestions.length > 0 && (
+                      {showSuggestions && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute z-10 w-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-64 overflow-y-auto"
+                          className="absolute z-10 w-full mt-2 bg-white dark:bg-[#2C2C2E] rounded-xl shadow-xl border border-gray-100 dark:border-white/10 max-h-80 overflow-y-auto overflow-x-hidden"
                         >
-                          {filteredSuggestions.map((suggestion, index) => (
+                          {isSearching && suggestions.length === 0 && (
+                            <div className="p-12 text-center">
+                              <Loader2 size={32} className="text-[#0071E3] animate-spin mx-auto mb-4" />
+                              <p className="text-sm font-bold text-[#1D1D1F] dark:text-white uppercase tracking-widest italic">Scanning Global Network...</p>
+                            </div>
+                          )}
+                          
+                          {!isSearching && company.trim() && suggestions.length === 0 && (
+                            <div className="p-12 text-center">
+                              <Search size={32} className="text-[#6E6E73] mx-auto mb-4 opacity-20" />
+                              <p className="text-sm font-bold text-[#1D1D1F] dark:text-white uppercase tracking-widest italic">No Organizations Found</p>
+                              <p className="text-xs text-[#6E6E73] mt-2 italic">Try a broader keyword or partial name.</p>
+                            </div>
+                          )}
+
+                          {suggestions.map((suggestion, index) => (
                             <button
-                              key={suggestion}
+                              key={`${suggestion.domain}-${index}`}
                               type="button"
                               onMouseEnter={() => setFocusedIndex(index)}
                               onClick={() => {
-                                setCompany(suggestion);
+                                setCompany(suggestion.name);
                                 setShowSuggestions(false);
                                 setFocusedIndex(-1);
                               }}
-                              className={`w-full text-left px-6 py-3 font-medium transition-colors border-b border-gray-50 last:border-0 ${index === focusedIndex ? 'bg-[#F5F5F7] text-[#0071E3]' : 'hover:bg-[#F5F5F7] text-[#1D1D1F]'}`}
+                              className={`w-full text-left px-6 py-4 transition-colors border-b border-gray-50 dark:border-white/5 last:border-0 flex items-center gap-4 ${index === focusedIndex ? 'bg-[#F5F5F7] dark:bg-white/5' : 'hover:bg-[#F5F5F7] dark:hover:bg-white/5'}`}
                             >
-                              {suggestion}
+                              <div className="w-10 h-10 rounded-lg bg-white dark:bg-[#1D1D1F] border border-gray-200 dark:border-white/10 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                {suggestion.logo ? (
+                                  <img src={suggestion.logo} alt={suggestion.name} className="w-8 h-8 object-contain" />
+                                ) : (
+                                  <div className="w-full h-full bg-blue-50 dark:bg-[#0071E3]/20 flex items-center justify-center text-blue-600 dark:text-[#0071E3] font-bold uppercase">
+                                    {suggestion.name[0]}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className={`font-bold truncate ${index === focusedIndex ? 'text-[#0071E3]' : 'text-[#1D1D1F] dark:text-white'}`}>
+                                    {suggestion.name}
+                                  </div>
+                                  {suggestion.source && (
+                                    <span className="text-[8px] font-black text-[#6E6E73] dark:text-[#86868B] uppercase tracking-[0.2em] opacity-40 italic">
+                                      via {suggestion.source}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-xs text-[#6E6E73] dark:text-[#86868B] truncate font-medium">
+                                    {suggestion.domain}
+                                  </span>
+                                  {suggestion.industry && (
+                                    <>
+                                      <span className="text-[#E5E5EA] dark:text-white/10">•</span>
+                                      <span className="text-[10px] font-bold text-[#0071E3] uppercase tracking-tighter italic">{suggestion.industry}</span>
+                                    </>
+                                  )}
+                                  {suggestion.country && (
+                                    <>
+                                      <span className="text-[#E5E5EA] dark:text-white/10">•</span>
+                                      <span className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest">{suggestion.country}</span>
+                                    </>
+                                  )}
+                                  {suggestion.employee_count && (
+                                    <>
+                                      <span className="text-[#E5E5EA] dark:text-white/10">•</span>
+                                      <span className="text-[10px] font-bold text-[#34C759] uppercase tracking-widest">{suggestion.employee_count.toLocaleString()}+ Staff</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <ChevronRight size={16} className={`shrink-0 ${index === focusedIndex ? 'text-[#0071E3]' : 'text-gray-300 dark:text-gray-600'}`} />
                             </button>
                           ))}
                         </motion.div>
@@ -182,7 +267,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                         )}
                         <span className={cn(
                           "text-base font-semibold",
-                          index === currentStep ? "text-[#1D1D1F]" : "text-[#6E6E73]"
+                          index === currentStep ? "text-[#1D1D1F] dark:text-white" : "text-[#6E6E73]"
                         )}>
                           {step}
                         </span>
@@ -208,8 +293,8 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
               )}
             </div>
             
-            <div className="bg-[#F5F5F7] rounded-b-[32px] p-6 text-center">
-              <p className="text-sm text-[#6E6E73] font-medium">
+            <div className="bg-[#F5F5F7] dark:bg-white/5 rounded-b-[32px] p-6 text-center">
+              <p className="text-sm text-[#6E6E73] dark:text-[#86868B] font-medium">
                 Our AI agents are scanning thousands of technical sources in real-time.
               </p>
             </div>

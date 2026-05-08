@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
+import { getIntelligenceStream, getRecommendations } from '@/services/api';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 interface IntelSignal {
@@ -40,24 +41,17 @@ const TargetUniversePage = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
-            const resSignals = await fetch(`${apiUrl}/api/v1/intelligence/stream?limit=50`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const dataSignals = await resSignals.json();
+            const dataSignals = await getIntelligenceStream(50);
             setSignals(dataSignals.signals || []);
 
-            const resRecs = await fetch(`${apiUrl}/api/v1/intelligence/recommendations`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const dataRecs = await resRecs.json();
+            const dataRecs = await getRecommendations();
             setRecommendations(dataRecs || []);
         } catch (error) {
             console.error("Failed to fetch intelligence data:", error);
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         fetchData();
@@ -97,7 +91,7 @@ const getSectorIcon = (sector: string) => {
         <div className="space-y-6 min-h-screen">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-5xl font-black text-[#1D1D1F] uppercase tracking-tighter italic flex items-center gap-3">
+                    <h1 className="text-5xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic flex items-center gap-3">
                         Target <span className="text-[#0071E3]">Universe</span>
                     </h1>
                     <p className="text-[#6E6E73] dark:text-[#86868B] text-lg font-medium italic mt-2">
@@ -142,7 +136,7 @@ const getSectorIcon = (sector: string) => {
                                                 {signal.company_name[0]}
                                             </span>
                                             <div>
-                                                <h3 className="text-sm font-bold text-[#1D1D1F] group-hover:text-[#0071E3] transition-colors">
+                                                <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors">
                                                     {signal.company_name}
                                                 </h3>
                                                 <div className="flex items-center gap-2 text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono uppercase">
@@ -185,7 +179,7 @@ const getSectorIcon = (sector: string) => {
                 <div className="space-y-10">
                     {/* Radar Chart Widget */}
                     <div className="glass-panel border-[#E5E5EA] p-10 rounded-[40px] relative overflow-hidden shadow-apple shadow-sm">
-                        <h3 className="text-xs font-black text-[#1D1D1F] uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <h3 className="text-xs font-black text-[#1D1D1F] dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2">
                              <Layers className="w-4 h-4 text-[#AF52DE]" /> Sector Composition
                         </h3>
                         <div className="h-[250px] w-full relative z-10">
@@ -203,7 +197,7 @@ const getSectorIcon = (sector: string) => {
                     <div className="bg-gradient-to-b from-[#0071E3]/5 to-[#AF52DE]/5 border border-[#E5E5EA] rounded-[40px] p-10 backdrop-blur-xl relative overflow-hidden shadow-apple shadow-sm">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-[#0071E3]/10 blur-[50px] rounded-full pointer-events-none" />
                         
-                        <h2 className="text-xs font-black text-[#1D1D1F] uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
+                        <h2 className="text-xs font-black text-[#1D1D1F] dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
                             <Zap className="w-4 h-4 text-amber-500" />
                             AI Target Recommendations
                         </h2>
@@ -216,7 +210,7 @@ const getSectorIcon = (sector: string) => {
                                     className="bg-white/60 border border-[#E5E5EA] rounded-xl p-4 hover:border-[#0071E3]/30 transition-all group"
                                 >
                                     <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-bold text-sm text-[#1D1D1F] group-hover:text-[#0071E3] transition-colors">
+                                        <h3 className="font-bold text-sm text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors">
                                             {rec.company_name}
                                         </h3>
                                         <span className="text-[9px] font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
@@ -242,7 +236,7 @@ const getSectorIcon = (sector: string) => {
                         <div className="w-12 h-12 bg-[#F5F5F7] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#E5E5EA]">
                              <Search className="w-5 h-5 text-[#86868B]" />
                         </div>
-                        <h3 className="text-xs font-black text-[#1D1D1F] uppercase tracking-widest mb-1">
+                        <h3 className="text-xs font-black text-[#1D1D1F] dark:text-white uppercase tracking-widest mb-1">
                             Manual Probe
                         </h3>
                         <p className="text-[10px] text-[#6E6E73] mb-4 font-medium italic text-center">

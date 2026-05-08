@@ -13,7 +13,10 @@ from src.domains.notifications.controllers.notifications import router as notifi
 from src.domains.telemetry.controllers.meta import router as meta_router
 from src.domains.settings.controllers.settings import router as settings_router
 
+from src.domains.discovery.controllers.discovery import router as discovery_router
+
 api_router = APIRouter()
+api_router.include_router(discovery_router, prefix="/api/v1/discovery", tags=["discovery"])
 api_router.include_router(competitors_router, prefix="/api/v1", tags=["competitors"])
 
 # reports.py handled trigger_scan. Let's keep it for compatibility or migrate. 

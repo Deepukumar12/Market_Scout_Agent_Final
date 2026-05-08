@@ -4,6 +4,7 @@ import { Settings, Bell, ShieldCheck, User, LogOut, Check, Save, Sparkles, Alert
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
 import { useAuthStore } from '@/store/authStore';
+import { getSchedulerConfig, updateSchedulerConfig } from '@/services/api';
 import { cn } from '@/utils/utils';
 import { AnimatePresence } from 'framer-motion';
 
@@ -53,19 +54,15 @@ const SettingsPage = () => {
   });
 
   useEffect(() => {
-    const fetchSchedulerConfig = async () => {
+    const fetchSchedulerConfigData = async () => {
       try {
-        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${apiUrl}/api/v1/settings/scheduler`);
-        if (res.ok) {
-          const data = await res.json();
-          setSchedulerConfig(data);
-        }
+        const data = await getSchedulerConfig();
+        setSchedulerConfig(data);
       } catch (err) {
         console.error('Failed to load scheduler config', err);
       }
     };
-    fetchSchedulerConfig();
+    fetchSchedulerConfigData();
   }, []);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -139,12 +136,7 @@ const SettingsPage = () => {
     
     // Save scheduler config
     try {
-        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-        await fetch(`${apiUrl}/api/v1/settings/scheduler`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(schedulerConfig)
-        });
+        await updateSchedulerConfig(schedulerConfig);
     } catch (err) {
         console.error('Failed to save scheduler config', err);
     }
@@ -247,8 +239,8 @@ const SettingsPage = () => {
                           className={cn(
                             "py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
                             preferences.scanWindow === days 
-                              ? "bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] border-transparent shadow-apple" 
-                              : "bg-transparent border-[#E5E5EA] dark:border-white/10 text-[#6E6E73] hover:text-[#1D1D1F] dark:hover:text-white"
+                              ? "bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] dark:text-white border-transparent shadow-apple" 
+                              : "bg-transparent border-[#E5E5EA] dark:border-white/10 text-[#6E6E73] hover:text-[#1D1D1F] dark:text-white dark:hover:text-white"
                           )}
                         >
                           {days} Days
@@ -402,7 +394,7 @@ const SettingsPage = () => {
                                   "flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
                                   preferences.scoutDepth === level 
                                     ? "bg-white dark:bg-[#1D1D1F] text-[#0071E3] shadow-apple-sm" 
-                                    : "text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white"
+                                    : "text-[#86868B] hover:text-[#1D1D1F] dark:text-white dark:hover:text-white"
                                )}
                             >
                                {level}

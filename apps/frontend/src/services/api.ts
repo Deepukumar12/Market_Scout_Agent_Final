@@ -23,8 +23,9 @@ api.interceptors.response.use(
             const isAuthEndpoint = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
             if (!isAuthEndpoint) {
                 localStorage.removeItem('scoutiq_token');
-                delete api.defaults.headers.common['Authorization'];
-                window.location.href = '/login';
+                // We don't force a redirect here anymore because public pages 
+                // like the LandingPage might trigger 401s for non-essential metrics.
+                // The ProtectedDashboard component in main.tsx handles redirects for private routes.
             }
         }
         return Promise.reject(error);
@@ -65,8 +66,8 @@ export const runScan = async (payload: {
     return response.data;
 };
 
-export const analyzeCompany = async (companyName: string) => {
-    return runScan({ company_name: companyName });
+export const analyzeCompany = async (company: { name: string, domain: string }) => {
+    return runScan({ company_name: company.name, website: company.domain });
 };
 
 
@@ -145,6 +146,28 @@ export const getInnovationTrends = async () => {
     return response.data;
 };
 
+export const getMarketComparison = async () => {
+    const response = await api.get('/intelligence/market-comparison');
+    return response.data;
+};
+
+export const getLastSevenDays = async (competitor?: string) => {
+    const response = await api.get('/intelligence/last-seven-days', {
+        params: competitor ? { competitor } : {}
+    });
+    return response.data;
+};
+
+export const getMissionBriefing = async () => {
+    const response = await api.get('/intelligence/mission-briefing');
+    return response.data;
+};
+
+export const getStrategicPlan = async (payload: { competitor_id: string, focus_area: string, risk_level: string }) => {
+    const response = await api.post('/intelligence/strategic-plan', payload);
+    return response.data;
+};
+
 export const getPredictivePipeline = async () => {
     const response = await api.get('/intelligence/predictive-pipeline');
     return response.data;
@@ -152,6 +175,13 @@ export const getPredictivePipeline = async () => {
 
 export const getSentimentMatrix = async () => {
     const response = await api.get('/intelligence/sentiment-matrix');
+    return response.data;
+};
+
+export const getSentimentAnalysis = async (competitorId: string) => {
+    const response = await api.get('/intelligence/sentiment-analysis', {
+        params: { competitor_id: competitorId }
+    });
     return response.data;
 };
 
@@ -164,6 +194,13 @@ export const getSignalAnalytics = async (competitorId?: string) => {
 
 export const getRiskMatrix = async () => {
     const response = await api.get('/intelligence/risk-matrix');
+    return response.data;
+};
+
+export const getRiskAssessment = async (competitorId: string) => {
+    const response = await api.get('/intelligence/risk-assessment', {
+        params: { competitor_id: competitorId }
+    });
     return response.data;
 };
 
@@ -190,6 +227,21 @@ export const markAllNotificationsRead = async () => {
 
 export const clearNotifications = async () => {
     const response = await api.delete('/notifications/clear');
+    return response.data;
+};
+
+export const getSchedulerConfig = async () => {
+    const response = await api.get('/settings/scheduler');
+    return response.data;
+};
+
+export const updateSchedulerConfig = async (data: { interval_unit: string, interval_value: number }) => {
+    const response = await api.post('/settings/scheduler', data);
+    return response.data;
+};
+
+export const searchCompanies = async (query: string) => {
+    const response = await api.get('/discovery/search', { params: { q: query } });
     return response.data;
 };
 

@@ -56,7 +56,7 @@ const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen,
               "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",
               isActive 
                 ? "bg-[#0071E3] text-white shadow-apple-blue font-bold" 
-                : "text-[#6E6E73] dark:text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E]"
+                : "text-[#6E6E73] dark:text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:text-white dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E]"
             )}
           >
             {({ isActive }) => (

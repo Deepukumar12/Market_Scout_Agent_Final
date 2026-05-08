@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/utils';
 import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';
+import { getSignalAnalytics } from '@/services/api';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 // --- Types ---
@@ -52,14 +53,8 @@ const AnalyticsPage = () => {
       if (!selectedCompetitorId || selectedCompetitorId === 'null') return;
       setLoading(true);
       try {
-        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${apiUrl}/api/v1/intelligence/analytics?competitor_id=${selectedCompetitorId}`, {
-              headers: { Authorization: `Bearer ${token}` }
-          });
-          if(res.ok) {
-              const json = await res.json();
-              setData(json);
-          }
+          const json = await getSignalAnalytics(selectedCompetitorId);
+          setData(json);
       } catch(e) {
           console.error(e);
       } finally {
@@ -126,7 +121,7 @@ const AnalyticsPage = () => {
             </span>
           </div>
           <div className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-1 italic">24h Signal Volume</div>
-          <div className="text-3xl font-black text-[#1D1D1F] tracking-tighter uppercase italic">{data?.total_signals_24h.toLocaleString() || '---'}</div>
+          <div className="text-3xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic">{data?.total_signals_24h.toLocaleString() || '---'}</div>
         </div>
 
         <div className="p-8 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm group hover:shadow-apple transition-all">

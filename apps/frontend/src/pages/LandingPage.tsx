@@ -15,12 +15,16 @@ import {
   Activity,
   Lock,
   Cpu,
-  LayoutGrid
+  LayoutGrid,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Footer } from '@/layouts/Footer';
 import { cn } from '@/utils/utils';
 import { useIntelStore } from '@/store/intelStore';
+import { useAuthStore } from '@/store/authStore';
+import { useTheme } from '@/context/ThemeContext';
 
 // --- Components ---
 
@@ -45,7 +49,7 @@ const BentoCard = ({
     <div className="relative z-10">
       <div className={cn(
         "w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-lg",
-        variant === "light" ? "bg-[#0071E3] text-white" : "bg-white text-[#1D1D1F]"
+        variant === "light" ? "bg-[#0071E3] text-white" : "bg-white text-[#1D1D1F] dark:text-white"
       )}>
         <Icon size={24} />
       </div>
@@ -67,7 +71,7 @@ const BentoCard = ({
 const FeatureLabel = ({ children, color = "#0071E3" }: any) => (
   <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm mb-6">
     <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
-    <span className="text-[10px] font-black text-[#1D1D1F] uppercase tracking-wider">{children}</span>
+    <span className="text-[10px] font-black text-[#1D1D1F] dark:text-white uppercase tracking-wider">{children}</span>
   </div>
 );
 
@@ -76,6 +80,8 @@ const FeatureLabel = ({ children, color = "#0071E3" }: any) => (
 export default function LandingPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { globalMetrics, fetchGlobalMetrics } = useIntelStore();
+  const { token } = useAuthStore();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     fetchGlobalMetrics();
@@ -90,7 +96,7 @@ export default function LandingPage() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-[#F5F5F7] dark:bg-background text-[#1D1D1F] selection:bg-[#0071E3]/20 font-sans antialiased overflow-x-hidden">
+    <div ref={containerRef} className="min-h-screen bg-[#F5F5F7] dark:bg-background text-[#1D1D1F] dark:text-white selection:bg-[#0071E3]/20 font-sans antialiased overflow-x-hidden">
       
       {/* Navigation */}
       <motion.nav 
@@ -104,26 +110,42 @@ export default function LandingPage() {
               <div className="w-10 h-10 rounded-xl bg-[#0071E3] flex items-center justify-center shadow-apple">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold tracking-tight text-[#1D1D1F]">
+              <span className="text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-white">
                 Scout<span className="text-[#0071E3]"> Agent</span>
               </span>
             </Link>
 
             <div className="hidden md:flex items-center gap-10">
               {['Features', 'Intelligence', 'Security'].map((item) => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="text-sm font-bold text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] transition-colors uppercase tracking-widest text-[10px]">
+                <a key={item} href={`#${item.toLowerCase()}`} className="text-sm font-bold text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] dark:text-white transition-colors uppercase tracking-widest text-[10px]">
                   {item}
                 </a>
               ))}
             </div>
 
             <div className="flex items-center gap-4">
-              <Link to="/login" className="text-[10px] font-black text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] px-4 uppercase tracking-widest italic">Sign In</Link>
-              <Link to="/dashboard">
-                <Button className="bg-[#1D1D1F] hover:bg-[#323235] text-white px-8 py-2.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-apple transition-all">
-                  Launch Console
-                </Button>
-              </Link>
+              <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white hover:bg-[#E5E5EA] dark:hover:bg-[#3A3A3C] transition-all"
+              >
+                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+              </button>
+              {token ? (
+                <Link to="/dashboard">
+                  <Button className="bg-[#0071E3] hover:bg-[#0077ED] text-white px-8 py-2.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-apple transition-all">
+                    Dashboard
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" className="text-[10px] font-black text-[#6E6E73] dark:text-[#86868B] hover:text-[#1D1D1F] dark:text-white dark:hover:text-white px-4 uppercase tracking-widest italic">Sign In</Link>
+                  <Link to="/register">
+                    <Button className="bg-[#1D1D1F] dark:bg-white dark:text-[#1D1D1F] dark:text-white hover:bg-[#323235] dark:hover:bg-gray-200 text-white px-8 py-2.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-apple transition-all">
+                      Get Started
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -141,7 +163,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
            >
              <FeatureLabel>Version 1.0 Stable</FeatureLabel>
-             <h1 className="text-8xl md:text-[160px] font-black tracking-tighter leading-[0.8] uppercase italic text-[#1D1D1F]">
+             <h1 className="text-8xl md:text-[160px] font-black tracking-tighter leading-[0.8] uppercase italic text-[#1D1D1F] dark:text-white">
                 Autonomous <br />
                 <span className="text-[#0071E3]">Signals.</span>
              </h1>
@@ -156,20 +178,20 @@ export default function LandingPage() {
              transition={{ duration: 0.8, delay: 0.2 }}
              className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-12"
            >
-              <Link to="/dashboard">
+              <Link to={token ? "/dashboard" : "/register"}>
                 <Button size="lg" className="h-16 px-12 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white text-[12px] font-black uppercase tracking-widest shadow-apple-large group">
-                  Initiate Exploration
+                  {token ? "Resume Intelligence" : "Initiate Exploration"}
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="h-16 px-12 rounded-full border-[#E5E5EA] dark:border-white/10 text-[#1D1D1F] text-[12px] font-black uppercase tracking-widest hover:bg-white shadow-apple-sm">
+              <Button size="lg" variant="outline" className="h-16 px-12 rounded-full border-[#E5E5EA] dark:border-white/10 text-[#1D1D1F] dark:text-white text-[12px] font-black uppercase tracking-widest hover:bg-white shadow-apple-sm">
                 Watch Technical Briefing
               </Button>
            </motion.div>
         </div>
 
         {/* Visionary Background */}
-        <div className="absolute inset-0 -z-10 bg-white">
+        <div className="absolute inset-0 -z-10 bg-white dark:bg-background">
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-40">
               <Canvas camera={{ position: [0, 0, 5] }}>
                 <ambientLight intensity={0.5} />
@@ -185,7 +207,7 @@ export default function LandingPage() {
       </motion.section>
 
       {/* Bento Feature Grid */}
-      <section className="py-40 px-8 bg-white border-y border-[#E5E5EA] dark:border-white/10" id="features">
+      <section className="py-40 px-8 bg-white dark:bg-background border-y border-[#E5E5EA] dark:border-white/10" id="features">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-32">
              <FeatureLabel color="#AF52DE">The Bento Architecture</FeatureLabel>
@@ -299,7 +321,7 @@ export default function LandingPage() {
          <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center">
             <div>
                <FeatureLabel color="#5856D6">Visualizing Data Density</FeatureLabel>
-               <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.9] text-[#1D1D1F] mb-12">
+               <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.9] text-[#1D1D1F] dark:text-white mb-12">
                   The <span className="text-[#0071E3]">Signal</span> <br />is Here.
                </h2>
                <p className="text-xl text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed max-w-xl mb-12">
@@ -307,13 +329,13 @@ export default function LandingPage() {
                </p>
                <div className="flex items-center gap-12 border-t border-[#E5E5EA] dark:border-white/10 pt-12">
                   <div>
-                     <div className="text-4xl font-black italic text-[#1D1D1F]">
+                     <div className="text-4xl font-black italic text-[#1D1D1F] dark:text-white">
                         {globalMetrics?.articles_processed ? `${Math.min(99, 85 + (globalMetrics.articles_processed % 10))}%` : '87%'}
                      </div>
                      <div className="text-[10px] font-black uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6]">Precision Level</div>
                   </div>
                   <div>
-                     <div className="text-4xl font-black italic text-[#1D1D1F]">99.9%</div>
+                     <div className="text-4xl font-black italic text-[#1D1D1F] dark:text-white">99.9%</div>
                      <div className="text-[10px] font-black uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6]">Agent Uptime</div>
                   </div>
                </div>
@@ -335,7 +357,7 @@ export default function LandingPage() {
                {/* Live Overlay */}
                <div className="absolute top-10 left-10 p-6 bg-white/70 backdrop-blur-xl rounded-[24px] border border-white shadow-apple">
                   <div className="text-[10px] font-black text-[#6E6E73] dark:text-[#86868B] uppercase tracking-widest mb-1">Global Load</div>
-                  <div className="text-2xl font-black italic text-[#1D1D1F]">NORMAL</div>
+                  <div className="text-2xl font-black italic text-[#1D1D1F] dark:text-white">NORMAL</div>
                </div>
             </div>
          </div>
@@ -383,7 +405,7 @@ export default function LandingPage() {
       {/* Final Call to Action */}
       <section className="py-60 px-8 text-center bg-white">
          <div className="max-w-4xl mx-auto space-y-16">
-            <h2 className="text-7xl md:text-[140px] font-black tracking-tight uppercase italic leading-[0.8] text-[#1D1D1F]">
+            <h2 className="text-7xl md:text-[140px] font-black tracking-tight uppercase italic leading-[0.8] text-[#1D1D1F] dark:text-white">
                Ready to <br /><span className="text-[#0071E3]">Evolve?</span>
             </h2>
             <p className="text-2xl text-[#6E6E73] dark:text-[#86868B] font-medium italic">

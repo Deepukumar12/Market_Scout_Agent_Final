@@ -77,7 +77,7 @@ const AiSuggestionPage = () => {
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-5xl font-black text-[#1D1D1F] uppercase tracking-tighter italic">Strategic <span className="text-[#0071E3]">Initiatives</span></h1>
+          <h1 className="text-5xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic">Strategic <span className="text-[#0071E3]">Initiatives</span></h1>
           <p className="text-[#6E6E73] text-lg font-medium italic mt-2">Synthesize product pivots and revenue strategies from live market signals.</p>
         </div>
         {!idea && !loading && (
@@ -240,7 +240,7 @@ const AiSuggestionPage = () => {
                       <TrendingUp className="w-6 h-6 text-[#0071E3]" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-[#1D1D1F] uppercase italic tracking-tighter">Revenue Growth Matrix</h3>
+                      <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Revenue Growth Matrix</h3>
                       <p className="text-[10px] text-[#86868B] font-mono mt-0.5 uppercase tracking-widest">12-month predictive revenue vs capture cost</p>
                     </div>
                   </div>

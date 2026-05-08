@@ -160,7 +160,7 @@ const CompetitorsPage = () => {
               <div className="relative z-10 space-y-4">
                   <Shield className="w-12 h-12 text-[#E5E5EA] mx-auto" />
                   <div>
-                    <h3 className="text-xl font-black text-[#1D1D1F] uppercase italic tracking-tighter">No Entities Detected</h3>
+                    <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">No Entities Detected</h3>
                     <p className="text-sm text-[#6E6E73] dark:text-[#86868B] max-w-xs mx-auto mt-2 font-medium italic">
                        {filterQuery ? `Filter "${filterQuery}" returned zero signal nodes.` : "The competition universe is currently empty. Deploy an agent to begin surveillance."}
                     </p>

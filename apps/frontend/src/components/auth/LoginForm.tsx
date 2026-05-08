@@ -42,7 +42,7 @@ export function LoginForm() {
         <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#1D1D1F] text-white shadow-apple-large mb-8 transition-transform hover:scale-105 active:scale-95">
           <Zap className="w-8 h-8" />
         </Link>
-        <h1 className="text-4xl font-bold tracking-tight text-[#1D1D1F] mb-3">Sign in.</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-[#1D1D1F] dark:text-white mb-3">Sign in.</h1>
         <p className="text-sm font-medium text-[#6E6E73]">Use your ScoutIQ credentials.</p>
       </div>
 
@@ -59,7 +59,7 @@ export function LoginForm() {
                      <Input 
                       placeholder="Email Address" 
                       {...field} 
-                      className="bg-white border-[#E5E5EA] text-[#1D1D1F] rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
+                      className="bg-white border-[#E5E5EA] text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
                     />
                    </div>
                 </FormControl>
@@ -79,7 +79,7 @@ export function LoginForm() {
                       type="password" 
                       placeholder="Access Key" 
                       {...field} 
-                      className="bg-white border-[#E5E5EA] text-[#1D1D1F] rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
+                      className="bg-white border-[#E5E5EA] text-[#1D1D1F] dark:text-white rounded-2xl h-14 pl-12 pr-5 font-medium transition-all focus:ring-4 focus:ring-[#0071E3]/10 focus:border-[#0071E3]" 
                     />
                   </div>
                 </FormControl>
@@ -121,7 +121,7 @@ export function LoginForm() {
           <Button 
             type="button" 
             variant="ghost" 
-            className="w-full text-[#1D1D1F] hover:bg-white rounded-full h-14 font-bold text-sm"
+            className="w-full text-[#1D1D1F] dark:text-white hover:bg-white rounded-full h-14 font-bold text-sm"
             onClick={() => {
                 form.setValue("email", "demo@scoutiq.ai");
                 form.setValue("password", "demo123");

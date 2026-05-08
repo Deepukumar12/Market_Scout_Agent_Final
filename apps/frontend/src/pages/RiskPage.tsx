@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/utils';
 import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';
+import { getRiskAssessment } from '@/services/api';
 
 interface RiskData {
   risk_score: number;
@@ -40,14 +41,8 @@ const RiskPage = () => {
       if (!selectedCompetitorId) return;
       setLoading(true);
       try {
-        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${apiUrl}/api/v1/intelligence/risk-assessment?competitor_id=${selectedCompetitorId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        }
+        const json = await getRiskAssessment(selectedCompetitorId);
+        setData(json);
       } catch (e) {
         console.error(e);
       } finally {
@@ -55,14 +50,14 @@ const RiskPage = () => {
       }
     };
     fetchData();
-  }, [selectedCompetitorId, token]);
+  }, [selectedCompetitorId]);
 
   return (
     <div className="space-y-10 pb-20">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black text-[#1D1D1F] uppercase italic tracking-tighter">Risk <span className="text-[#FF3B30]">Intelligence</span></h1>
+          <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Risk <span className="text-[#FF3B30]">Intelligence</span></h1>
           <p className="text-[#6E6E73] dark:text-[#86868B] mt-2 font-medium italic">Strategic threat assessment and market vulnerability mapping.</p>
         </div>
 
@@ -70,7 +65,7 @@ const RiskPage = () => {
           <select 
             value={selectedCompetitorId || ''} 
             onChange={(e) => setSelectedCompetitorId(e.target.value)}
-            className="h-10 px-4 rounded-full border border-[#E5E5EA] bg-white text-sm font-bold text-[#1D1D1F] focus:outline-none shadow-apple-sm"
+            className="h-10 px-4 rounded-full border border-[#E5E5EA] bg-white text-sm font-bold text-[#1D1D1F] dark:text-white focus:outline-none shadow-apple-sm"
           >
             <option value="" disabled>Select a competitor</option>
             {competitors.map(c => (
@@ -100,14 +95,14 @@ const RiskPage = () => {
                </div>
                
                <div className="space-y-2">
-                 <h3 className="text-5xl font-black text-[#1D1D1F] tracking-tighter uppercase italic">
+                 <h3 className="text-5xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic">
                    {data.risk_score}
                  </h3>
                  <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">Risk Index</p>
                </div>
 
                <div className="w-full mt-10 p-6 rounded-3xl bg-[#F5F5F7]">
-                  <p className="text-lg font-bold text-[#1D1D1F] mb-1">{data.threat_level} Priority</p>
+                  <p className="text-lg font-bold text-[#1D1D1F] dark:text-white mb-1">{data.threat_level} Priority</p>
                   <p className="text-xs text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed italic">Strategic intervention recommended within 14 days.</p>
                </div>
             </div>
@@ -115,7 +110,7 @@ const RiskPage = () => {
             {/* Potential Threats */}
             <div className="lg:col-span-2 space-y-10">
               <div className="p-10 rounded-[40px] bg-white/70 backdrop-blur-xl border border-[#E5E5EA] shadow-apple shadow-sm">
-                <h3 className="text-xl font-black text-[#1D1D1F] mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
+                <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
                   <Lock className="text-[#0071E3]" size={20} />
                   Market <span className="text-[#FF3B30]">Vulnerabilities</span>
                 </h3>
@@ -125,14 +120,14 @@ const RiskPage = () => {
                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-[#FF3B30] shadow-apple-sm group-hover:scale-110 transition-transform">
                           <Zap size={18} />
                        </div>
-                       <span className="text-sm font-bold text-[#1D1D1F]">{v}</span>
+                       <span className="text-sm font-bold text-[#1D1D1F] dark:text-white">{v}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div className="p-10 rounded-[40px] bg-white/70 backdrop-blur-xl border border-[#E5E5EA] shadow-apple shadow-sm">
-                <h3 className="text-xl font-black text-[#1D1D1F] mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
+                <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white mb-8 flex items-center gap-2 uppercase italic tracking-tighter">
                    <Eye className="text-[#AF52DE]" size={20} />
                   Competitive <span className="text-[#AF52DE]">Threat Matrix</span>
                 </h3>
@@ -141,7 +136,7 @@ const RiskPage = () => {
                      <div key={i} className="flex items-center justify-between p-6 rounded-3xl bg-[#F5F5F7] hover:bg-[#F5F5F7]/80 transition-all">
                         <div className="flex flex-col">
                            <span className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest mb-1">{t.competitor}</span>
-                           <span className="text-sm font-bold text-[#1D1D1F]">{t.threat}</span>
+                           <span className="text-sm font-bold text-[#1D1D1F] dark:text-white">{t.threat}</span>
                         </div>
                         <div className={cn(
                           "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",

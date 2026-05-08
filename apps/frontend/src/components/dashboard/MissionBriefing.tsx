@@ -73,7 +73,7 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
                 </div>
                 <ul className="space-y-3">
                   {data.technical_risks.map((risk, i) => (
-                    <li key={i} className="text-[11px] font-bold text-[#1D1D1F] dark:text-[#A1A1A6] leading-relaxed flex items-start gap-2 italic">
+                    <li key={i} className="text-[11px] font-bold text-[#1D1D1F] dark:text-white dark:text-[#A1A1A6] leading-relaxed flex items-start gap-2 italic">
                       <span className="text-[#FF3B30]">•</span> {risk}
                     </li>
                   ))}
@@ -88,7 +88,7 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
                 </div>
                 <ul className="space-y-3">
                   {data.market_opportunities.map((opp, i) => (
-                    <li key={i} className="text-[11px] font-bold text-[#1D1D1F] dark:text-[#A1A1A6] leading-relaxed flex items-start gap-2 italic">
+                    <li key={i} className="text-[11px] font-bold text-[#1D1D1F] dark:text-white dark:text-[#A1A1A6] leading-relaxed flex items-start gap-2 italic">
                       <span className="text-[#0071E3]">•</span> {opp}
                     </li>
                   ))}
