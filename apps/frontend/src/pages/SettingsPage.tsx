@@ -4,7 +4,7 @@ import {
   Settings, Bell, ShieldCheck, User, LogOut, Check, Save, 
   Sparkles, AlertTriangle, Activity, Monitor, History,
   ExternalLink, Trash2, Smartphone, Globe, Lock, CreditCard,
-  BarChart3, Clock, MapPin, Cpu
+  BarChart3, Clock, MapPin, Cpu, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
