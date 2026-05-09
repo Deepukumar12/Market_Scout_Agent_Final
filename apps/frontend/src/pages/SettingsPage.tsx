@@ -3,21 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, Bell, ShieldCheck, User, LogOut, Check, Save, 
   Sparkles, AlertTriangle, Activity, Monitor, History,
-  ExternalLink, Trash2, Smartphone, Globe, Lock, CreditCard,
+  ExternalLink, Trash2, Smartphone, Globe, Lock,
   BarChart3, Clock, MapPin, Cpu, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
 import { useAuthStore } from '@/store/authStore';
 import { 
-  getSchedulerConfig, updateSchedulerConfig, 
   getUserActivity, getUserSessions, revokeSession,
-  getSavedReports, updateProfile as apiUpdateProfile,
-  upgradeSubscription
+  getSavedReports, updateProfile as apiUpdateProfile
 } from '@/services/api';
 import { cn } from '@/utils/utils';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+  AreaChart, Area, ResponsiveContainer 
 } from 'recharts';
 
 // Native date formatter for locale-aware display
@@ -40,7 +38,7 @@ const SettingsPage = () => {
   const [activities, setActivities] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [savedReports, setSavedReports] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'intelligence' | 'activity' | 'subscription'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'intelligence' | 'activity'>('profile');
 
   // Profile Form State
   const [profileForm, setProfileForm] = useState({
@@ -54,11 +52,6 @@ const SettingsPage = () => {
     current_password: '',
     new_password: '',
     confirm_password: ''
-  });
-
-  const [schedulerConfig, setSchedulerConfig] = useState({
-    interval_unit: 'days',
-    interval_value: 7
   });
 
   // Local state for preferences with persistence
@@ -80,13 +73,11 @@ const SettingsPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [sched, act, sess, reports] = await Promise.all([
-          getSchedulerConfig(),
+        const [act, sess, reports] = await Promise.all([
           getUserActivity(),
           getUserSessions(),
           getSavedReports()
         ]);
-        setSchedulerConfig(sched);
         setActivities(act);
         setSessions(sess);
         setSavedReports(reports);
@@ -122,11 +113,13 @@ const SettingsPage = () => {
     setLoading(true);
     setUpdateError(null);
     try {
+      // Direct call to updateProfile from authStore
       await updateProfile({ ...profileForm, preferences });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-      fetchUser();
+      await fetchUser();
     } catch (err: any) {
+      console.error('Profile update error:', err);
       setUpdateError(err.response?.data?.detail || 'Failed to update profile');
     } finally {
       setLoading(false);
@@ -165,30 +158,14 @@ const SettingsPage = () => {
     }
   };
 
-  const handleUpgrade = async (plan: string) => {
-    setLoading(true);
-    try {
-      await upgradeSubscription(plan);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-      fetchUser();
-    } catch (err) {
-      console.error('Upgrade failed', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const saveGlobalSettings = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        updateSchedulerConfig(schedulerConfig),
-        apiUpdateProfile({ preferences })
-      ]);
+      // Simplify to only update preferences to avoid scheduler endpoint issues if they exist
+      await apiUpdateProfile({ preferences });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-      fetchUser();
+      await fetchUser();
     } catch (err) {
       console.error('Failed to save settings', err);
     } finally {
@@ -243,8 +220,7 @@ const SettingsPage = () => {
           { id: 'profile', icon: User, label: 'Identity' },
           { id: 'security', icon: ShieldCheck, label: 'Security' },
           { id: 'intelligence', icon: Sparkles, label: 'Intelligence' },
-          { id: 'activity', icon: History, label: 'Archives' },
-          { id: 'subscription', icon: CreditCard, label: 'Plan' }
+          { id: 'activity', icon: History, label: 'Archives' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -296,9 +272,6 @@ const SettingsPage = () => {
                  </div>
 
                  <div className="flex flex-wrap justify-center gap-3">
-                    <div className="px-5 py-2.5 rounded-2xl bg-[#0071E3]/10 border border-[#0071E3]/20 text-[10px] font-black text-[#0071E3] uppercase tracking-widest italic">
-                       {user?.subscription_plan?.toUpperCase() || 'FREE TIER'}
-                    </div>
                     <div className="px-5 py-2.5 rounded-2xl bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] text-[10px] font-black uppercase tracking-widest italic">
                        ROLE: {user?.role?.toUpperCase() || 'USER'}
                     </div>
@@ -402,6 +375,7 @@ const SettingsPage = () => {
                        placeholder="https://images.scoutiq.ai/avatar-123.jpg"
                        icon={<Monitor className="w-4 h-4" />}
                     />
+                    {updateError && <p className="text-[11px] font-black text-rose-500 uppercase tracking-widest italic flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {updateError}</p>}
                     <div className="flex justify-end">
                       <Button type="submit" disabled={loading} className="bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-[11px] h-14 px-12 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95">
                          Update Identity
@@ -543,47 +517,6 @@ const SettingsPage = () => {
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-8"
               >
-                <SectionCard title="Autonomous Engine Scheduler" icon={<Clock className="w-5 h-5 text-emerald-500" />}>
-                   <div className="space-y-10">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                         <div className="space-y-4">
-                            <label className="text-[11px] font-black text-[#86868B] uppercase tracking-[0.3em] italic flex items-center gap-2">
-                              <History className="w-4 h-4" /> Sweep Interval
-                            </label>
-                            <input 
-                              type="number"
-                              min="1"
-                              value={schedulerConfig.interval_value}
-                              onChange={(e) => setSchedulerConfig({...schedulerConfig, interval_value: parseInt(e.target.value) || 1})}
-                              className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-[24px] px-8 py-5 text-lg font-black outline-none focus:ring-2 focus:ring-[#0071E3] transition-all"
-                            />
-                         </div>
-                         <div className="space-y-4">
-                            <label className="text-[11px] font-black text-[#86868B] uppercase tracking-[0.3em] italic flex items-center gap-2">
-                              <Globe className="w-4 h-4" /> Temporal Dimension
-                            </label>
-                            <select 
-                              value={schedulerConfig.interval_unit}
-                              onChange={(e) => setSchedulerConfig({...schedulerConfig, interval_unit: e.target.value})}
-                              className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-[24px] px-8 py-5 text-lg font-black outline-none focus:ring-2 focus:ring-[#0071E3] transition-all appearance-none cursor-pointer"
-                            >
-                               <option value="minutes">Minutes</option>
-                               <option value="hours">Hours</option>
-                               <option value="days">Days</option>
-                            </select>
-                         </div>
-                      </div>
-                      <div className="p-8 rounded-[32px] bg-[#0071E3]/5 border border-[#0071E3]/10 flex items-center gap-6">
-                        <div className="w-12 h-12 rounded-2xl bg-[#0071E3]/10 flex items-center justify-center">
-                          <Zap className="w-6 h-6 text-[#0071E3]" />
-                        </div>
-                        <p className="text-xs text-[#0071E3] font-bold italic leading-relaxed">
-                          Mission parameters secured. The next autonomous scan will initiate in exactly <span className="underline">{schedulerConfig.interval_value} {schedulerConfig.interval_unit}</span>.
-                        </p>
-                      </div>
-                   </div>
-                </SectionCard>
-
                 <SectionCard title="Inference Engine Core" icon={<Cpu className="w-5 h-5 text-[#0071E3]" />}>
                    <div className="space-y-10">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -715,75 +648,6 @@ const SettingsPage = () => {
                 </SectionCard>
               </motion.div>
             )}
-
-            {activeTab === 'subscription' && (
-              <motion.div
-                key="subscription"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
-              >
-                <SectionCard title="Active Intelligence Plan" icon={<CreditCard className="w-5 h-5 text-[#0071E3]" />}>
-                   <div className="p-10 rounded-[48px] bg-gradient-to-br from-[#0071E3] to-[#AF52DE] text-white relative overflow-hidden shadow-3xl">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[80px] -mr-32 -mt-32" />
-                      <div className="relative space-y-8">
-                         <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                               <h3 className="text-4xl font-black uppercase italic tracking-tighter">{user?.subscription_plan || 'Intelligence Free'}</h3>
-                               <p className="text-white/60 text-xs font-black uppercase tracking-widest">Active Surveillance Tier</p>
-                            </div>
-                            <div className="w-16 h-16 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center border border-white/20">
-                               <Sparkles className="w-8 h-8 text-white" />
-                            </div>
-                         </div>
-                         
-                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-white/20">
-                            <div>
-                               <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-white/60">Scan Allowance</p>
-                               <p className="text-xl font-black italic">50 / Month</p>
-                            </div>
-                            <div>
-                               <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-white/60">Concurrent Agents</p>
-                               <p className="text-xl font-black italic">03 Active</p>
-                            </div>
-                            <div>
-                               <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-white/60">Next Billing</p>
-                               <p className="text-xl font-black italic">No Charge</p>
-                            </div>
-                         </div>
-                      </div>
-                   </div>
-                </SectionCard>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                   <SubscriptionTier 
-                      name="Intelligence Pro"
-                      price="$49"
-                      features={[
-                        "Unlimited Autonomous Sweeps",
-                        "High-Latency Real-time Pushes",
-                        "Advanced Financial Analysis",
-                        "Priority API Node Access"
-                      ]}
-                      isActive={user?.subscription_plan === 'Pro'}
-                      onUpgrade={() => handleUpgrade('Pro')}
-                   />
-                   <SubscriptionTier 
-                      name="Nexus Enterprise"
-                      price="Custom"
-                      features={[
-                        "Global Multi-Agent Clusters",
-                        "Custom LLM Fine-tuning",
-                        "Full API Export Access",
-                        "Dedicated Protocol Support"
-                      ]}
-                      isActive={user?.subscription_plan === 'Enterprise'}
-                      onUpgrade={() => handleUpgrade('Enterprise')}
-                   />
-                </div>
-              </motion.div>
-            )}
           </AnimatePresence>
 
           {/* Danger Zone Protocol */}
@@ -853,35 +717,6 @@ const SettingRow = ({ label, description, checked, onToggle }: { label: string, 
       </div>
       <Switch checked={checked} onCheckedChange={onToggle} className="data-[state=checked]:bg-[#0071E3] scale-125" />
    </div>
-);
-
-const SubscriptionTier = ({ name, price, features, isActive, onUpgrade }: { name: string, price: string, features: string[], isActive: boolean, onUpgrade: () => void }) => (
-  <div className={cn(
-    "p-10 rounded-[48px] border transition-all duration-500 space-y-8",
-    isActive ? "border-[#0071E3] bg-[#0071E3]/5" : "border-[#E5E5EA] dark:border-white/10 bg-white/70 dark:bg-[#1D1D1F]/70"
-  )}>
-    <div className="space-y-1">
-      <h4 className="text-2xl font-black uppercase italic tracking-tighter text-[#1D1D1F] dark:text-white">{name}</h4>
-      <p className="text-4xl font-black text-[#0071E3] tracking-tighter">{price}<span className="text-sm text-[#86868B]"> / month</span></p>
-    </div>
-    <ul className="space-y-4">
-      {features.map((f, i) => (
-        <li key={i} className="flex items-center gap-3 text-xs font-medium text-[#6E6E73] dark:text-[#86868B] italic">
-          <Check className="w-4 h-4 text-emerald-500" /> {f}
-        </li>
-      ))}
-    </ul>
-    <Button 
-      disabled={isActive}
-      onClick={onUpgrade}
-      className={cn(
-        "w-full h-14 rounded-full font-black uppercase tracking-widest text-[11px]",
-        isActive ? "bg-[#F5F5F7] dark:bg-white/5 text-[#86868B]" : "bg-black dark:bg-white text-white dark:text-black"
-      )}
-    >
-      {isActive ? "ACTIVE PLAN" : "UPGRADE PROTOCOL"}
-    </Button>
-  </div>
 );
 
 export default SettingsPage;
