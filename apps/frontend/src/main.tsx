@@ -21,6 +21,7 @@ import { AuthLayout } from '@/layouts/AuthLayout';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { useAuthStore } from '@/store/authStore';
+import ErrorPage from '@/pages/ErrorPage';
 
 const App = () => {
   const initialize = useAuthStore((state) => state.initialize);
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+    errorElement: <ErrorPage />,
     children: [
       {
         index: true,
@@ -73,6 +75,7 @@ const router = createBrowserRouter([
       {
         path: "/dashboard",
         element: <ProtectedDashboard />,
+        errorElement: <ErrorPage />,
         children: [
           {
             index: true,

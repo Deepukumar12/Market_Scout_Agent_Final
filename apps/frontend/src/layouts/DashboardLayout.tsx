@@ -15,7 +15,7 @@ import { analyzeCompany } from '@/services/api';
 const DashboardLayout = () => {
   const { user, initSync } = useAuthStore();
   const { fetchCompetitors } = useCompetitorStore();
-  const { fetchNotifications, initWebSocket } = useNotificationStore();
+  const { fetchNotifications, initWebSocket, closeWebSocket } = useNotificationStore();
   const location = useLocation();
   const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -41,8 +41,9 @@ const DashboardLayout = () => {
     return () => {
       clearInterval(interval);
       if (cleanupSync) cleanupSync();
+      closeWebSocket();
     };
-  }, [fetchNotifications, initWebSocket, initSync]);
+  }, [fetchNotifications, initWebSocket, initSync, closeWebSocket]);
 
   useEffect(() => {
     fetchCompetitors();

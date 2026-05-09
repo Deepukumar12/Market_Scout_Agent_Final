@@ -20,6 +20,7 @@ interface NotificationState {
     markAsRead: (id: string) => Promise<void>;
     markAllAsRead: () => Promise<void>;
     clearAll: () => Promise<void>;
+    closeWebSocket: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -145,4 +146,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             console.error('Failed to clear notifications archive:', error);
         }
     },
+
+    closeWebSocket: () => {
+        const { socket } = get();
+        if (socket) {
+            socket.onclose = null; // Prevent auto-reconnect
+            socket.close();
+            set({ socket: null });
+        }
+    }
 }));
