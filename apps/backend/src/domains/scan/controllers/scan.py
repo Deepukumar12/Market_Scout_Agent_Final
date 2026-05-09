@@ -58,6 +58,9 @@ async def post_scan(
         metadata={"source": body.website or "direct"}
     )
 
+    # Call the actual intelligence pipeline
+    result = await run_scan(body)
+
     if result is None:
         await create_notification(
             user_id=str(current_user.id),

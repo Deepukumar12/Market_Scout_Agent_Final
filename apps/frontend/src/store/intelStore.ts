@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { 
-  runCompetitorScan, 
-  runScan as runScanApi, 
+import {
+  runCompetitorScan,
+  runScan as runScanApi,
   getCompetitors,
   getIntelligenceStream,
   getRecommendations,
@@ -67,30 +67,30 @@ export const useIntelStore = create<IntelState>((set) => ({
 
   fetchHistory: async (query?: string) => {
     try {
-        const data = await getIntelligenceStream(50); // limit 50
-        set({ history: data.signals || [] });
-    } catch(err) {
-        console.error("Failed to fetch history:", err);
+      const data = await getIntelligenceStream(50); // limit 50
+      set({ history: data.signals || [] });
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
     }
   },
 
   fetchSignals: async () => {
     try {
-        const data = await getIntelligenceStream(50);
-        set({ signals: data.signals || [] });
-    } catch(error) {
-        console.error("Failed to fetch intelligence data:", error);
+      const data = await getIntelligenceStream(50);
+      set({ signals: data.signals || [] });
+    } catch (error) {
+      console.error("Failed to fetch intelligence data:", error);
     }
   },
 
   fetchRecommendations: async () => {
     set({ loading: true });
     try {
-        const data = await getRecommendations();
-        set({ recommendations: data, loading: false });
-    } catch(e) {
-        console.error("Failed to fetch recommendations", e);
-        set({ loading: false });
+      const data = await getRecommendations();
+      set({ recommendations: data, loading: false });
+    } catch (e) {
+      console.error("Failed to fetch recommendations", e);
+      set({ loading: false });
     }
   },
 
@@ -130,91 +130,91 @@ export const useIntelStore = create<IntelState>((set) => ({
 
   fetchActivityTimeline: async (query?: string) => {
     try {
-        const data = await getActivityTimeline();
-        set({ activities: data.days || [] });
-    } catch(err) {
-        console.error("Failed to fetch activity timeline:", err);
+      const data = await getActivityTimeline();
+      set({ activities: data.days || [] });
+    } catch (err) {
+      console.error("Failed to fetch activity timeline:", err);
     }
   },
 
   fetchInnovationTrends: async () => {
     try {
-        const data = await getInnovationTrends();
-        set({ innovationTrends: data });
-    } catch(err) {
-        console.error("Failed to fetch innovation trends:", err);
+      const data = await getInnovationTrends();
+      set({ innovationTrends: data });
+    } catch (err) {
+      console.error("Failed to fetch innovation trends:", err);
     }
   },
 
   fetchGlobalMetrics: async () => {
     try {
-        const data = await getGlobalMetrics();
-        set({ globalMetrics: data });
-    } catch(err) {
-        console.error("Failed to fetch global metrics:", err);
+      const data = await getGlobalMetrics();
+      set({ globalMetrics: data });
+    } catch (err) {
+      console.error("Failed to fetch global metrics:", err);
     }
   },
 
   fetchMarketComparison: async () => {
     try {
-        const data = await getMarketComparison();
-        set({ comparisonMatrix: data });
-    } catch(err) {
-        console.error("Failed to fetch market comparison:", err);
+      const data = await getMarketComparison();
+      set({ comparisonMatrix: data });
+    } catch (err) {
+      console.error("Failed to fetch market comparison:", err);
     }
   },
 
   fetchLastSevenDays: async (query?: string) => {
     try {
-        const data = await getLastSevenDays(query);
-        set({ lastSevenDays: data });
-    } catch(err) {
-        console.error("Failed to fetch last 7 days releases:", err);
+      const data = await getLastSevenDays(query);
+      set({ lastSevenDays: data });
+    } catch (err) {
+      console.error("Failed to fetch last 7 days releases:", err);
     }
   },
 
   fetchMissionBriefing: async () => {
     try {
-        const data = await getMissionBriefing();
-        set({ missionBriefing: data });
-    } catch(err) {
-        console.error("Failed to fetch mission briefing:", err);
+      const data = await getMissionBriefing();
+      set({ missionBriefing: data });
+    } catch (err) {
+      console.error("Failed to fetch mission briefing:", err);
     }
   },
 
   fetchStrategicPlan: async (competitorId, focusArea, riskLevel) => {
     set({ loading: true, error: null, strategicPlan: null });
     try {
-        const data = await getStrategicPlan({ 
-            competitor_id: competitorId, 
-            focus_area: focusArea, 
-            risk_level: riskLevel 
-        });
-        set({ strategicPlan: data, loading: false });
-    } catch(err) {
-        console.error("Failed to fetch strategic plan:", err);
-        set({ loading: false, error: 'Strategic Network Link Failure' });
+      const data = await getStrategicPlan({
+        competitor_id: competitorId,
+        focus_area: focusArea,
+        risk_level: riskLevel
+      });
+      set({ strategicPlan: data, loading: false });
+    } catch (err) {
+      console.error("Failed to fetch strategic plan:", err);
+      set({ loading: false, error: 'Strategic Network Link Failure' });
     }
   },
 
   fetchCompetitors: async () => {
     try {
-        const data = await getCompetitors();
-        set({ competitors: data });
-    } catch(err) {
-        console.error("Failed to fetch competitors:", err);
+      const data = await getCompetitors();
+      set({ competitors: data });
+    } catch (err) {
+      console.error("Failed to fetch competitors:", err);
     }
   },
 
-  clear: () => set({ 
-    error: null, 
-    history: [], 
-    signals: [], 
-    recommendations: [], 
-    activities: [], 
-    innovationTrends: null, 
-    globalMetrics: null, 
-    strategicPlan: null, 
+  clear: () => set({
+    error: null,
+    history: [],
+    signals: [],
+    recommendations: [],
+    activities: [],
+    innovationTrends: null,
+    globalMetrics: null,
+    strategicPlan: null,
     competitors: [],
     lastSevenDays: []
   }),

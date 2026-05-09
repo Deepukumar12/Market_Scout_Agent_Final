@@ -99,9 +99,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             localStorage.setItem('scoutiq_token', token);
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-            // Immediately fetch full profile from DB (JWT only has basic fields)
-            set({ token, loading: false });
-            await get().fetchUser();
+            const decoded = parseJwt(token);
+            set({ user: decoded, token, loading: false });
         } catch (err: any) {
             console.error("Login error:", err);
             let errorMessage = 'Authentication failed';
@@ -135,9 +134,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             localStorage.setItem('scoutiq_token', token);
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-            // Immediately fetch full profile from DB (JWT only has basic fields)
-            set({ token, loading: false });
-            await get().fetchUser();
+            const decoded = parseJwt(token);
+            set({ user: decoded, token, loading: false });
         } catch (err: any) {
             console.error("Register error:", err);
             let errorMessage = 'Registration failed';
@@ -167,10 +165,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     updateProfile: async (data) => {
         set({ loading: true, error: null });
         try {
-            await api.put('/auth/profile', data);
-            // Always re-fetch authoritative DB record
-            await get().fetchUser();
-            set({ loading: false });
+            const updatedUser = await api.put('/auth/profile', data);
+            set({ user: updatedUser.data, loading: false });
         } catch (err: any) {
             set({ error: err.response?.data?.detail || 'Update failed', loading: false });
             throw err;

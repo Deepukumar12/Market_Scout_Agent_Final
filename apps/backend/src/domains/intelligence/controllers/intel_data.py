@@ -1486,7 +1486,7 @@ async def get_market_comparison(current_user: User = Depends(get_current_user)):
             innovation_score = min(100, total_features * 10)
             
             # Risk Level based on pure actual volume
-            risk_score = 100 - min(100, total_features * 10)
+            risk_score = min(100, total_features * 15)
             
             comparison.append(MarketComparisonMetric(
                 competitor=comp_name,

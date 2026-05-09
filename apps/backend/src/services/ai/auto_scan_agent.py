@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime
 from collections import defaultdict
 from src.domains.competitors.services.competitor_service import get_all_competitors
-from src.domains.users.services.user_service import get_user_email
+from src.domains.users.services.user_service import get_user_email, get_user_preferences
 from src.domains.notifications.services.email_service import send_email_report
 from src.domains.scan.services.scan_pipeline import run_scan
 from src.domains.scan.models.scan import ScanRequest, ScanFeature
@@ -20,12 +20,13 @@ async def async_run_auto_scan():
     """
     logger.info("🚀 Starting autonomous competitor scan (Async)...")
 
-    # ✅ Ensure DB is connected (should be handled by FastAPI lifespan, but defensive check)
+    # ✅ Ensure DB is connected
     if db.db is None:
         await db.connect()
 
     try:
-        competitors = get_all_competitors()
+        # ✅ Refactored to await async database call
+        competitors = await get_all_competitors()
 
         if not competitors:
             logger.warning("⚠️ No competitors found in database")
@@ -40,7 +41,8 @@ async def async_run_auto_scan():
 
         # 2️⃣ Loop per user
         for user_id, comps in user_competitor_map.items():
-            email = get_user_email(user_id)
+            # ✅ Refactored to await async user lookup
+            email = await get_user_email(user_id)
             if not email:
                 logger.warning(f"⚠️ No email found for user_id: {user_id}, skipping")
                 continue
@@ -53,7 +55,7 @@ async def async_run_auto_scan():
                 logger.info(f"🔍 Processing: {company} for {email}")
 
                 try:
-                    # ✅ Check if we already have fresh features (last 24h) to avoid redundant expensive scans
+                    # ✅ Check if we already have fresh features (last 24h)
                     fresh_features = await get_cached_features(company, limit=1, days=1)
                     
                     if not fresh_features:
@@ -76,7 +78,7 @@ async def async_run_auto_scan():
                             source_url=h.get("source_url", ""),
                             source_domain=h.get("source_domain", "Unknown"),
                             category=h.get("category", "Platform"),
-                            confidence_score=int(h.get("confidence_score") or 70)
+                            confidence_score=float(h.get("confidence_score") or 70.0) # Fixed type mismatch
                         ))
 
                     user_reports.append({
@@ -91,7 +93,38 @@ async def async_run_auto_scan():
                 logger.warning(f"⚠️ No reports generated for user {email}, skipping")
                 continue
 
-            # 4️⃣ Background processing completed.
+            # 4️⃣ Send Email Report if enabled in system settings
+            scheduler_settings = await db.db.system_settings.find_one({"_id": "scheduler"})
+            if scheduler_settings and scheduler_settings.get("email_enabled"):
+                # ✅ Refactored to await async preferences lookup
+                prefs = await get_user_preferences(user_id)
+                if prefs and not prefs.get("emailAlerts", True):
+                    logger.info(f"⏭️ User {email} has disabled email alerts. Skipping dispatch.")
+                else:
+                    logger.info(f"📧 Dispatching intelligence report to {email}...")
+                    
+                    report_content = f"Market Scout Intelligence Briefing - {datetime.now().strftime('%Y-%m-%d')}\n\n"
+                    report_content += f"Automated surveillance cycle completed for {len(user_reports)} targets.\n\n"
+                    
+                    for report in user_reports:
+                        report_content += f"--- {report['company'].upper()} ---\n"
+                        if not report['features']:
+                            report_content += "No new technical signals detected in this cycle.\n"
+                        else:
+                            for f in report['features'][:5]: # Top 5 signals
+                                report_content += f"• {f.feature_title}: {f.technical_summary[:150]}...\n"
+                                report_content += f"  Source: {f.source_url}\n\n"
+                        report_content += "\n"
+                    
+                    report_content += "\nThis is an automated briefing from your Market Scout Agent console."
+                    
+                    send_email_report(
+                        to_email=email,
+                        subject=f"ScoutIQ: Strategic Intelligence Briefing ({len(user_reports)} Targets)",
+                        content=report_content
+                    )
+
+            # 5️⃣ Background processing completed.
             from src.domains.notifications.services.notification_service import notification_service
             from src.domains.notifications.models.notification import NotificationType
             

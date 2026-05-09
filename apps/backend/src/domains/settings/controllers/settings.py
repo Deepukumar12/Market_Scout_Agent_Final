@@ -12,6 +12,7 @@ router = APIRouter()
 class SchedulerConfig(BaseModel):
     interval_unit: Literal["minutes", "hours", "days"]
     interval_value: int
+    email_enabled: bool = False
 
 @router.get("/scheduler", response_model=SchedulerConfig)
 async def get_scheduler_config():
@@ -20,10 +21,11 @@ async def get_scheduler_config():
     if settings:
         return SchedulerConfig(
             interval_unit=settings.get("interval_unit", "days"),
-            interval_value=settings.get("interval_value", 7)
+            interval_value=settings.get("interval_value", 7),
+            email_enabled=settings.get("email_enabled", False)
         )
     # Default is every 7 days if not configured
-    return SchedulerConfig(interval_unit="days", interval_value=7)
+    return SchedulerConfig(interval_unit="days", interval_value=7, email_enabled=False)
 
 @router.post("/scheduler")
 async def update_scheduler_config(config: SchedulerConfig):
@@ -67,11 +69,12 @@ async def update_scheduler_config(config: SchedulerConfig):
     from src.shared.websockets import manager
     from src.domains.notifications.models.notification import NotificationType
     
+    email_status = "ENABLED" if config.email_enabled else "DISABLED"
     await manager.broadcast({
         "title": "System Configuration Updated",
-        "message": f"Global surveillance cycle recalibrated to every {config.interval_value} {config.interval_unit}.",
+        "message": f"Global surveillance cycle recalibrated to every {config.interval_value} {config.interval_unit}. Automated Email Reports: {email_status}.",
         "type": NotificationType.INFO.value,
         "timestamp": datetime.now().isoformat()
     })
     
-    return {"message": f"Scheduler successfully updated to run every {config.interval_value} {config.interval_unit}"}
+    return {"message": f"Scheduler successfully updated to run every {config.interval_value} {config.interval_unit}. Email reports: {email_status}"}

@@ -3,7 +3,7 @@ Strict request/response models for the Market Scout Agent scan API.
 No synthetic fallback; real fetched data only.
 """
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -23,7 +23,7 @@ class ScanFeature(BaseModel):
     source_url: str
     source_domain: str
     category: str
-    confidence_score: int = Field(ge=0, le=100)
+    confidence_score: float = Field(ge=0, le=100)
 
 
 class GitHubRepoSummary(BaseModel):

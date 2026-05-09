@@ -1,4 +1,4 @@
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta, timezone
 import uuid
 import os
 import shutil
@@ -138,7 +138,6 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 
         from src.services.activity_service import activity_service
         from src.services.session_service import session_service
-        from datetime import datetime
         
         # Track session with real metadata
         user_agent = request.headers.get("user-agent", "unknown")
@@ -146,7 +145,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         
         await collection.update_one(
             {"_id": user["_id"]},
-            {"$set": {"last_login": datetime.utcnow()}}
+            {"$set": {"last_login": datetime.now(timezone.utc)}}
         )
         
         await session_service.track_session(
@@ -226,10 +225,7 @@ async def update_profile(
     database = await get_database()
     collection = database["users"]
 
-    update_data = {
-        k: v for k, v in user_update.model_dump().items()
-        if v is not None and k != 'hashed_password'
-    }
+    update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
     
     if "email" in update_data and update_data["email"] != current_user.email:
         existing = await collection.find_one({"email": update_data["email"]})
@@ -322,6 +318,7 @@ async def upload_avatar(
     filepath = os.path.join("uploads", filename)
     
     # 2. Save file
+    os.makedirs("uploads", exist_ok=True)
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     

@@ -235,7 +235,7 @@ export const getSchedulerConfig = async () => {
     return response.data;
 };
 
-export const updateSchedulerConfig = async (data: { interval_unit: string, interval_value: number }) => {
+export const updateSchedulerConfig = async (data: { interval_unit: string, interval_value: number, email_enabled: boolean }) => {
     const response = await api.post('/settings/scheduler', data);
     return response.data;
 };

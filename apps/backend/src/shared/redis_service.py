@@ -10,13 +10,22 @@ class RedisService:
     def __init__(self):
         self.redis_url = settings.REDIS_URL
         self.client: Optional[redis.Redis] = None
+        self._pool: Optional[redis.ConnectionPool] = None
 
     async def connect(self):
+        """Initialize Redis connection pool and client."""
         if not self.client:
             try:
-                self.client = redis.from_url(self.redis_url, encoding="utf-8", decode_responses=True)
+                # Use connection pooling for better performance under load
+                self._pool = redis.ConnectionPool.from_url(
+                    self.redis_url, 
+                    encoding="utf-8", 
+                    decode_responses=True,
+                    max_connections=20
+                )
+                self.client = redis.Redis(connection_pool=self._pool)
                 await self.client.ping()
-                logger.info("✅ Connected to Redis")
+                logger.info("✅ Connected to Redis (with Connection Pool)")
             except Exception as e:
                 logger.error(f"❌ Redis connection failed: {e}")
                 self.client = None
@@ -31,7 +40,7 @@ class RedisService:
             data = await self.client.get(key)
             return json.loads(data) if data else None
         except Exception as e:
-            logger.error(f"Redis get error: {e}")
+            logger.error(f"Redis get error for key {key}: {e}")
             return None
 
     async def set(self, key: str, value: Any, expire: int = 86400):
@@ -43,6 +52,17 @@ class RedisService:
         try:
             await self.client.set(key, json.dumps(value), ex=expire)
         except Exception as e:
-            logger.error(f"Redis set error: {e}")
+            logger.error(f"Redis set error for key {key}: {e}")
+
+    async def delete(self, key: str):
+        if self.client:
+            await self.client.delete(key)
+
+    async def close(self):
+        """Cleanly close the Redis pool."""
+        if self.client:
+            await self.client.close()
+        if self._pool:
+            await self._pool.disconnect()
 
 redis_service = RedisService()

@@ -39,7 +39,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         // Correct path as per main.py and api.py inclusion
         const wsUrl = `${protocol}//${window.location.host.replace(':5173', ':8000')}/ws/notifications?token=${token}`;
-        
+
         const ws = new WebSocket(wsUrl);
 
         ws.onmessage = (event) => {
@@ -58,7 +58,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                         id: data.id || Math.random().toString(36).substr(2, 9),
                         title: data.title,
                         message: data.message,
-                        type: data.type.toLowerCase(),
+                        type: (data.type || 'info').toLowerCase(),
                         timestamp: data.timestamp,
                         read: false,
                         competitorId: data.competitorId
@@ -88,10 +88,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         set({ loading: true });
         try {
             const data = await api.getNotifications();
-            set({ 
-                notifications: data, 
+            set({
+                notifications: data,
                 unreadCount: data.filter((n: any) => !n.read).length,
-                loading: false 
+                loading: false
             });
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
@@ -116,7 +116,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                 unreadCount: notifications.filter((n) => !n.read).length,
             };
         });
-        
+
         try {
             await api.markNotificationRead(id);
         } catch (error) {
@@ -130,7 +130,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             notifications: state.notifications.map((n) => ({ ...n, read: true })),
             unreadCount: 0,
         }));
-        
+
         try {
             await api.markAllNotificationsRead();
         } catch (error) {
@@ -151,7 +151,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         const { socket } = get();
         if (socket) {
             socket.onclose = null; // Prevent auto-reconnect
-            socket.close();
+            
+            if (socket.readyState === WebSocket.CONNECTING) {
+                // If still connecting, wait for open then close to avoid race condition
+                socket.onopen = () => socket.close();
+            } else if (socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+            
             set({ socket: null });
         }
     }

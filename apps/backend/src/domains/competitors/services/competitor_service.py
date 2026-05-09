@@ -1,16 +1,18 @@
-from pymongo import MongoClient
-import os
-from dotenv import load_dotenv
+import logging
+from src.core.database import db
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
-client = MongoClient(os.getenv("MONGODB_URL"))
-db = client[os.getenv("DATABASE_NAME")]
-collection = db["competitors"]
-
-def get_all_competitors():
+async def get_all_competitors():
+    """
+    Fetch all competitors asynchronously using the shared motor client.
+    """
     try:
-        competitors = list(collection.find({}))
+        if db.db is None:
+            await db.connect()
+            
+        cursor = db.db.competitors.find({})
+        competitors = await cursor.to_list(length=1000)
 
         result = []
         for comp in competitors:
@@ -22,5 +24,5 @@ def get_all_competitors():
         return result
 
     except Exception as e:
-        print("❌ Error fetching competitors:", e)
+        logger.error(f"❌ Error fetching competitors: {e}")
         return []

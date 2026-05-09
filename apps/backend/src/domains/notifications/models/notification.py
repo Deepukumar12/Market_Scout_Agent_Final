@@ -1,6 +1,6 @@
 
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from enum import Enum
 
@@ -23,7 +23,7 @@ class Notification(NotificationBase):
     id: Optional[str] = Field(alias="_id", default=None)
     user_id: str
     read: bool = False
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Config:
         populate_by_name = True

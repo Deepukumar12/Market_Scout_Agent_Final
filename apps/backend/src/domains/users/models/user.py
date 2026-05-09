@@ -25,7 +25,7 @@ class UserLogin(BaseModel):
 
 class UserInDB(UserBase):
     hashed_password: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     last_login: Optional[datetime] = None
     role: str = "user"
     subscription_plan: str = "Free" # Free, Pro, Enterprise
@@ -38,7 +38,7 @@ class User(UserBase):
     is_active: bool = True
     role: str = "user"
     subscription_plan: str = "Free"
-    created_at: datetime
+    created_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
     preferences: Dict[str, Any] = Field(default_factory=dict)
 
@@ -46,7 +46,6 @@ class User(UserBase):
         populate_by_name=True,
         arbitrary_types_allowed=True,
         extra="ignore",
-        json_encoders={datetime: lambda v: v.isoformat() if v else None}
     )
 
 

@@ -18,8 +18,9 @@ class AgentLogger:
         formatted = f"{category}: {message}"
         
         try:
-            # Broadcast as JSON for the frontend to parse easily
-            await manager.broadcast(json.dumps(payload))
+            # Broadcast the dictionary directly; manager.broadcast handles serialization
+            payload["type"] = "AGENT"
+            await manager.broadcast(payload)
         except Exception:
             pass # Fail silently if no connections
             

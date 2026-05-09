@@ -83,7 +83,7 @@ async def run_competitor_scan(
     # Calculate aggregate metrics for the competitor
     avg_conf = 0.0
     if result.features:
-        avg_conf = sum(f.confidence_score for f in result.features) / len(result.features)
+        avg_conf = sum(float(f.confidence_score) for f in result.features) / len(result.features)
     
     # NEW: Aggregate historical features to ensure "Continuous Last Seven Released"
     historical_raw = await get_cached_features(competitor.name, limit=20)
@@ -103,7 +103,7 @@ async def run_competitor_scan(
                 source_url=h.get("source_url", ""),
                 source_domain=h.get("source_domain", "archived"),
                 category=h.get("category", "Platform"),
-                confidence_score=int(h.get("confidence_score") or 70)
+                confidence_score=float(h.get("confidence_score") or 70.0)
             ))
             seen_keys.add(key)
 

@@ -1,51 +1,75 @@
-### Node / frontend
+# --- IDE / OS Junk ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# --- Node / Frontend ---
 node_modules/
 dist/
 build/
 .turbo/
 .parcel-cache/
-
+.next/
+.cache/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
 
-### Python / backend
+# --- Python / Backend ---
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.pyd
 *.so
+*.egg
 *.egg-info/
 .pytest_cache/
-
 .venv/
 venv/
 env/
 ENV/
-
-coverage/
+.tox/
+.nox/
 .coverage
 .coverage.*
 htmlcov/
+.mypy_cache/
+.ruff_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+pip-log.txt
+pip-delete-this-directory.txt
 
-### Environment & secrets
+# --- Environment & secrets ---
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+cert.crt
 
-### OS / editor junk
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
+# --- Logs & Temp ---
+*_logs.txt
+*.log
+tmp/
+temp/
+out/
 
-.vscode/
-.idea/
-
-### Misc project artifacts
-frontend_logs.txt
-backend_logs.txt
-backend_log_trace.txt
-
+# --- Database / Data ---
+*.sqlite3
+*.db
+dump.rdb
+data/
+uploads/
+!uploads/.gitkeep

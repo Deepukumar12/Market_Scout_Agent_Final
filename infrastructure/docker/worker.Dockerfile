@@ -16,14 +16,21 @@ RUN pip install --user --no-cache-dir -r requirements.txt
 # Final stage
 FROM python:3.11-slim
 
+# Create a non-privileged user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
 
 # Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
+COPY --from=builder /root/.local /home/appuser/.local
 COPY . .
 
+# Set permissions
+RUN chown -R appuser:appuser /app
+USER appuser
+
 # Update PATH
-ENV PATH=/root/.local/bin:$PATH
+ENV PATH=/home/appuser/.local/bin:$PATH
+ENV PYTHONUNBUFFERED=1
 
 # Run Celery worker
 CMD ["celery", "-A", "src.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
