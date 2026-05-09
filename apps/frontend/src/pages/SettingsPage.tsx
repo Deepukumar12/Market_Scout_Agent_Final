@@ -312,8 +312,8 @@ const SettingsPage = () => {
                             </span>
                           )}
                        </div>
-                       <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-[48px]">
-                          <span className="text-white text-[10px] font-black uppercase tracking-widest italic">Change Identity</span>
+                       <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-[48px] backdrop-blur-[2px]">
+                          <Camera className="w-6 h-6 text-white/70" />
                           <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
                        </label>
                     </div>
@@ -355,28 +355,18 @@ const SettingsPage = () => {
              </div>
           </SectionCard>
 
-          <SectionCard title="Usage Telemetry" icon={<BarChart3 className="w-5 h-5 text-[#AF52DE]" />}>
+          <SectionCard title="Intelligence Throughput" icon={<BarChart3 className="w-5 h-5 text-[#AF52DE]" />}>
              <div className="space-y-8">
-                <div className="space-y-4">
+                <div className="space-y-2">
+                   <p className="text-[10px] font-black text-[#86868B] uppercase tracking-widest mb-1 italic">Strategic Archive Size</p>
                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-[10px] font-black text-[#86868B] uppercase tracking-widest mb-1">Monthly Cycle</p>
-                        <p className="text-2xl font-black text-[#1D1D1F] dark:text-white tracking-tighter italic">
-                          {savedReports.length} / 50 <span className="text-xs text-[#86868B] font-medium">Scans</span>
-                        </p>
-                      </div>
+                      <p className="text-4xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">
+                        {savedReports.length} <span className="text-sm text-[#86868B] font-bold not-italic tracking-normal">Dossiers</span>
+                      </p>
                       <div className="text-right">
-                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Efficiency</p>
-                        <p className="text-lg font-black text-emerald-500 italic">94.2%</p>
+                        <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Efficiency Rate</p>
+                        <p className="text-lg font-black text-emerald-500 italic">98.4%</p>
                       </div>
-                   </div>
-                   <div className="h-3 w-full bg-[#F5F5F7] dark:bg-white/5 rounded-full overflow-hidden border border-[#E5E5EA] dark:border-white/10">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min((savedReports.length / 50) * 100, 100)}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className="h-full bg-gradient-to-r from-[#0071E3] to-[#AF52DE] shadow-[0_0_15px_rgba(0,113,227,0.5)]" 
-                      />
                    </div>
                 </div>
 
@@ -480,7 +470,7 @@ const SettingsPage = () => {
                          value={profileForm.bio}
                          onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
                          className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-[28px] px-8 py-6 text-base font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-4 focus:ring-[#0071E3]/20 focus:border-[#0071E3] transition-all min-h-[120px] resize-none"
-                         placeholder="Operational background and technical focus..."
+                         placeholder="Operational background..."
                       />
                     </div>
                     {updateError && <p className="text-[11px] font-black text-rose-500 uppercase tracking-widest italic flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {updateError}</p>}
@@ -492,32 +482,32 @@ const SettingsPage = () => {
                   </form>
                 </SectionCard>
 
-                <SectionCard title="Nexus Preferences" icon={<Settings className="w-5 h-5 text-[#AF52DE]" />}>
+                <SectionCard title="Preferences" icon={<Settings className="w-5 h-5 text-[#AF52DE]" />}>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                       <div className="space-y-8">
                         <SettingRow 
-                           label="Email Intelligence"
-                           description="Receive high-velocity briefings directly to your encrypted inbox."
+                           label="Email Notifications"
+                           description="Receive briefings to your inbox."
                            checked={preferences.emailAlerts}
                            onToggle={() => handleToggle('emailAlerts')}
                         />
                         <SettingRow 
-                           label="Real-time Pushes"
-                           description="Instant browser telemetry for high-priority signal detections."
+                           label="Real-time Alerts"
+                           description="Instant browser notifications for updates."
                            checked={preferences.pushNotifications}
                            onToggle={() => handleToggle('pushNotifications')}
                         />
                       </div>
                       <div className="space-y-8">
                         <SettingRow 
-                           label="Autonomous Sweeps"
-                           description="Enable background agents to sweep the target universe daily."
+                           label="Auto Sweeps"
+                           description="Background scanning enabled."
                            checked={preferences.autoScan}
                            onToggle={() => handleToggle('autoScan')}
                         />
                         <SettingRow 
                            label="Security Persistence"
-                           description="Maintain active intelligence links across temporal sessions."
+                           description="Maintain active link sessions."
                            checked={preferences.sessionTimeout}
                            onToggle={() => handleToggle('sessionTimeout')}
                         />
@@ -574,7 +564,7 @@ const SettingsPage = () => {
                    </form>
                 </SectionCard>
 
-                <SectionCard title="Active Protocol Sessions" icon={<Monitor className="w-5 h-5 text-[#0071E3]" />}>
+                <SectionCard title="Active Sessions" icon={<Monitor className="w-5 h-5 text-[#0071E3]" />}>
                    <div className="space-y-4">
                       {sessions.length > 0 ? sessions.map(session => (
                         <div key={session.id} className="flex items-center justify-between p-8 rounded-[32px] bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 hover:shadow-xl transition-all duration-300">
@@ -595,7 +585,7 @@ const SettingsPage = () => {
                            </div>
                            <div className="flex items-center gap-8">
                               <div className="text-right">
-                                <p className="text-[9px] font-black text-[#86868B] uppercase tracking-widest mb-1 italic">Last Pulse</p>
+                                <p className="text-[9px] font-black text-[#86868B] uppercase tracking-widest mb-1 italic">Last Activity</p>
                                 <p className="text-xs font-black text-[#1D1D1F] dark:text-white italic">{formatDate(session.last_active)}</p>
                               </div>
                               <button 
@@ -609,7 +599,7 @@ const SettingsPage = () => {
                       )) : (
                         <div className="py-20 text-center space-y-4">
                            <Monitor className="w-12 h-12 text-[#86868B] mx-auto opacity-20" />
-                           <p className="text-[11px] text-[#86868B] italic uppercase tracking-widest">No active secondary sessions detected.</p>
+                           <p className="text-[11px] text-[#86868B] italic uppercase tracking-widest">No active sessions found.</p>
                         </div>
                       )}
                    </div>
@@ -625,11 +615,11 @@ const SettingsPage = () => {
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-8"
               >
-                <SectionCard title="Inference Engine Core" icon={<Cpu className="w-5 h-5 text-[#0071E3]" />}>
+                <SectionCard title="Inference Engine" icon={<Cpu className="w-5 h-5 text-[#0071E3]" />}>
                    <div className="space-y-10">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                          <div className="space-y-4">
-                            <label className="text-[11px] font-black text-[#86868B] uppercase tracking-[0.3em] italic">Active LLM Provider</label>
+                            <label className="text-[11px] font-black text-[#86868B] uppercase tracking-[0.3em] italic">Active Provider</label>
                             <div className="flex bg-[#F5F5F7] dark:bg-white/5 p-2 rounded-[28px] border border-[#E5E5EA] dark:border-white/10">
                                {['ollama', 'groq', 'gemini'].map((engine) => (
                                   <button
@@ -667,9 +657,6 @@ const SettingsPage = () => {
                             </div>
                          </div>
                       </div>
-                      <div className="p-8 rounded-[32px] bg-[#AF52DE]/5 border border-[#AF52DE]/10 text-xs italic text-[#AF52DE] font-medium leading-relaxed">
-                        Note: "High" intelligence depth utilizes advanced semantic cross-referencing which may increase inference latency by ~40%.
-                      </div>
                    </div>
                 </SectionCard>
               </motion.div>
@@ -683,7 +670,7 @@ const SettingsPage = () => {
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-8"
               >
-                <SectionCard title="Protocol Log Stream" icon={<History className="w-5 h-5 text-[#AF52DE]" />}>
+                <SectionCard title="Protocol Logs" icon={<History className="w-5 h-5 text-[#AF52DE]" />}>
                    <div className="space-y-6 relative">
                       <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-[#E5E5EA] via-[#AF52DE]/20 to-[#E5E5EA] dark:from-white/5 dark:via-[#AF52DE]/10 dark:to-white/5" />
                       {activities.length > 0 ? activities.map((activity, idx) => (
@@ -699,9 +686,9 @@ const SettingsPage = () => {
                                     {formatDate(activity.timestamp)}
                                  </span>
                               </div>
-                              <p className="text-xs text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed italic">
-                                 {activity.target ? `Target Identified: ${activity.target}` : 'Operational telemetry pulse recorded at the system node.'}
-                              </p>
+                               <p className="text-xs text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed italic">
+                                  {activity.target ? `Target: ${activity.target}` : `Secure system event: ${activity.action} verified on primary node.`}
+                               </p>
                               {activity.metadata?.ip && (
                                 <div className="mt-4 pt-4 border-t border-[#E5E5EA] dark:border-white/5 flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-all duration-500">
                                    <div className="flex items-center gap-2">
