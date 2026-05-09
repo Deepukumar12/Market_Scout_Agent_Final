@@ -13,7 +13,7 @@ import { useExecutionStore } from '@/store/executionStore';
 import { analyzeCompany } from '@/services/api';
 
 const DashboardLayout = () => {
-  const { user } = useAuthStore();
+  const { user, initSync } = useAuthStore();
   const { fetchCompetitors } = useCompetitorStore();
   const { fetchNotifications, initWebSocket } = useNotificationStore();
   const location = useLocation();
@@ -36,9 +36,13 @@ const DashboardLayout = () => {
   useEffect(() => {
     fetchNotifications();
     initWebSocket(); // Real-time notification uplink
+    const cleanupSync = initSync(); // Real-time profile sync
     const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications, initWebSocket]);
+    return () => {
+      clearInterval(interval);
+      if (cleanupSync) cleanupSync();
+    };
+  }, [fetchNotifications, initWebSocket, initSync]);
 
   useEffect(() => {
     fetchCompetitors();

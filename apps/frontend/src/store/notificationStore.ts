@@ -44,6 +44,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                if (data.type === 'USER_UPDATE') {
+                    window.dispatchEvent(new CustomEvent('user-protocol-sync', { detail: data.user }));
+                    return;
+                }
+
                 if (data.type === 'SYSTEM') return; // Handshake info
 
                 // Add to list and update unread

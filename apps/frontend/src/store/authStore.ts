@@ -15,6 +15,7 @@ interface AuthState {
     updateProfile: (data: any) => Promise<void>;
     changePassword: (data: any) => Promise<void>;
     deleteAccount: () => Promise<void>;
+    initSync: () => void;
 }
 
 // Simple JWT decoder for client-side use
@@ -193,6 +194,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             throw err;
             set({ loading: false });
         }
+    },
+
+    initSync: () => {
+        const handler = (e: any) => {
+            if (e.detail) {
+                console.log('🔄 Real-time Identity Sync:', e.detail.full_name);
+                set({ user: e.detail });
+            }
+        };
+        window.addEventListener('user-protocol-sync', handler);
+        return () => window.removeEventListener('user-protocol-sync', handler);
     }
 }));
 

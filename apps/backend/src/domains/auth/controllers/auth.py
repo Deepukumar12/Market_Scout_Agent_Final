@@ -244,6 +244,26 @@ async def update_profile(
 
     updated_user = await collection.find_one({"_id": ObjectId(current_user.id)})
     updated_user["id"] = str(updated_user.pop("_id"))
+    
+    # Sanitize for WebSocket (Convert datetime to string)
+    ws_user = updated_user.copy()
+    if ws_user.get("created_at"):
+        ws_user["created_at"] = ws_user["created_at"].isoformat()
+    if ws_user.get("last_login"):
+        ws_user["last_login"] = ws_user["last_login"].isoformat()
+
+    from src.shared.websockets import manager
+    await manager.send_personal_message(
+        {
+            "type": "USER_UPDATE",
+            "title": "Identity Synchronized",
+            "message": "User profile protocols updated in real-time.",
+            "timestamp": datetime.now().isoformat(),
+            "user": ws_user
+        },
+        str(current_user.id)
+    )
+
     return User(**updated_user)
 
 
