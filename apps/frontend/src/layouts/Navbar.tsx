@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown, Menu, Moon, Sun } from 'lucide-react';
+import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown, Menu, Moon, Sun, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -54,10 +54,10 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => navigate('/dashboard')}
         >
-          <div className="w-8 h-8 bg-[#0071E3] rounded-lg flex items-center justify-center shadow-lg shadow-[#0071E3]/20">
-            <div className="w-4 h-4 bg-white rounded-sm rotate-45" />
+          <div className="w-10 h-10 bg-[#0071E3] rounded-xl flex items-center justify-center shadow-lg shadow-[#0071E3]/20">
+            <Zap className="text-white w-5 h-5" />
           </div>
-          <span className="text-xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">Market <span className="text-[#AF52DE]">Scout</span></span>
+          <span className="text-2xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">SCOUT<span className="text-blue-600">IQ</span></span>
         </motion.div>
 
         <div className="relative max-w-md w-full group hidden md:block">

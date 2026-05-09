@@ -59,6 +59,8 @@ const SentimentAnalysisPage = () => {
       }
     };
     fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
   }, [selectedCompetitorId]);
 
   const pieData = data ? [

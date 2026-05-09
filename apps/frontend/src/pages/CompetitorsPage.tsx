@@ -16,6 +16,11 @@ const CompetitorsPage = () => {
   useEffect(() => {
     fetchCompetitors();
     fetchGlobalMetrics();
+    const interval = setInterval(() => {
+      fetchCompetitors();
+      fetchGlobalMetrics();
+    }, 30000);
+    return () => clearInterval(interval);
   }, [fetchCompetitors, fetchGlobalMetrics]);
 
   const filteredCompetitors = useMemo(() => {

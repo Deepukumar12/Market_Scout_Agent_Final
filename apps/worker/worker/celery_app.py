@@ -16,7 +16,7 @@ app = Celery(
     "market_scout_worker",
     broker=redis_url,
     backend=redis_url,
-    include=["src.tasks"]
+    include=["worker.tasks"]
 )
 
 app.conf.update(

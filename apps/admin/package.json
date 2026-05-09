@@ -13,6 +13,7 @@
     "@market-scout/platform": "*",
     "@types/lodash": "^4.17.24",
     "axios": "^1.16.0",
+    "framer-motion": "^12.38.0",
     "lodash": "^4.18.1",
     "lucide-react": "^0.300.0",
     "react": "^18.2.0",

@@ -80,6 +80,9 @@ const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen,
            </div>
            <ThemeToggle />
         </div>
+        <p className="text-center text-[9px] font-black uppercase tracking-[0.4em] text-[#86868B] opacity-50 italic">
+          The Signal <span className="text-[#1D1D1F] dark:text-white">Decoded.</span>
+        </p>
       </div>
     </aside>
     </>

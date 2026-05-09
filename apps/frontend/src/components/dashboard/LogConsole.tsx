@@ -45,7 +45,19 @@ export default function LogConsole() {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        setLogs((prev) => [...prev.slice(-100), data]);
+        const entry: LogEntry = data;
+        setLogs((prev) => [...prev.slice(-100), entry]);
+        
+        // Sync with execution store
+        const { addLog, setStep } = useExecutionStore.getState();
+        addLog(entry);
+
+        // Detect Phase from message: "Phase X: ..."
+        const phaseMatch = entry.message.match(/Phase (\d+)/);
+        if (phaseMatch) {
+          const phase = parseInt(phaseMatch[1]);
+          setStep(phase - 1);
+        }
       } catch (e) {
         // Fallback for plain text messages
         const entry: LogEntry = {
@@ -54,6 +66,7 @@ export default function LogConsole() {
           timestamp: new Date().toISOString()
         };
         setLogs((prev) => [...prev.slice(-100), entry]);
+        useExecutionStore.getState().addLog(entry);
       }
     };
 

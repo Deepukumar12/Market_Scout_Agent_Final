@@ -9,8 +9,54 @@ export interface PlatformConfig {
 export class PlatformClient {
   private config: PlatformConfig;
 
+  private token: string | null = null;
+
   constructor(config: PlatformConfig) {
     this.config = config;
+    // Auto-load token from localStorage if available in browser
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('scout_token');
+    }
+  }
+
+  setToken(token: string | null) {
+    this.token = token;
+    if (typeof window !== 'undefined') {
+      if (token) localStorage.setItem('scout_token', token);
+      else localStorage.removeItem('scout_token');
+    }
+  }
+
+  private getHeaders() {
+    return this.token ? { Authorization: `Bearer ${this.token}` } : {};
+  }
+
+  async login(username: string, password: string) {
+    const formData = new URLSearchParams();
+    formData.append('username', username);
+    formData.append('password', password);
+
+    try {
+      const response = await axios.post(`${this.config.backendUrl}/api/v1/auth/login`, formData, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      this.setToken(response.data.access_token);
+      return response.data;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
+  }
+
+  async register(data: any) {
+    try {
+      const response = await axios.post(`${this.config.backendUrl}/api/v1/auth/register`, data);
+      this.setToken(response.data.access_token);
+      return response.data;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -18,7 +64,9 @@ export class PlatformClient {
    */
   async getSystemStats() {
     try {
-      const response = await axios.get(`${this.config.backendUrl}/api/v1/meta/stats`);
+      const response = await axios.get(`${this.config.backendUrl}/api/v1/meta/stats`, {
+        headers: this.getHeaders()
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to fetch system stats:', error);
@@ -31,7 +79,9 @@ export class PlatformClient {
    */
   async getCompetitors() {
     try {
-      const response = await axios.get(`${this.config.backendUrl}/api/v1/competitors`);
+      const response = await axios.get(`${this.config.backendUrl}/api/v1/competitors`, {
+        headers: this.getHeaders()
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to fetch competitors:', error);
@@ -44,7 +94,9 @@ export class PlatformClient {
    */
   async triggerScan(competitorId: string) {
     try {
-      const response = await axios.post(`${this.config.backendUrl}/api/v1/competitors/${competitorId}/scan`);
+      const response = await axios.post(`${this.config.backendUrl}/api/v1/competitors/${competitorId}/scan`, {}, {
+        headers: this.getHeaders()
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to trigger scan:', error);
@@ -57,10 +109,57 @@ export class PlatformClient {
    */
   async getAuditLogs() {
     try {
-      const response = await axios.get(`${this.config.backendUrl}/api/v1/meta/logs`);
+      const response = await axios.get(`${this.config.backendUrl}/api/v1/meta/logs`, {
+        headers: this.getHeaders()
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to fetch audit logs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch worker nodes status.
+   */
+  async getWorkers() {
+    try {
+      const response = await axios.get(`${this.config.backendUrl}/api/v1/meta/workers`, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch workers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch chart data for signals.
+   */
+  async getChartData() {
+    try {
+      const response = await axios.get(`${this.config.backendUrl}/api/v1/meta/chart-data`, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch chart data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch masked vault entries.
+   */
+  async getVault() {
+    try {
+      const response = await axios.get(`${this.config.backendUrl}/api/v1/meta/vault`, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch vault data:', error);
       throw error;
     }
   }

@@ -1,142 +1,236 @@
-
-import { Zap, Github, Twitter, Linkedin, Mail, ArrowRight } from "lucide-react";
+import { useEffect } from "react";
+import { Zap, Github, Twitter, Linkedin, Mail, ArrowRight, Activity, Globe, Cpu, Shield, Lock, Server, Terminal, BarChart3, Database, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useIntelStore } from "@/store/intelStore";
+import { cn } from "@/utils/utils";
 
 export function Footer() {
+  const { globalMetrics, fetchGlobalMetrics } = useIntelStore();
+
+  useEffect(() => {
+    fetchGlobalMetrics();
+    const interval = setInterval(fetchGlobalMetrics, 30000); // 30s heartbeat
+    return () => clearInterval(interval);
+  }, [fetchGlobalMetrics]);
+
+  const footerSections = [
+    {
+      title: "Intelligence Platform",
+      links: [
+        { label: "Market Intelligence", href: "#intelligence" },
+        { label: "Competitor Surveillance", href: "#intelligence" },
+        { label: "Predictive Analytics", href: "#intelligence" },
+        { label: "Sentiment Decoding", href: "#intelligence" },
+        { label: "Technical Signals", href: "#intelligence" },
+        { label: "RAG Architecture", href: "#infrastructure" },
+      ]
+    },
+    {
+      title: "Enterprise Solutions",
+      links: [
+        { label: "Global Infrastructure", href: "#infrastructure" },
+        { label: "Edge Intelligence", href: "#infrastructure" },
+        { label: "Security & Compliance", href: "#security" },
+        { label: "API Documentation", href: "#" },
+        { label: "System Integration", href: "#" },
+        { label: "Custom Model Training", href: "#" },
+      ]
+    },
+    {
+      title: "Trust & Transparency",
+      links: [
+        { label: "Security Whitepaper", href: "#security" },
+        { label: "Privacy Protocol", href: "#security" },
+        { label: "Data Integrity", href: "#security" },
+        { label: "Ethics Framework", href: "#" },
+        { label: "Compliance Center", href: "#" },
+        { label: "Uptime Status", href: "#" },
+      ]
+    },
+    {
+      title: "Corporate",
+      links: [
+        { label: "About ScoutIQ", href: "#" },
+        { label: "Leadership", href: "#" },
+        { label: "Press & Media", href: "#" },
+        { label: "Career Portal", href: "#" },
+        { label: "Investor Relations", href: "#enterprise" },
+        { label: "Contact Command", href: "mailto:deeputhakur0986@gmail.com" },
+      ]
+    }
+  ];
+
   return (
-    <footer className="border-t border-white/10 bg-black pt-16 pb-8 relative overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-cyan-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+    <footer className="relative border-t border-[#F0F0F3] dark:border-white/5 bg-white dark:bg-[#050505] transition-colors duration-700 overflow-hidden">
+      {/* Premium Gradient Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-600/50 to-transparent" />
+      <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-blue-600/5 dark:bg-blue-600/10 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/4 right-0 w-[400px] h-[400px] bg-indigo-600/5 dark:bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
 
-      <div className="container mx-auto px-6 md:px-12 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-          
-          {/* Brand Column */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.5)]">
-                <Zap className="w-5 h-5 text-cyan-400" />
+      <div className="container mx-auto px-6 md:px-12 pt-32 pb-16 relative z-10">
+        
+        {/* Top Intelligence Bar */}
+        <div className="grid lg:grid-cols-4 gap-12 mb-32 border-b border-[#F0F0F3] dark:border-white/5 pb-24">
+          <div className="lg:col-span-2 space-y-10">
+            <div className="flex items-center gap-4 group">
+              <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-600/40 group-hover:scale-110 transition-all duration-500">
+                <Zap className="w-8 h-8 text-white fill-white" />
               </div>
-              <span className="text-xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                SCOUT<span className="text-cyan-400">IQ</span>
-              </span>
+              <div className="flex flex-col">
+                <span className="text-3xl font-black tracking-tighter text-[#1D1D1F] dark:text-white uppercase italic">
+                  SCOUT<span className="text-blue-600">IQ</span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">Operational Intelligence</span>
+                </div>
+              </div>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              The autonomous market intelligence platform for forward-thinking enterprises. Dominate your market with real-time AI insights.
+            
+            <h3 className="text-5xl md:text-6xl font-black tracking-tight text-[#1D1D1F] dark:text-white leading-[0.9] italic max-w-xl">
+              Mapping the future of <span className="text-blue-600">Market Surveillance.</span>
+            </h3>
+            
+            <p className="text-lg text-[#6E6E73] dark:text-[#86868B] font-medium max-w-lg leading-relaxed">
+              ScoutIQ delivers sub-second competitive intelligence through a global mesh of autonomous agents. Deciphering signals, ensuring market dominance.
             </p>
-            <div className="flex gap-4">
-              <SocialIcon href="https://x.com/Deepukumar24" icon={<Twitter className="w-4 h-4" />} />
-              <SocialIcon href="https://github.com/Deepukumar12" icon={<Github className="w-4 h-4" />} />
-              <SocialIcon href="https://www.linkedin.com/in/deepu-kumar-393564289/" icon={<Linkedin className="w-4 h-4" />} />
-              <SocialIcon href="mailto:deeputhakur0986@gmail.com" icon={<Mail className="w-4 h-4" />} />
+
+            <div className="flex items-center gap-6 pt-4">
+              <SocialIcon href="https://github.com/Deepukumar12" icon={<Github size={20} />} label="GitHub" />
+              <SocialIcon href="https://x.com/Deepukumar24" icon={<Twitter size={20} />} label="Twitter" />
+              <SocialIcon href="https://www.linkedin.com/in/deepu-kumar-393564289/" icon={<Linkedin size={20} />} label="LinkedIn" />
+              <SocialIcon href="mailto:deeputhakur0986@gmail.com" icon={<Mail size={20} />} label="Email" />
             </div>
           </div>
 
-          {/* Links Column 1 */}
-          <div>
-            <h4 className="font-bold text-white mb-6">Product</h4>
-            <ul className="space-y-4 text-sm text-gray-400">
-              <FooterLink>Features</FooterLink>
-              <FooterLink>Integrations</FooterLink>
-              <FooterLink>Enterprise</FooterLink>
-              <FooterLink>Changelog</FooterLink>
-              <FooterLink>Documentation</FooterLink>
-            </ul>
-          </div>
-
-          {/* Links Column 2 */}
-          <div>
-            <h4 className="font-bold text-white mb-6">Company</h4>
-            <ul className="space-y-4 text-sm text-gray-400">
-              <FooterLink>About Us</FooterLink>
-              <FooterLink>Careers</FooterLink>
-              <FooterLink>Blog</FooterLink>
-              <FooterLink>Legal</FooterLink>
-              <FooterLink>Contact</FooterLink>
-            </ul>
-          </div>
-
-          {/* Founder Column */}
-          <div className="md:col-span-1 border-l border-white/10 pl-8">
-            <h4 className="font-black text-white mb-6 uppercase tracking-[0.2em] text-[10px] italic flex items-center gap-2">
-              <Zap className="w-3 h-3 text-cyan-400" /> Pioneering the <span className="text-cyan-400">Scout IQ</span> Era
-            </h4>
-            <div className="space-y-4">
-              <p className="text-gray-400 text-xs leading-relaxed italic font-medium">
-                "Our mission is to democratize high-fidelity market intelligence. By synthesizing millions of global technical signals, we empower organizations to move at the speed of thought."
-              </p>
-              <div className="flex items-center gap-3 pt-2">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-black italic text-sm shadow-lg">
-                  DK
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-white font-black uppercase italic tracking-tighter text-sm">Deepu Kumar</span>
-                  <span className="text-cyan-400 text-[9px] font-bold uppercase tracking-widest leading-none">Architect & Founder</span>
-                </div>
+          <div className="lg:col-span-2 space-y-12">
+            <div className="p-10 rounded-[3rem] bg-blue-600 dark:bg-blue-600/10 text-white relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 transition-transform duration-700">
+                <MessageSquare size={120} strokeWidth={1} />
               </div>
-              <div className="pt-4 space-y-2 border-t border-white/5">
-                <a href="mailto:deeputhakur0986@gmail.com" className="text-gray-400 hover:text-cyan-400 transition-colors text-xs flex items-center gap-2">
-                  <Mail className="w-3 h-3" /> deeputhakur0986@gmail.com
-                </a>
-                <div className="text-gray-400 text-[10px] flex items-center gap-2 font-mono">
-                  +91 9006225162
+              <div className="relative z-10 space-y-6">
+                <h4 className="text-3xl font-black italic uppercase tracking-tighter">Stay Ahead of the Signal</h4>
+                <p className="text-blue-100 dark:text-blue-300 text-sm font-medium max-w-sm">Join 5,000+ enterprise leaders receiving our weekly market intelligence briefing.</p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input 
+                    type="email" 
+                    placeholder="Enter corporate email" 
+                    className="flex-1 h-14 rounded-2xl bg-white/10 dark:bg-white/5 border border-white/20 px-6 text-sm font-bold placeholder:text-blue-200 outline-none focus:ring-2 focus:ring-white/30 transition-all"
+                  />
+                  <Button className="h-14 px-8 rounded-2xl bg-white text-blue-600 hover:bg-blue-50 font-black uppercase tracking-widest text-xs shadow-xl">
+                    Subscribe
+                  </Button>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Stay Ahead Column */}
-          <div>
-            <h4 className="font-bold text-white mb-6">Connect</h4>
-            <div className="flex gap-4 mb-8">
-              <SocialIcon href="https://x.com/Deepukumar24" icon={<Twitter className="w-4 h-4" />} />
-              <SocialIcon href="https://github.com/Deepukumar12" icon={<Github className="w-4 h-4" />} />
-              <SocialIcon href="https://www.linkedin.com/in/deepu-kumar-393564289/" icon={<Linkedin className="w-4 h-4" />} />
-              <SocialIcon href="mailto:deeputhakur0986@gmail.com" icon={<Mail className="w-4 h-4" />} />
-            </div>
-            <h4 className="font-bold text-white mb-6">Stay Ahead</h4>
-            <div className="flex gap-2">
-              <input 
-                type="email" 
-                placeholder="Intelligence Stream" 
-                className="bg-white/5 border border-white/10 rounded-md px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 w-full transition-colors"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <MetricCard 
+                icon={<Globe className="text-blue-600" size={24} />}
+                label="Global Nodes"
+                value={globalMetrics?.total_competitors || "0"}
+                subValue="+12% Active"
               />
-              <Button variant="neon" size="icon" className="shrink-0">
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+              <MetricCard 
+                icon={<Activity className="text-blue-600" size={24} />}
+                label="Signal Synthesis"
+                value={globalMetrics?.articles_processed || "0"}
+                subValue="Real-time Flow"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Links Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-16 mb-32">
+          {footerSections.map((section) => (
+            <div key={section.title} className="space-y-8">
+              <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-[#1D1D1F] dark:text-white border-b border-[#F0F0F3] dark:border-white/5 pb-4">
+                {section.title}
+              </h4>
+              <ul className="space-y-4">
+                {section.links.map((link) => (
+                  <li key={link.label}>
+                    <a 
+                      href={link.href} 
+                      className="text-sm font-bold text-[#6E6E73] dark:text-[#86868B] hover:text-blue-600 dark:hover:text-white transition-all duration-300 flex items-center group gap-2"
+                    >
+                      <ArrowRight size={12} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-blue-600" />
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom Panel */}
+        <div className="pt-16 border-t border-[#F0F0F3] dark:border-white/5 flex flex-col lg:flex-row justify-between items-center gap-12">
+          <div className="flex flex-col md:flex-row items-center gap-8 text-[11px] font-black uppercase tracking-[0.2em] text-[#86868B]">
+            <div className="flex items-center gap-6">
+              <span>© 2026 ScoutIQ Intelligence Protocol.</span>
+              <div className="hidden md:block w-1.5 h-1.5 rounded-full bg-[#E5E5EA] dark:bg-white/10" />
+              <div className="flex items-center gap-3">
+                <span className="text-[#1D1D1F] dark:text-white">Built by Deepu Kumar</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                <span className="text-blue-600 italic">Advanced Agentic Coding v2.4</span>
+              </div>
             </div>
           </div>
 
-        </div>
-
-        {/* Bottom Bar */}
-        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
-          <p>© 2026 ScoutIQ Inc. & Deepu Kumar. All rights reserved.</p>
-          <div className="flex gap-8">
-            <a href="#" className="hover:text-cyan-400 transition-colors">Neural Sovereignty</a>
-            <a href="#" className="hover:text-cyan-400 transition-colors">Signal Privacy</a>
-            <a href="#" className="hover:text-cyan-400 transition-colors">Founder Direct</a>
+          <div className="flex items-center gap-10">
+            <div className="flex flex-wrap justify-center gap-10 text-[11px] font-black uppercase tracking-[0.3em] text-[#86868B]">
+              <a href="#" className="hover:text-blue-600 transition-colors">Privacy</a>
+              <a href="#" className="hover:text-blue-600 transition-colors">Terms</a>
+              <a href="#" className="hover:text-blue-600 transition-colors">SLA</a>
+              <a href="#" className="hover:text-blue-600 transition-colors">Status</a>
+            </div>
+            <div className="hidden xl:flex items-center gap-3 px-4 py-2 rounded-full border border-[#F0F0F3] dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-[#86868B] hover:border-blue-600/30 transition-colors cursor-pointer">
+              <Globe size={14} />
+              <span>United States (English)</span>
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Corporate Badge */}
+      <div className="absolute -bottom-10 right-10 text-[120px] font-black text-black/[0.02] dark:text-white/[0.02] select-none pointer-events-none uppercase italic tracking-tighter">
+        SURVEILLANCE
       </div>
     </footer>
   );
 }
 
-function SocialIcon({ icon, href }: { icon: React.ReactNode, href: string }) {
+function SocialIcon({ icon, href, label }: { icon: React.ReactNode, href: string, label: string }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all duration-300 border border-transparent hover:border-cyan-500/20">
+    <a 
+      href={href} 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      aria-label={label}
+      className="w-12 h-12 rounded-xl bg-[#FBFBFE] dark:bg-white/5 border border-[#F0F0F3] dark:border-white/5 flex items-center justify-center text-[#86868B] hover:text-blue-600 hover:border-blue-600/30 transition-all duration-500 shadow-sm hover:shadow-xl hover:-translate-y-1"
+    >
       {icon}
     </a>
-  )
+  );
 }
 
-function FooterLink({ children }: { children: React.ReactNode }) {
+function MetricCard({ icon, label, value, subValue }: { icon: React.ReactNode, label: string, value: string | number, subValue: string }) {
   return (
-    <li>
-      <a href="#" className="hover:text-cyan-400 transition-colors block w-fit">
-        {children}
-      </a>
-    </li>
-  )
+    <div className="p-8 rounded-[2rem] bg-[#FBFBFE] dark:bg-white/5 border border-[#F0F0F3] dark:border-white/5 shadow-2xl shadow-black/5 hover:border-blue-600/20 transition-all duration-500 group">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-12 h-12 rounded-xl bg-blue-600/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+          {icon}
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#86868B]">{label}</span>
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-4xl font-black text-[#1D1D1F] dark:text-white tracking-tighter">{value}</span>
+        <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">{subValue}</span>
+      </div>
+    </div>
+  );
 }
+
+

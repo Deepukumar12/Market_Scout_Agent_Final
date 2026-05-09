@@ -7,20 +7,32 @@ import {
   ArrowRight,
   Shield,
   Zap,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { runScan } from '@/services/api';
 import { useCompetitorStore } from '@/store/competitorStore';
+import { useExecutionStore } from '@/store/executionStore';
+import { cn } from '@/utils/utils';
 
 const AddCompetitorPage = () => {
   const { addCompetitor, fetchCompetitors } = useCompetitorStore();
+  const { currentStep: realStep, setStep, startExecution, stopExecution } = useExecutionStore();
   
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const progressSteps = [
+    'Initializing AI Scout agents...',
+    'Searching technical repositories...',
+    'Scraping latest feature releases...',
+    'Analyzing competitive edge...',
+    'Generating intelligence report...'
+  ];
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,20 +41,18 @@ const AddCompetitorPage = () => {
     setLoading(true);
     setError(null);
     setSuccess(false);
+    startExecution(progressSteps.length);
 
     try {
-      // Extract a simplified name from URL if possible, or just use domain
       let companyName = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
       if (!companyName) companyName = url;
 
-      // 1. First, add the competitor to the database so it has a URL
       const newComp = await addCompetitor(companyName, url);
       
       if (!newComp) {
         throw new Error('Failed to initialize competitor in surveillance network.');
       }
 
-      // 2. Then, run the deep intelligence scan
       const data = await runScan({
         company_name: companyName,
         website: url,
@@ -50,10 +60,9 @@ const AddCompetitorPage = () => {
       });
 
       if (data && !data.error) {
+        setStep(progressSteps.length - 1);
         setSuccess(true);
         setUrl('');
-        // No need to fetchCompetitors() here as addCompetitor already updates the store,
-        // but we can do it to be sure of server state
         fetchCompetitors();
       } else {
         setError(data?.error || 'Intelligence scan returned internal error.');
@@ -64,6 +73,7 @@ const AddCompetitorPage = () => {
       setError(message);
     } finally {
       setLoading(false);
+      stopExecution();
     }
   };
 
@@ -75,39 +85,73 @@ const AddCompetitorPage = () => {
       </div>
 
       <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl rounded-[48px] p-12 shadow-apple border border-[#E5E5EA] dark:border-white/10 shadow-sm transition-colors duration-500">
-        <form onSubmit={handleAdd} className="space-y-8">
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-[#86868B] dark:text-[#A1A1A6] group-focus-within:text-[#0071E3] transition-colors">
-              <Globe size={24} />
-            </div>
-            <Input 
-              type="url"
-              placeholder="https://competitor.com"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="h-20 pl-16 pr-8 rounded-3xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border-transparent dark:text-white focus:border-[#0071E3] focus:ring-4 focus:ring-[#0071E3]/10 text-xl font-medium transition-all"
-              required
-            />
-          </div>
-
-          <Button 
-            type="submit" 
-            disabled={loading}
-            className="w-full h-20 rounded-3xl bg-[#0071E3] hover:bg-[#0077ED] text-white font-black text-xl uppercase tracking-widest shadow-xl shadow-[#0071E3]/20 transition-all disabled:opacity-50"
-          >
-            {loading ? (
-              <div className="flex items-center gap-3">
-                <Loader2 className="animate-spin" size={24} />
-                Analyzing Intelligence...
+        {!loading && !success ? (
+          <form onSubmit={handleAdd} className="space-y-8">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-[#86868B] dark:text-[#A1A1A6] group-focus-within:text-[#0071E3] transition-colors">
+                <Globe size={24} />
               </div>
-            ) : (
+              <Input 
+                type="url"
+                placeholder="https://competitor.com"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="h-20 pl-16 pr-8 rounded-3xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border-transparent dark:text-white focus:border-[#0071E3] focus:ring-4 focus:ring-[#0071E3]/10 text-xl font-medium transition-all"
+                required
+              />
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full h-20 rounded-3xl bg-[#0071E3] hover:bg-[#0077ED] text-white font-black text-xl uppercase tracking-widest shadow-xl shadow-[#0071E3]/20 transition-all"
+            >
               <div className="flex items-center gap-2">
                 Begin Analysis
                 <ArrowRight size={24} />
               </div>
-            )}
-          </Button>
-        </form>
+            </Button>
+          </form>
+        ) : loading ? (
+          <div className="space-y-10 py-4">
+             <div className="relative h-3 w-full bg-[#F5F5F7] dark:bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  className="absolute inset-y-0 left-0 bg-[#0071E3] shadow-[0_0_15px_rgba(0,113,227,0.5)]"
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${((realStep + 1) / progressSteps.length) * 100}%` }}
+                />
+              </div>
+
+              <div className="grid gap-6">
+                {progressSteps.map((step, index) => (
+                  <div 
+                    key={index}
+                    className={cn(
+                      "flex items-center gap-6 transition-all duration-500",
+                      index > realStep ? "opacity-20 grayscale" : "opacity-100"
+                    )}
+                  >
+                    {index < realStep ? (
+                      <div className="w-8 h-8 rounded-full bg-[#34C759] flex items-center justify-center text-white">
+                        <CheckCircle2 size={20} />
+                      </div>
+                    ) : index === realStep ? (
+                      <div className="w-8 h-8 rounded-full bg-[#0071E3] flex items-center justify-center text-white shadow-lg shadow-[#0071E3]/30">
+                        <Loader2 size={20} className="animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full border-2 border-[#E5E5EA] dark:border-white/10" />
+                    )}
+                    <span className={cn(
+                      "text-lg font-black italic tracking-tight uppercase",
+                      index === realStep ? "text-[#1D1D1F] dark:text-white" : "text-[#86868B]"
+                    )}>
+                      {step}
+                    </span>
+                  </div>
+                ))}
+              </div>
+          </div>
+        ) : null}
 
         <AnimatePresence>
           {error && (

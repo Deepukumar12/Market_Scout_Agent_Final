@@ -1,19 +1,14 @@
 import os
 import asyncio
 import logging
-from src.celery_app import app
+from worker.celery_app import app
 from typing import Dict, Any
 
 # Real Backend Imports
 from src.services.data.scraper_service import scrape_url
-from src.services.ai.agent_service import MarketIntelligenceAgent
-from src.domains.competitors.services.competitor_service import CompetitorService
-from src.core.database import db
+from src.services.ai.agent_service import run_agent_pipeline
 
 logger = logging.getLogger(__name__)
-
-# Initialize AI Agent
-agent = MarketIntelligenceAgent()
 
 def run_async(coro):
     """Helper to run async code in Celery sync tasks."""
@@ -40,11 +35,7 @@ def scan_competitor_task(self, competitor_id: str, url: str) -> Dict[str, Any]:
             return {"status": "error", "message": "Failed to extract content"}
 
         # Step 2: Real AI Analysis
-        analysis = run_async(agent.analyze_competitor(
-            name=competitor_id, # Simplified for example
-            content=scrape_result["content"],
-            metadata=scrape_result.get("metadata", {})
-        ))
+        analysis = run_agent_pipeline(competitor_id)
 
         # Step 3: Persistence (Real-time update)
         # Note: In production, we'd use a repository to save this
