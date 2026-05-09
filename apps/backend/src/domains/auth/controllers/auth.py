@@ -226,7 +226,10 @@ async def update_profile(
     database = await get_database()
     collection = database["users"]
 
-    update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
+    update_data = {
+        k: v for k, v in user_update.model_dump().items()
+        if v is not None and k != 'hashed_password'
+    }
     
     if "email" in update_data and update_data["email"] != current_user.email:
         existing = await collection.find_one({"email": update_data["email"]})

@@ -77,7 +77,7 @@ const SettingsPage = () => {
     return { ...defaultPrefs, ...(user?.preferences || {}) };
   });
 
-  // Sync form state when user changes (dynamic update)
+  // Sync form state when user changes (server sync — reset dirty flag)
   useEffect(() => {
     if (user) {
       setProfileForm({
@@ -90,6 +90,7 @@ const SettingsPage = () => {
         job_title: user.job_title || ''
       });
       setPreferences(prev => ({ ...prev, ...(user.preferences || {}) }));
+      setIsDirty(false); // Server data synced — no unsaved changes
     }
   }, [user]);
 
@@ -121,32 +122,24 @@ const SettingsPage = () => {
     return Object.entries(counts).map(([name, count]) => ({ name, count })).slice(-7);
   }, [savedReports]);
 
+  // Track if there are unsaved changes
+  const [isDirty, setIsDirty] = useState(false);
+
   const handleToggle = (key: string) => {
     setPreferences((prev: any) => ({ ...prev, [key]: !prev[key] }));
     setSuccess(false);
+    setIsDirty(true);
   };
 
   const handleSelect = (key: string, value: any) => {
     setPreferences((prev: any) => ({ ...prev, [key]: value }));
     setSuccess(false);
+    setIsDirty(true);
   };
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setUpdateError(null);
-    try {
-      // Direct call to updateProfile from authStore
-      await updateProfile({ ...profileForm, preferences });
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-      await fetchUser();
-    } catch (err: any) {
-      console.error('Profile update error:', err);
-      setUpdateError(err.response?.data?.detail || 'Failed to update profile');
-    } finally {
-      setLoading(false);
-    }
+    await saveGlobalSettings();
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -219,14 +212,18 @@ const SettingsPage = () => {
     setLoading(true);
     setUpdateError(null);
     try {
-      // Save full profile + preferences atomically
       await apiUpdateProfile({ ...profileForm, preferences });
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      setIsDirty(false);
+      setTimeout(() => setSuccess(false), 3500);
+      // Always re-fetch authoritative DB record
       await fetchUser();
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || 'Failed to save settings';
-      setUpdateError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      const detail = err?.response?.data?.detail;
+      const msg = typeof detail === 'string' ? detail
+        : Array.isArray(detail) ? detail.map((d: any) => d.msg).join(', ')
+        : 'Failed to save. Check your inputs.';
+      setUpdateError(msg);
     } finally {
       setLoading(false);
     }
@@ -265,10 +262,15 @@ const SettingsPage = () => {
             disabled={loading}
             className={cn(
               "font-black uppercase tracking-widest text-[11px] h-14 px-12 transition-all rounded-full shadow-2xl backdrop-blur-md active:scale-95",
-              success ? "bg-emerald-500 text-white shadow-emerald-500/40" : "bg-[#0071E3] text-white shadow-[#0071E3]/40"
+              success ? "bg-emerald-500 text-white shadow-emerald-500/40 ring-0"
+                : isDirty ? "bg-[#0071E3] text-white shadow-[#0071E3]/40 ring-4 ring-amber-400/60"
+                : "bg-[#0071E3] text-white shadow-[#0071E3]/40"
             )}
           >
-            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : success ? "✓ SAVED" : "COMMIT CHANGES"}
+            {loading ? <RefreshCw className="w-4 h-4 animate-spin" />
+              : success ? "✓ SAVED"
+              : isDirty ? "● UNSAVED CHANGES"
+              : "COMMIT CHANGES"}
           </Button>
         </div>
       </div>

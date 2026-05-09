@@ -167,8 +167,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     updateProfile: async (data) => {
         set({ loading: true, error: null });
         try {
-            const updatedUser = await api.put('/auth/profile', data);
-            set({ user: updatedUser.data, loading: false });
+            await api.put('/auth/profile', data);
+            // Always re-fetch authoritative DB record
+            await get().fetchUser();
+            set({ loading: false });
         } catch (err: any) {
             set({ error: err.response?.data?.detail || 'Update failed', loading: false });
             throw err;

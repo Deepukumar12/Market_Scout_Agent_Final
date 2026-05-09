@@ -46,6 +46,7 @@ class User(UserBase):
         populate_by_name=True,
         arbitrary_types_allowed=True,
         extra="ignore",
+        json_encoders={datetime: lambda v: v.isoformat() if v else None}
     )
 
 
