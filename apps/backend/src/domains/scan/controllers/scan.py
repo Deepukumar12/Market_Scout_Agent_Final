@@ -50,8 +50,13 @@ async def post_scan(
     Query Planning (LLM) → Search (Zenserp) → Scrape + Date Filter → Content Filter → Gemini Analysis.
     Returns strict ScanResponse JSON, or {"error": "Gemini API unavailable"} if Gemini fails.
     """
-    logger.info("SCAN [%s] <- FRESH SCAN (ad-hoc POST /scan)", body.company_name)
-    result = await run_scan(body)
+    from src.services.activity_service import activity_service
+    await activity_service.log_activity(
+        user_id=str(current_user.id),
+        action="Strategic Analysis",
+        target=body.company_name,
+        metadata={"source": body.website or "direct"}
+    )
 
     if result is None:
         await create_notification(

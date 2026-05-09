@@ -81,6 +81,13 @@ async def clear_notifications(
     """
     collection = await get_notification_collection()
     await collection.delete_many({"user_id": str(current_user.id)})
+    
+    from src.services.activity_service import activity_service
+    await activity_service.log_activity(
+        user_id=str(current_user.id),
+        action="Notifications Cleared"
+    )
+    
     return {"status": "success", "message": "Notification archive cleared"}
 
 from src.domains.notifications.services.notification_service import notification_service

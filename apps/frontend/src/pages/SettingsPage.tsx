@@ -12,7 +12,8 @@ import { useAuthStore } from '@/store/authStore';
 import { 
   getSchedulerConfig, updateSchedulerConfig, 
   getUserActivity, getUserSessions, revokeSession,
-  getSavedReports, updateProfile as apiUpdateProfile
+  getSavedReports, updateProfile as apiUpdateProfile,
+  upgradeSubscription
 } from '@/services/api';
 import { cn } from '@/utils/utils';
 import { 
@@ -161,6 +162,20 @@ const SettingsPage = () => {
       setSessions(prev => prev.filter(s => s.id !== id));
     } catch (err) {
       console.error('Failed to revoke session', err);
+    }
+  };
+
+  const handleUpgrade = async (plan: string) => {
+    setLoading(true);
+    try {
+      await upgradeSubscription(plan);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+      fetchUser();
+    } catch (err) {
+      console.error('Upgrade failed', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -752,6 +767,7 @@ const SettingsPage = () => {
                         "Priority API Node Access"
                       ]}
                       isActive={user?.subscription_plan === 'Pro'}
+                      onUpgrade={() => handleUpgrade('Pro')}
                    />
                    <SubscriptionTier 
                       name="Nexus Enterprise"
@@ -763,6 +779,7 @@ const SettingsPage = () => {
                         "Dedicated Protocol Support"
                       ]}
                       isActive={user?.subscription_plan === 'Enterprise'}
+                      onUpgrade={() => handleUpgrade('Enterprise')}
                    />
                 </div>
               </motion.div>
@@ -838,7 +855,7 @@ const SettingRow = ({ label, description, checked, onToggle }: { label: string, 
    </div>
 );
 
-const SubscriptionTier = ({ name, price, features, isActive }: { name: string, price: string, features: string[], isActive: boolean }) => (
+const SubscriptionTier = ({ name, price, features, isActive, onUpgrade }: { name: string, price: string, features: string[], isActive: boolean, onUpgrade: () => void }) => (
   <div className={cn(
     "p-10 rounded-[48px] border transition-all duration-500 space-y-8",
     isActive ? "border-[#0071E3] bg-[#0071E3]/5" : "border-[#E5E5EA] dark:border-white/10 bg-white/70 dark:bg-[#1D1D1F]/70"
@@ -856,6 +873,7 @@ const SubscriptionTier = ({ name, price, features, isActive }: { name: string, p
     </ul>
     <Button 
       disabled={isActive}
+      onClick={onUpgrade}
       className={cn(
         "w-full h-14 rounded-full font-black uppercase tracking-widest text-[11px]",
         isActive ? "bg-[#F5F5F7] dark:bg-white/5 text-[#86868B]" : "bg-black dark:bg-white text-white dark:text-black"

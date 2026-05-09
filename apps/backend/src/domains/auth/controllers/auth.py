@@ -211,6 +211,33 @@ async def revoke_my_session(session_id: str, current_user: User = Depends(get_cu
     return {"status": "success", "message": "Session revoked"}
 
 
+@router.post("/subscription/upgrade")
+async def upgrade_subscription(
+    plan: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Upgrade the user's intelligence tier.
+    """
+    from src.core.database import get_database
+    database = await get_database()
+    collection = database["users"]
+
+    await collection.update_one(
+        {"_id": ObjectId(current_user.id)},
+        {"$set": {"subscription_plan": plan}}
+    )
+    
+    from src.services.activity_service import activity_service
+    await activity_service.log_activity(
+        user_id=str(current_user.id),
+        action="Protocol Upgrade",
+        metadata={"plan": plan}
+    )
+
+    return {"status": "success", "new_plan": plan}
+
+
 @router.put("/profile", response_model=User)
 async def update_profile(
     user_update: UserUpdate, 

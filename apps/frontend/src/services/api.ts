@@ -265,4 +265,9 @@ export const getSavedReports = async () => {
     return response.data;
 };
 
+export const upgradeSubscription = async (plan: string) => {
+    const response = await api.post(`/auth/subscription/upgrade?plan=${plan}`);
+    return response.data;
+};
+
 export default api;

@@ -13,6 +13,7 @@ from src.domains.competitors.models.competitor import (
     CompetitorStatus,
 )
 from src.domains.users.models.user import User
+from src.services.activity_service import activity_service
 
 router = APIRouter()
 
@@ -84,6 +85,14 @@ async def create_competitor(
     doc = created_competitor.copy()
     if "_id" in doc:
         doc["_id"] = str(doc["_id"])
+    
+    await activity_service.log_activity(
+        user_id=str(current_user.id),
+        action="Competitor Added",
+        target=new_competitor["name"],
+        metadata={"url": new_competitor.get("url")}
+    )
+    
     return Competitor(**doc)
 
 
@@ -136,6 +145,12 @@ async def delete_competitor(
 
     # 4. Delete the competitor itself
     await collection.delete_one({"_id": ObjectId(competitor_id)})
+    
+    await activity_service.log_activity(
+        user_id=str(current_user.id),
+        action="Competitor Removed",
+        target=competitor["name"]
+    )
     
     return {"status": "success", "message": "Competitor and associated data deleted successfully"}
 
