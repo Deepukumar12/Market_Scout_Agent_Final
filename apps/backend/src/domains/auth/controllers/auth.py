@@ -1,6 +1,9 @@
 from datetime import timedelta
+import uuid
+import os
+import shutil
 
-from fastapi import APIRouter, HTTPException, Depends, status, Request
+from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
 
 from src.core import config
@@ -300,6 +303,67 @@ async def deactivate_account(
     await database["users"].delete_one({"_id": user_oid})
 
     return {"status": "success", "message": "Identity and all associated data purged successfully"}
+
+
+@router.post("/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Upload and set a new profile avatar.
+    """
+    # 1. Create unique filename
+    ext = os.path.splitext(file.filename)[1]
+    filename = f"{uuid.uuid4()}{ext}"
+    filepath = os.path.join("uploads", filename)
+    
+    # 2. Save file
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # 3. Update User DB
+    from src.core.database import get_database
+    database = await get_database()
+    collection = database["users"]
+    
+    avatar_url = f"/uploads/{filename}"
+    await collection.update_one(
+        {"_id": ObjectId(current_user.id)},
+        {"$set": {"avatar_url": avatar_url}}
+    )
+    
+    # 4. Refresh and Sync
+    updated_user = await collection.find_one({"_id": ObjectId(current_user.id)})
+    updated_user["id"] = str(updated_user.pop("_id"))
+    
+    # Sanitize for WebSocket
+    ws_user = updated_user.copy()
+    if ws_user.get("created_at"):
+        ws_user["created_at"] = ws_user["created_at"].isoformat()
+    if ws_user.get("last_login"):
+        ws_user["last_login"] = ws_user["last_login"].isoformat()
+
+    from src.shared.websockets import manager
+    await manager.send_personal_message(
+        {
+            "type": "USER_UPDATE",
+            "title": "Avatar Uploaded",
+            "message": "New profile biometrics synchronized.",
+            "timestamp": datetime.now().isoformat(),
+            "user": ws_user
+        },
+        str(current_user.id)
+    )
+    
+    from src.services.activity_service import activity_service
+    await activity_service.log_activity(
+        user_id=str(current_user.id),
+        action="Avatar Update",
+        metadata={"filename": filename}
+    )
+
+    return {"status": "success", "avatar_url": avatar_url}
 
 
 @router.put("/password")

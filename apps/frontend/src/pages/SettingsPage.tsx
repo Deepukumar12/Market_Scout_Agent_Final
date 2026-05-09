@@ -11,7 +11,8 @@ import { Switch } from '@/components/ui/Switch';
 import { useAuthStore } from '@/store/authStore';
 import { 
   getUserActivity, getUserSessions, revokeSession,
-  getSavedReports, updateProfile as apiUpdateProfile
+  getSavedReports, updateProfile as apiUpdateProfile,
+  uploadAvatar
 } from '@/services/api';
 import { cn } from '@/utils/utils';
 import { 
@@ -178,6 +179,23 @@ const SettingsPage = () => {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setLoading(true);
+    try {
+      const res = await uploadAvatar(file);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+      await fetchUser();
+    } catch (err) {
+      console.error('Avatar upload failed', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (window.confirm("CRITICAL PROTOCOL: Are you sure you want to permanently purge your identity and all intelligence data? This cannot be reversed.")) {
       setLoading(true);
@@ -283,13 +301,21 @@ const SettingsPage = () => {
                     <div className="w-40 h-40 rounded-[50px] bg-gradient-to-br from-[#0071E3] via-[#AF52DE] to-[#00c6ff] p-1 shadow-3xl transform group-hover:rotate-6 transition-transform duration-500">
                        <div className="w-full h-full rounded-[48px] bg-white dark:bg-[#1D1D1F] flex items-center justify-center overflow-hidden">
                           {user?.avatar_url ? (
-                            <img src={user.avatar_url} alt="Agent" className="w-full h-full object-cover" />
+                            <img 
+                              src={user.avatar_url.startsWith('http') ? user.avatar_url : `http://localhost:8000${user.avatar_url}`} 
+                              alt="Agent" 
+                              className="w-full h-full object-cover" 
+                            />
                           ) : (
                             <span className="text-6xl font-black text-[#0071E3] uppercase italic">
                               {user?.full_name?.charAt(0) || user?.email?.charAt(0) || 'A'}
                             </span>
                           )}
                        </div>
+                       <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-[48px]">
+                          <span className="text-white text-[10px] font-black uppercase tracking-widest italic">Change Identity</span>
+                          <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+                       </label>
                     </div>
                     <div className="absolute -bottom-4 -right-4 bg-emerald-500 p-3 rounded-[20px] border-4 border-white dark:border-[#1D1D1F] shadow-xl">
                        <Zap className="w-5 h-5 text-white" />

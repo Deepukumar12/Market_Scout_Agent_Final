@@ -107,8 +107,16 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-2 p-1 pl-1 pr-3 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] border border-transparent hover:border-[#E5E5EA] dark:hover:border-white/10 transition-all"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-[#0071E3] to-[#00c6ff] rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                {user?.full_name?.[0] || 'U'}
+              <div className="w-8 h-8 bg-gradient-to-br from-[#0071E3] to-[#00c6ff] rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
+                {user?.avatar_url ? (
+                  <img 
+                    src={user.avatar_url.startsWith('http') ? user.avatar_url : `http://localhost:8000${user.avatar_url}`} 
+                    alt={user?.full_name || 'User'} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <span>{user?.full_name?.[0] || 'U'}</span>
+                )}
               </div>
               <div className="hidden sm:flex flex-col items-start leading-tight">
                 <span className="text-sm font-bold text-[#1D1D1F] dark:text-white">
