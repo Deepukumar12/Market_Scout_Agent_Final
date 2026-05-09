@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useIntelStore } from '@/store/intelStore';
+import { useAuthStore } from '@/store/authStore';
 
 import StatCard from '@/components/dashboard/StatCard';
 import FeatureChart from '@/components/dashboard/FeatureChart';
@@ -87,6 +88,8 @@ const DashboardPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState('Just now');
 
+  const { user } = useAuthStore();
+
   useEffect(() => {
     setSearchQuery(globalSearchQuery);
   }, [globalSearchQuery]);
@@ -150,9 +153,10 @@ const DashboardPage = () => {
                </div>
             </div>
             <h1 className="text-6xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">
-              Command <span className="text-blue-600">Center.</span>
+              Welcome back, <span className="text-blue-600">{user?.full_name?.split(' ')[0] || 'Agent'}.</span>
             </h1>
             <p className="text-lg text-[#86868B] font-medium italic max-w-xl">
+              Strategic Console active for {user?.full_name || 'Authorized Personnel'}. 
               Synthesizing global market intelligence from 5,000+ technical sources. 
               Real-time monitoring of <span className="text-[#1D1D1F] dark:text-white font-bold">{globalMetrics?.total_competitors || 0} competitors</span> across all domains.
             </p>

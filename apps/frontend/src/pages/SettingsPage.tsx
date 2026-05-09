@@ -158,6 +158,21 @@ const SettingsPage = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (window.confirm("CRITICAL PROTOCOL: Are you sure you want to permanently purge your identity and all intelligence data? This cannot be reversed.")) {
+      setLoading(true);
+      try {
+        const { deleteAccount: purgeAccount } = useAuthStore.getState();
+        await purgeAccount();
+        navigate('/login');
+      } catch (err) {
+        console.error('Account purge failed', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const saveGlobalSettings = async () => {
     setLoading(true);
     try {
@@ -663,6 +678,8 @@ const SettingsPage = () => {
                    </p>
                 </div>
                 <Button 
+                   onClick={handleDeleteAccount}
+                   disabled={loading}
                    className="bg-rose-500 hover:bg-rose-600 text-white font-black uppercase tracking-widest text-[11px] h-16 px-14 rounded-full shadow-3xl shadow-rose-500/40 transition-all hover:scale-105 active:scale-95"
                 >
                    Execute Delete

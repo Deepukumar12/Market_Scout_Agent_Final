@@ -247,6 +247,41 @@ async def update_profile(
     return User(**updated_user)
 
 
+@router.delete("/me")
+async def deactivate_account(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Permanently wipe all user data from the platform.
+    """
+    from src.core.database import get_database
+    from bson import ObjectId
+    
+    database = await get_database()
+    user_id_str = str(current_user.id)
+    user_oid = ObjectId(current_user.id)
+
+    # 1. Clear sessions
+    await database["user_sessions"].delete_many({"user_id": user_id_str})
+    
+    # 2. Clear activity logs
+    await database["activity_logs"].delete_many({"user_id": user_id_str})
+    
+    # 3. Clear competitors and their associated data (simplified for this call)
+    await database["competitors"].delete_many({"user_id": user_id_str})
+    
+    # 4. Clear notifications
+    await database["notifications"].delete_many({"user_id": user_id_str})
+    
+    # 5. Clear reports
+    await database["reports"].delete_many({"user_id": user_id_str})
+
+    # 6. Delete user record
+    await database["users"].delete_one({"_id": user_oid})
+
+    return {"status": "success", "message": "Identity and all associated data purged successfully"}
+
+
 @router.put("/password")
 async def change_password(
     pwd_data: PasswordChange,

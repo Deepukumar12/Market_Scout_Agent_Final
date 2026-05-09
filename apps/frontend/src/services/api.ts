@@ -265,4 +265,9 @@ export const getSavedReports = async () => {
     return response.data;
 };
 
+export const deleteAccount = async () => {
+    const response = await api.delete('/auth/me');
+    return response.data;
+};
+
 export default api;

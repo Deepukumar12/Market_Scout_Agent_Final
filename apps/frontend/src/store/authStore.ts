@@ -14,6 +14,7 @@ interface AuthState {
     fetchUser: () => Promise<void>;
     updateProfile: (data: any) => Promise<void>;
     changePassword: (data: any) => Promise<void>;
+    deleteAccount: () => Promise<void>;
 }
 
 // Simple JWT decoder for client-side use
@@ -179,6 +180,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch (err: any) {
             set({ error: err.response?.data?.detail || 'Password change failed', loading: false });
             throw err;
+        }
+    },
+
+    deleteAccount: async () => {
+        set({ loading: true, error: null });
+        try {
+            await api.delete('/auth/me');
+            get().logout();
+        } catch (err: any) {
+            set({ error: err.response?.data?.detail || 'Account deletion failed', loading: false });
+            throw err;
+            set({ loading: false });
         }
     }
 }));
