@@ -78,7 +78,7 @@ export function Footer() {
               </div>
               <div className="flex flex-col">
                 <span className="text-3xl font-black tracking-tighter text-[#1D1D1F] dark:text-white uppercase italic">
-                  SCOUT<span className="text-blue-600">FORGE</span>
+                  SCOUTFORGE<span className="text-blue-600">AI</span>
                 </span>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

@@ -180,7 +180,7 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-blue-600/30 overflow-hidden">
                 <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
               </div>
-              <span className="text-2xl font-black tracking-tighter uppercase italic">SCOUT<span className="text-blue-600">FORGE</span></span>
+              <span className="text-2xl font-black tracking-tighter uppercase italic">SCOUTFORGE<span className="text-blue-600">AI</span></span>
             </Link>
             
             <div className="hidden lg:flex items-center gap-8">
