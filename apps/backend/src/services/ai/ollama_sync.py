@@ -17,7 +17,7 @@ standard_logger = logging.getLogger(__name__)
 class OllamaClient:
     """
     Simple client for interacting with local Ollama server.
-    Matches the interface required by the Market Scout Agent pipeline.
+    Matches the interface required by the Sentinel Pro pipeline.
     """
 
     def __init__(self):

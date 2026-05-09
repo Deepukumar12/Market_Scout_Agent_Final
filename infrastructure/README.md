@@ -1,6 +1,6 @@
 # Infrastructure as Code (IaC) & Production Operations
 
-This directory contains the configurations and scripts required to deploy, manage, and monitor the Market Scout Agent platform in a production environment.
+This directory contains the configurations and scripts required to deploy, manage, and monitor the Sentinel Pro platform in a production environment.
 
 ## Directory Structure
 

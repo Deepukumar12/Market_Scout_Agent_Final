@@ -42,7 +42,7 @@ class CompanyAdapter(BaseAdapter):
 
     def normalize(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Map Clearbit response to ScoutIQ profile schema.
+        Map Clearbit response to Sentinel Pro profile schema.
         """
         return {
             "name": raw.get("name"),

@@ -35,7 +35,7 @@ export default function LogConsole() {
 
     socket.onopen = () => {
       const entry: LogEntry = {
-        message: "Connected to ScoutIQ Agent Network...",
+        message: "Connected to Sentinel Pro Agent Network...",
         category: "SYSTEM",
         timestamp: new Date().toISOString()
       };

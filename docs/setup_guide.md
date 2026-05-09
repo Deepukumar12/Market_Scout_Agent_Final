@@ -1,6 +1,6 @@
 # Enterprise Setup & Deployment
 
-The Market Scout Engine requires modern Python `>=3.10` and `Node.js >=18`. Full functionality scales dynamically maximizing available system computational nodes natively. It supports entirely local extraction via Ollama, dropping data transmission entirely.
+The Sentinel Pro Engine requires modern Python `>=3.10` and `Node.js >=18`. Full functionality scales dynamically maximizing available system computational nodes natively. It supports entirely local extraction via Ollama, dropping data transmission entirely.
 
 ## Initialization Sequence
 

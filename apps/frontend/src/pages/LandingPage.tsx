@@ -177,10 +177,10 @@ export default function LandingPage() {
         )}>
           <div className="flex items-center gap-12">
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-blue-600/30">
-                <Zap className="text-white w-6 h-6" />
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-blue-600/30 overflow-hidden">
+                <img src="/logo.png" alt="Sentinel Pro" className="w-full h-full object-cover" />
               </div>
-              <span className="text-2xl font-black tracking-tighter uppercase italic">SCOUT<span className="text-blue-600">IQ</span></span>
+              <span className="text-2xl font-black tracking-tighter uppercase italic">SENTINEL<span className="text-blue-600">PRO</span></span>
             </Link>
             
             <div className="hidden lg:flex items-center gap-8">
@@ -432,7 +432,7 @@ export default function LandingPage() {
               The Signal <br /><span className="text-blue-500">Decoded.</span>
             </h2>
             <p className="text-xl md:text-2xl text-[#86868B] font-medium leading-relaxed max-w-xl">
-              Market Scout doesn't just collect data; it decodes technical momentum. Our RAG-driven pipeline identifies shifts that traditional monitoring systems miss.
+              Sentinel Pro doesn't just collect data; it decodes technical momentum. Our RAG-driven pipeline identifies shifts that traditional monitoring systems miss.
             </p>
             <div className="space-y-8 pt-8">
                {[
@@ -548,7 +548,7 @@ export default function LandingPage() {
           <div className="space-y-4">
              {[
                { q: "How are technical signals verified?", a: "Every signal detected by our agents is cross-referenced against multiple technical endpoints (release logs, API docs, site changes) and linked to an immutable citation URL." },
-               { q: "Can we track custom competitors?", a: "Yes. The Market Scout platform allows for ad-hoc addition of any corporate entity with a technical presence for real-time tracking." },
+               { q: "Can we track custom competitors?", a: "Yes. The Sentinel Pro platform allows for ad-hoc addition of any corporate entity with a technical presence for real-time tracking." },
                { q: "What is the update frequency?", a: "Our High-Velocity nodes scan mission-critical targets every 15 minutes, while standard monitoring operates on a 2-hour cycle." }
              ].map((faq, i) => (
                <div key={i} className="glass-card p-10 rounded-3xl border border-[#F0F0F3] dark:border-white/5 hover:border-blue-600/30 transition-all group">

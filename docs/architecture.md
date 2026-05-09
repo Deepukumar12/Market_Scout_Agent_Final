@@ -1,6 +1,6 @@
-# Market Scout Analytics - Enterprise Architecture
+# Sentinel Pro Analytics - Enterprise Architecture
 
-Market Scout is an autonomous corporate intelligence platform designed to scrape, extract, and convert unstructured open-web competitor activity into structured, predictive technical insights.
+Sentinel Pro is an autonomous corporate intelligence platform designed to scrape, extract, and convert unstructured open-web competitor activity into structured, predictive technical insights.
 
 ## High-Level System Architecture
 

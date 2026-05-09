@@ -172,13 +172,13 @@ async def get_intel_stream(
                 {"$addFields": {
                     "searchScore": {
                         "$cond": [
-                            {"$addFields": {"input": "", "regex": f"^{re.escape(q)}", "options": "i"}},
+                            {"$regexMatch": {"input": "$name", "regex": f"^{re.escape(q)}", "options": "i"}},
                             2,
                             1
                         ]
                     }
                 }},
-                {"$addFields": {"searchScore": -1, "name": 1}},
+                {"$sort": {"searchScore": -1, "name": 1}},
                 {"$limit": 100}
             ]
             cursor = db.db["competitors"].aggregate(pipeline)

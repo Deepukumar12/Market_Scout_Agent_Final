@@ -37,7 +37,7 @@ load_dotenv(dotenv_path=env_path, override=True)
 class Settings(BaseSettings):
 
     # PROJECT
-    PROJECT_NAME: str = "SCOUTIQ"
+    PROJECT_NAME: str = "SENTINEL_PRO"
     API_V1_STR: str = "/api/v1"
 
 
@@ -144,7 +144,7 @@ class Settings(BaseSettings):
     # ---------------------------------------------------
     REDDIT_CLIENT_ID: str = ""
     REDDIT_CLIENT_SECRET: str = ""
-    REDDIT_USER_AGENT: str = "ScoutIQ/1.0"
+    REDDIT_USER_AGENT: str = "Sentinel Pro/1.0"
     YOUTUBE_API_KEY: str = ""
 
 

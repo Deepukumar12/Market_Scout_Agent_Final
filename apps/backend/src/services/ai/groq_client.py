@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class GroqClient:
     """
-    High-performance Groq Client for Market Scout Agent.
+    High-performance Groq Client for Sentinel Pro.
     Provides Llama 3 backed intelligence synthesis.
     """
 

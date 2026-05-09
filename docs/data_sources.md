@@ -1,6 +1,6 @@
 # Intelligence Data Sources & Processing
 
-Market Scout is powered by a robust orchestration of open-source and proprietary intelligence channels. The engine securely discovers, retrieves, and processes fragmented information across the web into unified metadata via sophisticated token guards and caching layers.
+Sentinel Pro is powered by a robust orchestration of open-source and proprietary intelligence channels. The engine securely discovers, retrieves, and processes fragmented information across the web into unified metadata via sophisticated token guards and caching layers.
 
 ## Provenance Model (Data Flow)
 

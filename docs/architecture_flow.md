@@ -1,6 +1,6 @@
-# Market Scout Agent - System Flow Architecture
+# Sentinel Pro - System Flow Architecture
 
-This document describes the real-time data flow through the Market Scout Agent platform.
+This document describes the real-time data flow through the Sentinel Pro platform.
 
 ## High-Level Architecture
 

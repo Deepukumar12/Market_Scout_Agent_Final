@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🦅 Market Scout Agent (ScoutIQ)</h1>
+  <h1>🦅 Sentinel Pro (Sentinel Pro)</h1>
   <p><strong>Enterprise-Grade Autonomous Competitive Intelligence Platform</strong></p>
   <p>
     <img src="https://img.shields.io/badge/Python-3.9+-blue.svg" alt="Python Version" />
@@ -37,10 +37,10 @@
 
 ## 1. Project Title and Description
 
-**Market Scout Agent (ScoutIQ)**
+**Sentinel Pro (Sentinel Pro)**
 
 **The Business Problem:** Modern enterprises and strategic teams struggle to synthesize the overwhelming volume of unstructured market data, technical product updates, and competitor intelligence. Manual tracking leads to delayed strategic decisions, and standard LLMs often hallucinate facts without grounded data.
-**Product Value:** ScoutIQ automates the entire intelligence lifecycle. It actively orchestrates background web sweeps, scrapes technical blogs, and analyzes GitHub repositories. By mapping raw noise into deterministic, hallucination-free insights, it delivers verified, actionable intelligence.
+**Product Value:** Sentinel Pro automates the entire intelligence lifecycle. It actively orchestrates background web sweeps, scrapes technical blogs, and analyzes GitHub repositories. By mapping raw noise into deterministic, hallucination-free insights, it delivers verified, actionable intelligence.
 **Real-World Use Cases:**
 - **Product Managers:** Dynamically monitoring competitor feature rollouts and release velocity.
 - **Strategy Teams:** Evaluating market disruption threats and predicting competitor roadmaps.
@@ -50,7 +50,7 @@
 
 ## 2. Product Overview
 
-Market Scout Agent is an autonomous competitive intelligence SaaS platform.
+Sentinel Pro is an autonomous competitive intelligence SaaS platform.
 - **What it does:** It tracks designated enterprise competitors using scheduled search pipelines, headless scrapers, and multi-tier AI models to synthesize product updates, pricing changes, and infrastructure shifts.
 - **Who uses it:** Enterprise strategy officers, product managers, venture capital analysts, and technical researchers.
 - **Why it matters:** It operates on a strict "Zero Mock Data" policy, ensuring every metric, timeline event, and threat score is rooted in live, traceable source URLs, thus eliminating AI hallucination risks.
@@ -386,7 +386,7 @@ This platform is Proprietary software. All rights reserved.
 
 **Deepu Kumar**  
 Lead Architect & Developer  
-Market Scout Agent Platform
+Sentinel Pro Platform
 
 ---
 

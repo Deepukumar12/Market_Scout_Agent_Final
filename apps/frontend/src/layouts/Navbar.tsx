@@ -87,10 +87,10 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => navigate('/dashboard')}
         >
-          <div className="w-10 h-10 bg-[#0071E3] rounded-xl flex items-center justify-center shadow-lg shadow-[#0071E3]/20">
-            <Zap className="text-white w-5 h-5" />
+          <div className="w-10 h-10 bg-[#0071E3] rounded-xl flex items-center justify-center shadow-lg shadow-[#0071E3]/20 overflow-hidden">
+            <img src="/logo.png" alt="Sentinel Pro" className="w-full h-full object-cover" />
           </div>
-          <span className="text-2xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">SCOUT<span className="text-blue-600">IQ</span></span>
+          <span className="text-2xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">SENTINEL<span className="text-blue-600">PRO</span></span>
         </motion.div>
 
         <div className="relative max-w-md w-full group hidden md:block" ref={searchRef}>
@@ -140,12 +140,20 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
                         </div>
                         <div>
                           <p className="text-sm font-bold text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors">
-                            {result.name.toLowerCase().startsWith(searchQuery.toLowerCase()) ? (
-                              <>
-                                <span className="text-[#0071E3]">{result.name.slice(0, searchQuery.length)}</span>
-                                {result.name.slice(searchQuery.length)}
-                              </>
-                            ) : result.name}
+                            {(() => {
+                              const name = result.name;
+                              const index = name.toLowerCase().indexOf(searchQuery.toLowerCase());
+                              if (index !== -1) {
+                                return (
+                                  <>
+                                    {name.slice(0, index)}
+                                    <span className="text-[#0071E3] font-black">{name.slice(index, index + searchQuery.length)}</span>
+                                    {name.slice(index + searchQuery.length)}
+                                  </>
+                                );
+                              }
+                              return name;
+                            })()}
                           </p>
                           <p className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono truncate max-w-[200px]">{result.url}</p>
                         </div>

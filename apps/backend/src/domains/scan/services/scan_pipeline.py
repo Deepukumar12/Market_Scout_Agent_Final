@@ -1,5 +1,5 @@
 """
-Market Scout Agent: strict 5-step deterministic pipeline.
+Sentinel Pro: strict 5-step deterministic pipeline.
 Simplified and updated for Zenserp search layer.
 """
 import logging

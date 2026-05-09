@@ -1,5 +1,5 @@
 """
-Strict request/response models for the Market Scout Agent scan API.
+Strict request/response models for the Sentinel Pro scan API.
 No synthetic fallback; real fetched data only.
 """
 from datetime import datetime
@@ -48,7 +48,7 @@ class FinancialData(BaseModel):
 
 
 class ScanResponse(BaseModel):
-    """Strict response from the Market Scout Agent with 100% real-time data."""
+    """Strict response from the Sentinel Pro with 100% real-time data."""
     competitor: str
     scan_date: str  # ISO date
     time_window_days: int
