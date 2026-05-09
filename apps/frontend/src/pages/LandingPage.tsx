@@ -141,18 +141,21 @@ export default function LandingPage() {
 
   // 100% Dynamic Data Initialization & Polling
   useEffect(() => {
-    fetchGlobalMetrics();
-    fetchSignals();
-    
-    // Polling for 100% Real-Time Feel
-    const interval = setInterval(() => {
+    const refresh = () => {
       fetchGlobalMetrics();
       fetchSignals();
-    }, 30000); // Sync every 30 seconds
+    };
+
+    refresh();
+    window.addEventListener('intelligence-refresh', refresh);
+    
+    // Polling for 100% Real-Time Feel
+    const interval = setInterval(refresh, 30000); // Sync every 30 seconds
     
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => {
+      window.removeEventListener('intelligence-refresh', refresh);
       clearInterval(interval);
       window.removeEventListener('scroll', handleScroll);
     };

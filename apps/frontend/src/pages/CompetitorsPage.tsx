@@ -14,13 +14,19 @@ const CompetitorsPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchCompetitors();
-    fetchGlobalMetrics();
-    const interval = setInterval(() => {
+    const refresh = () => {
       fetchCompetitors();
       fetchGlobalMetrics();
-    }, 30000);
-    return () => clearInterval(interval);
+    };
+
+    refresh();
+    window.addEventListener('intelligence-refresh', refresh);
+    
+    const interval = setInterval(refresh, 30000);
+    return () => {
+      window.removeEventListener('intelligence-refresh', refresh);
+      clearInterval(interval);
+    };
   }, [fetchCompetitors, fetchGlobalMetrics]);
 
   const filteredCompetitors = useMemo(() => {

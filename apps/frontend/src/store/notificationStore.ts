@@ -26,6 +26,57 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     notifications: [],
     unreadCount: 0,
     loading: false,
+    socket: null as WebSocket | null,
+
+    initWebSocket: () => {
+        const { socket } = get();
+        if (socket?.readyState === WebSocket.OPEN) return;
+
+        const token = localStorage.getItem('scoutiq_token'); // Standardized token key
+        if (!token) return;
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // Correct path as per main.py and api.py inclusion
+        const wsUrl = `${protocol}//${window.location.host.replace(':5173', ':8000')}/ws/notifications?token=${token}`;
+        
+        const ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'SYSTEM') return; // Handshake info
+
+                // Add to list and update unread
+                set((state) => {
+                    const newNotification = {
+                        id: data.id || Math.random().toString(36).substr(2, 9),
+                        title: data.title,
+                        message: data.message,
+                        type: data.type.toLowerCase(),
+                        timestamp: data.timestamp,
+                        read: false,
+                        competitorId: data.competitorId
+                    };
+
+                    const updatedNotifications = [newNotification, ...state.notifications];
+                    return {
+                        notifications: updatedNotifications,
+                        unreadCount: updatedNotifications.filter(n => !n.read).length
+                    };
+                });
+            } catch (err) {
+                console.error('WS Message Parse Error:', err);
+            }
+        };
+
+        ws.onclose = () => {
+            set({ socket: null });
+            // Reconnect after delay
+            setTimeout(() => get().initWebSocket(), 5000);
+        };
+
+        set({ socket: ws });
+    },
 
     fetchNotifications: async () => {
         set({ loading: true });

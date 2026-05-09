@@ -1,59 +1,75 @@
-
 import asyncio
 import random
-from typing import List
+import json
+from datetime import datetime
+from typing import List, Dict
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Query
 from jose import JWTError, jwt
 
 from src.core.config import settings
 
 router = APIRouter()
 
-
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        # Map user_id (str) to list of active WebSockets
+        self.active_connections: Dict[str, List[WebSocket]] = {}
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, user_id: str):
         await websocket.accept()
-        self.active_connections.append(websocket)
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = []
+        self.active_connections[user_id].append(websocket)
 
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+    def disconnect(self, websocket: WebSocket, user_id: str):
+        if user_id in self.active_connections:
+            self.active_connections[user_id].remove(websocket)
+            if not self.active_connections[user_id]:
+                del self.active_connections[user_id]
 
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(message)
+    async def send_personal_message(self, message: dict, user_id: str):
+        if user_id in self.active_connections:
+            for connection in self.active_connections[user_id]:
+                await connection.send_json(message)
 
+    async def broadcast(self, message: dict):
+        for connections in self.active_connections.values():
+            for connection in connections:
+                await connection.send_json(message)
 
 manager = ConnectionManager()
 
-
-@router.websocket("/ws/logs")
-async def websocket_endpoint(websocket: WebSocket):
+@router.websocket("/ws/notifications")
+async def notification_websocket(websocket: WebSocket, token: str = Query(...)):
     """
-    Authenticated WebSocket endpoint for streaming demo logs.
-    Expects a valid JWT in the `token` query parameter.
+    Authenticated WebSocket for real-time notifications.
     """
-    token = websocket.query_params.get("token")
-    if token:
-        try:
-            jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        except JWTError:
-            # For demo logs, we can be lenient or close if it's an invalid-but-present token
-            pass 
-    # If no token, we still allow connection for demo purposes
-
-    await manager.connect(websocket)
     try:
-        # Initial handshake
-        await websocket.send_text("SYSTEM: Secure uplink established with ScoutIQ Agent Network...")
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = str(payload.get("sub"))
+        if not user_id:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+    except JWTError:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    await manager.connect(websocket, user_id)
+    try:
+        # Send initial status
+        await websocket.send_json({
+            "type": "SYSTEM",
+            "title": "Uplink Secure",
+            "message": "Real-time intelligence stream synchronized.",
+            "timestamp": datetime.now().isoformat()
+        })
         
-        # Keep connection alive
         while True:
-            await asyncio.sleep(3600) # Sleep for an hour, wait for broadcast or disconnect
+            # Keep connection alive, wait for client messages if any (optional)
+            data = await websocket.receive_text()
+            # For now, we only push from server to client
             
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        manager.disconnect(websocket, user_id)
 

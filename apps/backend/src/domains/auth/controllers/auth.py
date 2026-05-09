@@ -57,6 +57,16 @@ async def register(user: UserCreate):
             },
             expires_delta=access_token_expires,
         )
+        # Push welcome notification
+        from src.domains.notifications.services.notification_service import notification_service
+        from src.domains.notifications.models.notification import NotificationType
+        await notification_service.create_notification(
+            user_id=str(created_user["_id"]),
+            title="System Initialization",
+            message=f"Welcome {created_user.get('full_name', 'Agent')}. Your intelligence profile has been activated.",
+            type=NotificationType.SUCCESS
+        )
+
         return {"access_token": access_token, "token_type": "bearer"}
 
     except Exception as e:
@@ -199,6 +209,15 @@ async def change_password(
     await collection.update_one(
         {"_id": ObjectId(current_user.id)},
         {"$set": {"hashed_password": new_hashed}}
+    )
+    
+    from src.domains.notifications.services.notification_service import notification_service
+    from src.domains.notifications.models.notification import NotificationType
+    await notification_service.create_notification(
+        user_id=str(current_user.id),
+        title="Security Protocol Update",
+        message="Your account password has been successfully rotated. If you did not perform this action, contact support.",
+        type=NotificationType.WARNING
     )
     
     return {"message": "Password updated successfully"}

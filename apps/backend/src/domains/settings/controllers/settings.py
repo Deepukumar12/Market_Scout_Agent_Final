@@ -63,4 +63,15 @@ async def update_scheduler_config(config: SchedulerConfig):
         **kwargs
     )
     
+    # 3. Notify all users of system update
+    from src.shared.websockets import manager
+    from src.domains.notifications.models.notification import NotificationType
+    
+    await manager.broadcast({
+        "title": "System Configuration Updated",
+        "message": f"Global surveillance cycle recalibrated to every {config.interval_value} {config.interval_unit}.",
+        "type": NotificationType.INFO.value,
+        "timestamp": datetime.now().isoformat()
+    })
+    
     return {"message": f"Scheduler successfully updated to run every {config.interval_value} {config.interval_unit}"}

@@ -92,7 +92,16 @@ async def async_run_auto_scan():
                 continue
 
             # 4️⃣ Background processing completed.
-            # Removed PDF generation and email logic to maintain a dashboard-only, real-time intelligence interface.
+            from src.domains.notifications.services.notification_service import notification_service
+            from src.domains.notifications.models.notification import NotificationType
+            
+            await notification_service.create_notification(
+                user_id=user_id,
+                title="Surveillance Cycle Complete",
+                message=f"Automated intelligence sync for {len(user_reports)} targets successful. Command center updated.",
+                type=NotificationType.INFO
+            )
+            
             logger.info(f"✅ Background intelligence synchronization completed for user {email}")
 
     except Exception as e:

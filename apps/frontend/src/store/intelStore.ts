@@ -111,6 +111,9 @@ export const useIntelStore = create<IntelState>((set) => ({
         message: `Deep intelligence scan completed. Verified ${data.total_valid_updates} signals.`,
         type: 'success'
       });
+
+      // Broadcast real-time refresh to all listeners (Dashboard, Universe, etc.)
+      window.dispatchEvent(new CustomEvent('intelligence-refresh'));
     } catch (err: any) {
       console.error('Market scan error:', err);
       const res = err.response?.data;

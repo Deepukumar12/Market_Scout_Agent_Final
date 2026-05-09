@@ -15,7 +15,7 @@ import { analyzeCompany } from '@/services/api';
 const DashboardLayout = () => {
   const { user } = useAuthStore();
   const { fetchCompetitors } = useCompetitorStore();
-  const { fetchNotifications } = useNotificationStore();
+  const { fetchNotifications, initWebSocket } = useNotificationStore();
   const location = useLocation();
   const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -32,11 +32,13 @@ const DashboardLayout = () => {
     'Generating intelligence report...'
   ];
 
+
   useEffect(() => {
     fetchNotifications();
+    initWebSocket(); // Real-time notification uplink
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, initWebSocket]);
 
   useEffect(() => {
     fetchCompetitors();

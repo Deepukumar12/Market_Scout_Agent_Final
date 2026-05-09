@@ -83,7 +83,9 @@ async def clear_notifications(
     await collection.delete_many({"user_id": str(current_user.id)})
     return {"status": "success", "message": "Notification archive cleared"}
 
-# Helper function to create notifications from other services
+from src.domains.notifications.services.notification_service import notification_service
+
+# Helper function to create notifications from other services (deprecated implementation, use service directly)
 async def create_notification(
     user_id: str,
     title: str,
@@ -91,14 +93,4 @@ async def create_notification(
     type: NotificationType = NotificationType.INFO,
     competitor_id: Optional[str] = None
 ):
-    collection = db.db["notifications"]
-    new_notif = {
-        "user_id": user_id,
-        "title": title,
-        "message": message,
-        "type": type,
-        "competitor_id": competitor_id,
-        "read": False,
-        "timestamp": get_now_ist()
-    }
-    await collection.insert_one(new_notif)
+    await notification_service.create_notification(user_id, title, message, type, competitor_id)

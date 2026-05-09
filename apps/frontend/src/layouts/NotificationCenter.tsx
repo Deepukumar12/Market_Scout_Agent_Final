@@ -90,7 +90,12 @@ const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
                   <Bell className="w-5 h-5 text-blue-400" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white tracking-tight">Intelligence Alerts</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-white tracking-tight">Intelligence Alerts</h2>
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-400 uppercase tracking-tighter animate-pulse">
+                      Live
+                    </span>
+                  </div>
                   <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">{unreadCount} UNREAD SIGNALS</p>
                 </div>
               </div>

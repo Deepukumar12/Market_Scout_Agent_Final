@@ -55,8 +55,13 @@ const TargetUniversePage = () => {
 
     useEffect(() => {
         fetchData();
+        window.addEventListener('intelligence-refresh', fetchData);
+        
         const interval = setInterval(fetchData, 30000); // Auto-refresh every 30s
-        return () => clearInterval(interval);
+        return () => {
+            window.removeEventListener('intelligence-refresh', fetchData);
+            clearInterval(interval);
+        };
     }, [fetchData]);
 
 
