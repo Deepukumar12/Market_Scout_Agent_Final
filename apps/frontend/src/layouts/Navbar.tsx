@@ -48,7 +48,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
       }
     };
 
-    const debounce = setTimeout(fetchResults, 300);
+    const debounce = setTimeout(fetchResults, 200);
     return () => clearTimeout(debounce);
   }, [searchQuery]);
 
@@ -139,7 +139,14 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
                           {result.name[0]}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors">{result.name}</p>
+                          <p className="text-sm font-bold text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors">
+                            {result.name.toLowerCase().startsWith(searchQuery.toLowerCase()) ? (
+                              <>
+                                <span className="text-[#0071E3]">{result.name.slice(0, searchQuery.length)}</span>
+                                {result.name.slice(searchQuery.length)}
+                              </>
+                            ) : result.name}
+                          </p>
                           <p className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono truncate max-w-[200px]">{result.url}</p>
                         </div>
                       </button>

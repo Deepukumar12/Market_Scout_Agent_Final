@@ -298,6 +298,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
   const [vault, setVault] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     // Check if user is already authenticated (token exists in localStorage via PlatformClient)
@@ -436,7 +437,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-blue-400 transition-colors" size={18} />
               <input 
                 type="text" 
-                placeholder="Search surveillance..." 
+                placeholder="Search surveillance..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} 
                 className="bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-6 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all placeholder:text-[var(--text-secondary)] font-bold italic text-[var(--text-primary)]"
               />
             </div>
@@ -589,7 +590,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
                     <Shield size={18} className="text-[#0071E3]" />
                   </div>
                   <div className="space-y-5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                    {logs.length > 0 ? logs.map((alert, i) => (
+                    {logs.filter(l => l.event.toLowerCase().includes(searchQuery.toLowerCase()) || l.user.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? logs.filter(l => l.event.toLowerCase().includes(searchQuery.toLowerCase()) || l.user.toLowerCase().includes(searchQuery.toLowerCase())).map((alert, i) => (
                       <div key={i} className="flex gap-4 p-4 rounded-2xl hover:bg-white/5 transition-all group border border-transparent hover:border-white/5 cursor-pointer">
                         <div className={cn(
                           "p-3 rounded-xl h-fit shadow-lg shrink-0",
@@ -649,7 +650,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-sm">
-                      {competitors.length > 0 ? competitors.map((row, i) => (
+                      {competitors.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? competitors.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).map((row, i) => (
                         <tr key={i} className="hover:bg-white/[0.02] transition-colors group">
                           <td className="px-8 py-6">
                             <div className="flex items-center gap-3">
