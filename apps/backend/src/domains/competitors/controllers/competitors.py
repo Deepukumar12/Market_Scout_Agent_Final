@@ -1,3 +1,4 @@
+import re
 
 from datetime import datetime, timezone
 from typing import List
@@ -38,16 +39,36 @@ async def list_competitors(
     collection = await get_competitor_collection()
     competitors = []
     # Filter by user_id to ensure users only see their own competitors
-    query = {"user_id": str(current_user.id)}
-    
+    pipeline = []
     if q:
-        # Simple case-insensitive regex search on name and url
-        query["$or"] = [
-            {"name": {"$regex": q, "$options": "i"}},
-            {"url": {"$regex": q, "$options": "i"}}
-        ]
-        
-    cursor = collection.find(query).sort("name", 1).skip(skip).limit(limit)
+        # Match documents for current user and query
+        pipeline.append({"$match": {
+            "user_id": str(current_user.id),
+            "$or": [
+                {"name": {"$regex": re.escape(q), "$options": "i"}},
+                {"url": {"$regex": re.escape(q), "$options": "i"}}
+            ]
+        }})
+        # Add searchScore: 2 for prefix match, 1 for partial match
+        pipeline.append({"$addFields": {
+            "searchScore": {
+                "$cond": [
+                    {"$regexMatch": {"input": "$name", "regex": f"^{re.escape(q)}", "options": "i"}},
+                    2,
+                    1
+                ]
+            }
+        }})
+        # Sort by score (desc) then name (asc)
+        pipeline.append({"$sort": {"searchScore": -1, "name": 1}})
+    else:
+        pipeline.append({"$match": {"user_id": str(current_user.id)}})
+        pipeline.append({"$sort": {"name": 1}})
+
+    pipeline.append({"$skip": skip})
+    pipeline.append({"$limit": limit})
+    
+    cursor = collection.aggregate(pipeline)
     async for document in cursor:
         doc = document.copy()
         if "_id" in doc:
