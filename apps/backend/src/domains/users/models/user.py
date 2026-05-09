@@ -7,6 +7,10 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    job_title: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -50,6 +54,10 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     avatar_url: Optional[str] = None
     preferences: Optional[Dict[str, Any]] = None
+    bio: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    job_title: Optional[str] = None
 
 
 class PasswordChange(BaseModel):

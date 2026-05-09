@@ -44,7 +44,11 @@ const SettingsPage = () => {
   const [profileForm, setProfileForm] = useState({
     full_name: user?.full_name || '',
     email: user?.email || '',
-    avatar_url: user?.avatar_url || ''
+    avatar_url: user?.avatar_url || '',
+    bio: user?.bio || '',
+    company: user?.company || '',
+    location: user?.location || '',
+    job_title: user?.job_title || ''
   });
 
   // Password Form State
@@ -69,6 +73,22 @@ const SettingsPage = () => {
     };
     return { ...defaultPrefs, ...(user?.preferences || {}) };
   });
+
+  // Sync form state when user changes (dynamic update)
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        full_name: user.full_name || '',
+        email: user.email || '',
+        avatar_url: user.avatar_url || '',
+        bio: user.bio || '',
+        company: user.company || '',
+        location: user.location || '',
+        job_title: user.job_title || ''
+      });
+      setPreferences(prev => ({ ...prev, ...(user.preferences || {}) }));
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -280,9 +300,17 @@ const SettingsPage = () => {
                     <h3 className="text-3xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-tight">
                       {user?.full_name || 'Anonymous Agent'}
                     </h3>
-                    <div className="flex items-center justify-center gap-2">
-                      <Globe className="w-3 h-3 text-[#86868B]" />
-                      <p className="text-[11px] text-[#86868B] font-black uppercase tracking-[0.3em] italic">{user?.email}</p>
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-3 h-3 text-[#86868B]" />
+                        <p className="text-[11px] text-[#86868B] font-black uppercase tracking-[0.3em] italic">{user?.email}</p>
+                      </div>
+                      {user?.job_title && (
+                        <div className="flex items-center gap-2">
+                           <Cpu className="w-3 h-3 text-[#0071E3]" />
+                           <p className="text-[10px] text-[#0071E3] font-black uppercase tracking-widest italic">{user.job_title} @ {user.company || 'Nexus'}</p>
+                        </div>
+                      )}
                     </div>
                  </div>
 
@@ -383,13 +411,52 @@ const SettingsPage = () => {
                           icon={<Globe className="w-4 h-4" />}
                        />
                     </div>
-                    <FormInput 
-                       label="Avatar Identifier URI"
-                       value={profileForm.avatar_url}
-                       onChange={(val) => setProfileForm({...profileForm, avatar_url: val})}
-                       placeholder="https://images.scoutiq.ai/avatar-123.jpg"
-                       icon={<Monitor className="w-4 h-4" />}
-                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                       <FormInput 
+                          label="Organization"
+                          value={profileForm.company}
+                          onChange={(val) => setProfileForm({...profileForm, company: val})}
+                          placeholder="Strategic Intelligence Corp"
+                          icon={<Globe className="w-4 h-4" />}
+                       />
+                       <FormInput 
+                          label="Operational Title"
+                          value={profileForm.job_title}
+                          onChange={(val) => setProfileForm({...profileForm, job_title: val})}
+                          placeholder="Lead Intelligence Agent"
+                          icon={<Cpu className="w-4 h-4" />}
+                       />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                       <FormInput 
+                          label="Deployment Location"
+                          value={profileForm.location}
+                          onChange={(val) => setProfileForm({...profileForm, location: val})}
+                          placeholder="Global Operations Hub"
+                          icon={<MapPin className="w-4 h-4" />}
+                       />
+                       <FormInput 
+                          label="Avatar Identifier URI"
+                          value={profileForm.avatar_url}
+                          onChange={(val) => setProfileForm({...profileForm, avatar_url: val})}
+                          placeholder="https://images.scoutiq.ai/avatar-123.jpg"
+                          icon={<Monitor className="w-4 h-4" />}
+                       />
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-[11px] font-black text-[#86868B] uppercase tracking-[0.4em] italic flex items-center gap-2">
+                         <History className="w-4 h-4" /> Agent Dossier / Bio
+                      </label>
+                      <textarea 
+                         value={profileForm.bio}
+                         onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
+                         className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-[28px] px-8 py-6 text-base font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-4 focus:ring-[#0071E3]/20 focus:border-[#0071E3] transition-all min-h-[120px] resize-none"
+                         placeholder="Operational background and technical focus..."
+                      />
+                    </div>
                     {updateError && <p className="text-[11px] font-black text-rose-500 uppercase tracking-widest italic flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {updateError}</p>}
                     <div className="flex justify-end">
                       <Button type="submit" disabled={loading} className="bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-[11px] h-14 px-12 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95">
