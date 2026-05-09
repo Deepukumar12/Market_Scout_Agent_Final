@@ -39,10 +39,10 @@ export function LoginForm() {
     <div className="w-full max-w-sm mx-auto">
       <div className="text-center mb-12">
         <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#1D1D1F] dark:bg-white text-white dark:text-black shadow-apple-large mb-8 transition-transform hover:scale-105 active:scale-95 overflow-hidden">
-          <img src="/logo.png" alt="Sentry IQ" className="w-full h-full object-cover" />
+          <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
         </Link>
         <h1 className="text-4xl font-bold tracking-tight text-[#1D1D1F] dark:text-white mb-3">Sign in.</h1>
-        <p className="text-sm font-medium text-[#6E6E73] dark:text-[#86868B]">Use your Sentry IQ credentials.</p>
+        <p className="text-sm font-medium text-[#6E6E73] dark:text-[#86868B]">Use your ScoutForge AI credentials.</p>
       </div>
 
       <Form {...form}>

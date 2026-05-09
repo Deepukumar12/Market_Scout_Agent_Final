@@ -1,6 +1,6 @@
-# Sentry IQ - System Flow Architecture
+# ScoutForge AI - System Flow Architecture
 
-This document describes the real-time data flow through the Sentry IQ platform.
+This document describes the real-time data flow through the ScoutForge AI platform.
 
 ## High-Level Architecture
 

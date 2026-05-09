@@ -25,7 +25,7 @@ class BaseAdapter(ABC):
 
     @abstractmethod
     def normalize(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalize raw provider data into Sentry IQ schema."""
+        """Normalize raw provider data into ScoutForge AI schema."""
         pass
 
     async def get_data(self, query: str, **kwargs) -> Optional[Dict[str, Any]]:

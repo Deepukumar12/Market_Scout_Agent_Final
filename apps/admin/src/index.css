@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  /* SENTRY_IQ Light Mode */
+  /* SCOUTFORGE_AI Light Mode */
   --bg-primary: #FBFBFE;
   --bg-secondary: #ffffff;
   --bg-accent: #f1f5f9;
@@ -21,7 +21,7 @@
 }
 
 .dark {
-  /* SENTRY_IQ Dark Mode - Premium Obsidian */
+  /* SCOUTFORGE_AI Dark Mode - Premium Obsidian */
   --bg-primary: #050505;
   --bg-secondary: #0A0A0C;
   --bg-accent: #11151f;

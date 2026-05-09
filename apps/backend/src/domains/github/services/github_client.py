@@ -1,5 +1,5 @@
 """
-GitHub API client for Sentry IQ: search repos, org repos, and repo details.
+GitHub API client for ScoutForge AI: search repos, org repos, and repo details.
 Uses GITHUB_TOKEN when set for higher rate limits and relevant data.
 """
 import logging

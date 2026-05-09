@@ -1,5 +1,5 @@
 """
-GitHub data API: company-level repo/org data for Sentry IQ intelligence.
+GitHub data API: company-level repo/org data for ScoutForge AI intelligence.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -24,7 +24,7 @@ async def get_company_github(
 ):
     """
     Fetch relevant GitHub data for a company: repos matching the name and orgs,
-    with descriptions, stars, and topics. Strengthens Sentry IQ intelligence.
+    with descriptions, stars, and topics. Strengthens ScoutForge AI intelligence.
     """
     try:
         data = await fetch_company_github_data(company_name, max_repos=max_repos)

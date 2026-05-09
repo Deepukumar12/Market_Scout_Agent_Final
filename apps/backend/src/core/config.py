@@ -37,7 +37,7 @@ load_dotenv(dotenv_path=env_path, override=True)
 class Settings(BaseSettings):
 
     # PROJECT
-    PROJECT_NAME: str = "SENTRY_IQ"
+    PROJECT_NAME: str = "SCOUTFORGE_AI"
     API_V1_STR: str = "/api/v1"
 
 
@@ -144,7 +144,7 @@ class Settings(BaseSettings):
     # ---------------------------------------------------
     REDDIT_CLIENT_ID: str = ""
     REDDIT_CLIENT_SECRET: str = ""
-    REDDIT_USER_AGENT: str = "Sentry IQ/1.0"
+    REDDIT_USER_AGENT: str = "ScoutForge AI/1.0"
     YOUTUBE_API_KEY: str = ""
 
 

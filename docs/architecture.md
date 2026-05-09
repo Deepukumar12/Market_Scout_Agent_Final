@@ -1,6 +1,6 @@
-# Sentry IQ Analytics - Enterprise Architecture
+# ScoutForge AI Analytics - Enterprise Architecture
 
-Sentry IQ is an autonomous corporate intelligence platform designed to scrape, extract, and convert unstructured open-web competitor activity into structured, predictive technical insights.
+ScoutForge AI is an autonomous corporate intelligence platform designed to scrape, extract, and convert unstructured open-web competitor activity into structured, predictive technical insights.
 
 ## High-Level System Architecture
 

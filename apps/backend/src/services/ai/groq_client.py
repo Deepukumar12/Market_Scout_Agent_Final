@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class GroqClient:
     """
-    High-performance Groq Client for Sentry IQ.
+    High-performance Groq Client for ScoutForge AI.
     Provides Llama 3 backed intelligence synthesis.
     """
 

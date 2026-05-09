@@ -135,7 +135,7 @@ class GeminiClient:
         """
         system_prompt = (
             "You are an autonomous Competitive Intelligence AI Agent operating inside "
-            "the Sentry IQ SaaS platform. You MUST return ONLY valid JSON and nothing else."
+            "the ScoutForge AI SaaS platform. You MUST return ONLY valid JSON and nothing else."
         )
 
         # High-level behavior and filtering rules, adapted from the user instructions.
@@ -257,7 +257,7 @@ IMPORTANT:
         """
         schema = self._resolve_schema_refs(ScanResponse.model_json_schema())
         instructions = """
-You are the Sentry IQ analysis step. You MUST return ONLY valid JSON matching the given schema.
+You are the ScoutForge AI analysis step. You MUST return ONLY valid JSON matching the given schema.
 
 CRITICAL – NO HALLUCINATION:
 - features: Extract intelligence items from the articles in scraped_sources. Each item MUST come from one of the provided articles.

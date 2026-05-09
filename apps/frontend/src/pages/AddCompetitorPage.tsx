@@ -81,7 +81,7 @@ const AddCompetitorPage = () => {
     <div className="max-w-4xl mx-auto py-12 px-6">
       <div className="text-center mb-16">
         <h1 className="text-5xl font-black text-[#1D1D1F] dark:text-white tracking-tighter mb-4 uppercase italic">Add <span className="text-[#0071E3]">Competitor</span></h1>
-        <p className="text-lg text-[#6E6E73] dark:text-[#86868B] font-medium italic">Sentry IQ will analyze the digital footprint and extract strategic signals.</p>
+        <p className="text-lg text-[#6E6E73] dark:text-[#86868B] font-medium italic">ScoutForge AI will analyze the digital footprint and extract strategic signals.</p>
       </div>
 
       <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl rounded-[48px] p-12 shadow-apple border border-[#E5E5EA] dark:border-white/10 shadow-sm transition-colors duration-500">

@@ -103,7 +103,7 @@ async def async_run_auto_scan():
                 else:
                     logger.info(f"📧 Dispatching intelligence report to {email}...")
                     
-                    report_content = f"Sentry IQ Intelligence Briefing - {datetime.now().strftime('%Y-%m-%d')}\n\n"
+                    report_content = f"ScoutForge AI Intelligence Briefing - {datetime.now().strftime('%Y-%m-%d')}\n\n"
                     report_content += f"Automated surveillance cycle completed for {len(user_reports)} targets.\n\n"
                     
                     for report in user_reports:
@@ -116,11 +116,11 @@ async def async_run_auto_scan():
                                 report_content += f"  Source: {f.source_url}\n\n"
                         report_content += "\n"
                     
-                    report_content += "\nThis is an automated briefing from your Sentry IQ console."
+                    report_content += "\nThis is an automated briefing from your ScoutForge AI console."
                     
                     send_email_report(
                         to_email=email,
-                        subject=f"Sentry IQ: Strategic Intelligence Briefing ({len(user_reports)} Targets)",
+                        subject=f"ScoutForge AI: Strategic Intelligence Briefing ({len(user_reports)} Targets)",
                         content=report_content
                     )
 

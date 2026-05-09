@@ -1,5 +1,5 @@
 """
-POST /api/v1/scan – Sentry IQ.
+POST /api/v1/scan – ScoutForge AI.
 Strict input: company_name, website (optional), time_window_days.
 Strict output: ScanResponse or {"error": "Gemini API unavailable"}.
 No synthetic fallback.
@@ -46,7 +46,7 @@ async def post_scan(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Run the 5-step Sentry IQ pipeline:
+    Run the 5-step ScoutForge AI pipeline:
     Query Planning (LLM) → Search (Zenserp) → Scrape + Date Filter → Content Filter → Gemini Analysis.
     Returns strict ScanResponse JSON, or {"error": "Gemini API unavailable"} if Gemini fails.
     """

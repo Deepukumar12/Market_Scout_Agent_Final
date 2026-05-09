@@ -35,7 +35,7 @@ export default function LogConsole() {
 
     socket.onopen = () => {
       const entry: LogEntry = {
-        message: "Connected to Sentry IQ Agent Network...",
+        message: "Connected to ScoutForge AI Agent Network...",
         category: "SYSTEM",
         timestamp: new Date().toISOString()
       };
