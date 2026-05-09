@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
-  Settings, Bell, ShieldCheck, User, LogOut, Check, Save,
+  Settings, ShieldCheck, User, LogOut, Check,
   Sparkles, AlertTriangle, Activity, Monitor, History,
   ExternalLink, Trash2, Smartphone, Globe, Lock,
-  BarChart3, Clock, MapPin, Cpu, Zap
+  BarChart3, MapPin, Cpu, Zap, Camera, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
@@ -31,6 +32,7 @@ const formatDate = (dateStr: string | null) => {
 
 const SettingsPage = () => {
   const { user, logout, updateProfile, changePassword, fetchUser } = useAuthStore();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
@@ -197,30 +199,34 @@ const SettingsPage = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (window.confirm("CRITICAL PROTOCOL: Are you sure you want to permanently purge your identity and all intelligence data? This cannot be reversed.")) {
-      setLoading(true);
-      try {
-        const { deleteAccount: purgeAccount } = useAuthStore.getState();
-        await purgeAccount();
-        navigate('/login');
-      } catch (err) {
-        console.error('Account purge failed', err);
-      } finally {
-        setLoading(false);
-      }
+    const confirmed = window.confirm(
+      'CRITICAL: This will permanently delete your account and ALL data. This action CANNOT be reversed. Confirm?'
+    );
+    if (!confirmed) return;
+    setLoading(true);
+    try {
+      const { deleteAccount: purgeAccount } = useAuthStore.getState();
+      await purgeAccount();
+      navigate('/login', { replace: true });
+    } catch (err: any) {
+      setUpdateError(err?.response?.data?.detail || 'Account deletion failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   const saveGlobalSettings = async () => {
     setLoading(true);
+    setUpdateError(null);
     try {
-      // Direct call to update everything in one atomic transaction
-      await updateProfile({ ...profileForm, preferences });
+      // Save full profile + preferences atomically
+      await apiUpdateProfile({ ...profileForm, preferences });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       await fetchUser();
-    } catch (err) {
-      console.error('Failed to save settings', err);
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || 'Failed to save settings';
+      setUpdateError(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setLoading(false);
     }
@@ -262,10 +268,37 @@ const SettingsPage = () => {
               success ? "bg-emerald-500 text-white shadow-emerald-500/40" : "bg-[#0071E3] text-white shadow-[#0071E3]/40"
             )}
           >
-            {loading ? "SYNCING..." : success ? "PROTOCOLS SECURED" : "COMMIT CHANGES"}
+            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : success ? "✓ SAVED" : "COMMIT CHANGES"}
           </Button>
         </div>
       </div>
+
+      {/* Global status banner */}
+      <AnimatePresence>
+        {updateError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-center gap-3 p-5 rounded-[24px] bg-rose-500/10 border border-rose-500/20 text-rose-500"
+          >
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <p className="text-sm font-bold">{updateError}</p>
+            <button onClick={() => setUpdateError(null)} className="ml-auto text-rose-400 hover:text-rose-500"><Check className="w-4 h-4" /></button>
+          </motion.div>
+        )}
+        {success && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-center gap-3 p-5 rounded-[24px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-500"
+          >
+            <Check className="w-5 h-5 shrink-0" />
+            <p className="text-sm font-bold">Changes saved and synchronized to production database.</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Primary Navigation Tabs */}
       <div className="flex flex-wrap bg-[#F5F5F7] dark:bg-white/5 p-2 rounded-[32px] w-fit border border-[#E5E5EA] dark:border-white/10 gap-2">

@@ -99,8 +99,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             localStorage.setItem('scoutiq_token', token);
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-            const decoded = parseJwt(token);
-            set({ user: decoded, token, loading: false });
+            // Immediately fetch full profile from DB (JWT only has basic fields)
+            set({ token, loading: false });
+            await get().fetchUser();
         } catch (err: any) {
             console.error("Login error:", err);
             let errorMessage = 'Authentication failed';
@@ -134,8 +135,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             localStorage.setItem('scoutiq_token', token);
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-            const decoded = parseJwt(token);
-            set({ user: decoded, token, loading: false });
+            // Immediately fetch full profile from DB (JWT only has basic fields)
+            set({ token, loading: false });
+            await get().fetchUser();
         } catch (err: any) {
             console.error("Register error:", err);
             let errorMessage = 'Registration failed';
