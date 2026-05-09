@@ -1,5 +1,5 @@
 """
-Intel pipeline: runs Sentinel Pro scan for a competitor with:
+Intel pipeline: runs Sentry IQ scan for a competitor with:
 - Two-phase scan: first scan 14 days, subsequent 7 days
 - Delta detection and feature storage
 - Adaptive scan frequency (72h after 3 empty, 12h when active)
@@ -37,7 +37,7 @@ async def run_competitor_scan(
     competitor_doc: Optional[dict] = None,
 ) -> Optional[ScanResponse]:
     """
-    Run Sentinel Pro scan for this competitor.
+    Run Sentry IQ scan for this competitor.
     Uses two-phase window (14 days first, 7 days delta).
     Persists features via delta engine, updates competitor with adaptive frequency.
     Returns ScanResponse on success, None when Gemini is unavailable.

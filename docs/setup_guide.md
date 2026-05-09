@@ -1,6 +1,6 @@
 # Enterprise Setup & Deployment
 
-The Sentinel Pro Engine requires modern Python `>=3.10` and `Node.js >=18`. Full functionality scales dynamically maximizing available system computational nodes natively. It supports entirely local extraction via Ollama, dropping data transmission entirely.
+The Sentry IQ Engine requires modern Python `>=3.10` and `Node.js >=18`. Full functionality scales dynamically maximizing available system computational nodes natively. It supports entirely local extraction via Ollama, dropping data transmission entirely.
 
 ## Initialization Sequence
 

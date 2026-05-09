@@ -1,6 +1,6 @@
-# Sentinel Pro Analytics - Enterprise Architecture
+# Sentry IQ Analytics - Enterprise Architecture
 
-Sentinel Pro is an autonomous corporate intelligence platform designed to scrape, extract, and convert unstructured open-web competitor activity into structured, predictive technical insights.
+Sentry IQ is an autonomous corporate intelligence platform designed to scrape, extract, and convert unstructured open-web competitor activity into structured, predictive technical insights.
 
 ## High-Level System Architecture
 

@@ -61,7 +61,7 @@ const ErrorPage = () => {
 
         <div className="pt-6">
            <p className="text-[9px] font-black text-[#86868B] uppercase tracking-[0.3em] italic">
-             Sentinel Protection Active • error_code: {error?.status || '500_INTEL_DISRUPT'}
+             Sentry IQtection Active • error_code: {error?.status || '500_INTEL_DISRUPT'}
            </p>
         </div>
       </motion.div>

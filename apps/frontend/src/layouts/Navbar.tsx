@@ -88,9 +88,9 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           onClick={() => navigate('/dashboard')}
         >
           <div className="w-10 h-10 bg-[#0071E3] rounded-xl flex items-center justify-center shadow-lg shadow-[#0071E3]/20 overflow-hidden">
-            <img src="/logo.png" alt="Sentinel Pro" className="w-full h-full object-cover" />
+            <img src="/logo.png" alt="Sentry IQ" className="w-full h-full object-cover" />
           </div>
-          <span className="text-2xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">SENTINEL<span className="text-blue-600">PRO</span></span>
+          <span className="text-2xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">SENTRY<span className="text-blue-600">IQ</span></span>
         </motion.div>
 
         <div className="relative max-w-md w-full group hidden md:block" ref={searchRef}>

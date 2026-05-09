@@ -1,5 +1,5 @@
 """
-Sentinel Pro: strict 5-step deterministic pipeline.
+Sentry IQ: strict 5-step deterministic pipeline.
 Simplified and updated for Zenserp search layer.
 """
 import logging

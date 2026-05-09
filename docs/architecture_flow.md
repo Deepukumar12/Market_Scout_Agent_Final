@@ -1,6 +1,6 @@
-# Sentinel Pro - System Flow Architecture
+# Sentry IQ - System Flow Architecture
 
-This document describes the real-time data flow through the Sentinel Pro platform.
+This document describes the real-time data flow through the Sentry IQ platform.
 
 ## High-Level Architecture
 

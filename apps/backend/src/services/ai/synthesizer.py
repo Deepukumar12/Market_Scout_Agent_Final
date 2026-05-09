@@ -58,7 +58,7 @@ def synthesize_report(company_name: str, scraped_texts: list[str]) -> str:
     date_line = ", ".join(date_list)
 
     prompt = f"""
-You are a Senior Technical Sentinel Pro. Output ONLY the report. No meta-commentary, no disclaimers.
+You are a Senior Technical Sentry IQ. Output ONLY the report. No meta-commentary, no disclaimers.
 
 PRIMARY GOAL:
 Create a DATE-WISE intelligence report for "{company_name}" for the past 7 days only.

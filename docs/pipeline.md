@@ -1,6 +1,6 @@
 # The Intelligence Pipeline (Sequence Diagram)
 
-The Sentinel Pro Engine operates autonomously via a tightly regulated data filtration sequence. Its primary purpose: convert raw, unstructured open-web content into a structured, hallucination-free technical intelligence report.
+The Sentry IQ Engine operates autonomously via a tightly regulated data filtration sequence. Its primary purpose: convert raw, unstructured open-web content into a structured, hallucination-free technical intelligence report.
 
 ## The Agentic Sequence
 

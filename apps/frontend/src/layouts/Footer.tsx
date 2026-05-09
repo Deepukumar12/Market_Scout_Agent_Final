@@ -50,7 +50,7 @@ export function Footer() {
     {
       title: "Corporate",
       links: [
-        { label: "About Sentinel Pro", href: "#" },
+        { label: "About Sentry IQ", href: "#" },
         { label: "Leadership", href: "#" },
         { label: "Press & Media", href: "#" },
         { label: "Career Portal", href: "#" },
@@ -74,11 +74,11 @@ export function Footer() {
           <div className="lg:col-span-2 space-y-10">
             <div className="flex items-center gap-4 group">
               <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-600/40 group-hover:scale-110 transition-all duration-500 overflow-hidden">
-                <img src="/logo.png" alt="Sentinel Pro" className="w-full h-full object-cover" />
+                <img src="/logo.png" alt="Sentry IQ" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
                 <span className="text-3xl font-black tracking-tighter text-[#1D1D1F] dark:text-white uppercase italic">
-                  SENTINEL<span className="text-blue-600">PRO</span>
+                  SENTRY<span className="text-blue-600">IQ</span>
                 </span>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -92,7 +92,7 @@ export function Footer() {
             </h3>
             
             <p className="text-lg text-[#6E6E73] dark:text-[#86868B] font-medium max-w-lg leading-relaxed">
-              Sentinel Pro delivers sub-second competitive intelligence through a global mesh of autonomous agents. Deciphering signals, ensuring market dominance.
+              Sentry IQ delivers sub-second competitive intelligence through a global mesh of autonomous agents. Deciphering signals, ensuring market dominance.
             </p>
 
             <div className="flex items-center gap-6 pt-4">
@@ -169,7 +169,7 @@ export function Footer() {
         <div className="pt-16 border-t border-[#F0F0F3] dark:border-white/5 flex flex-col lg:flex-row justify-between items-center gap-12">
           <div className="flex flex-col md:flex-row items-center gap-8 text-[11px] font-black uppercase tracking-[0.2em] text-[#86868B]">
             <div className="flex items-center gap-6">
-              <span>© 2026 Sentinel Pro Intelligence Protocol.</span>
+              <span>© 2026 Sentry IQ Intelligence Protocol.</span>
               <div className="hidden md:block w-1.5 h-1.5 rounded-full bg-[#E5E5EA] dark:bg-white/10" />
               <div className="flex items-center gap-3">
                 <span className="text-[#1D1D1F] dark:text-white">Built by Deepu Kumar</span>

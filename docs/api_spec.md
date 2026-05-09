@@ -1,6 +1,6 @@
 # Core API Specifications (v1)
 
-The Sentinel Pro API acts as the secure conduit connecting Next.js dashboards to the central Artificial Intelligence cluster. It natively enforces stateless authentication protocols natively mapping Pydantic schemas validating inbound traffic structures explicitly parsing REST endpoints.
+The Sentry IQ API acts as the secure conduit connecting Next.js dashboards to the central Artificial Intelligence cluster. It natively enforces stateless authentication protocols natively mapping Pydantic schemas validating inbound traffic structures explicitly parsing REST endpoints.
 
 ## Gateway Flow Structure
 
