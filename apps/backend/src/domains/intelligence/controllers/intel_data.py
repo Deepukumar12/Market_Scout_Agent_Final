@@ -169,7 +169,7 @@ async def get_intel_stream(
         if q:
             comp_query["name"] = {"$regex": q, "$options": "i"}
             
-        cursor = db.db["competitors"].find(comp_query, {"name": 1, "sector": 1})
+        cursor = db.db["competitors"].find(comp_query, {"name": 1, "sector": 1}).sort("name", 1)
         comps = await cursor.to_list(length=100)
         comp_map = {c["name"]: c.get("sector", "Technology") for c in comps}
         comp_names = list(comp_map.keys())

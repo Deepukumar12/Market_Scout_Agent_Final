@@ -40,7 +40,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
       setShowResults(true);
       try {
         const data = await getCompetitors(searchQuery);
-        setSearchResults(data.slice(0, 5));
+        setSearchResults(data.slice(0, 10));
       } catch (err) {
         console.error(err);
       } finally {

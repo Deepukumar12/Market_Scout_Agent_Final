@@ -47,7 +47,7 @@ async def list_competitors(
             {"url": {"$regex": q, "$options": "i"}}
         ]
         
-    cursor = collection.find(query).skip(skip).limit(limit)
+    cursor = collection.find(query).sort("name", 1).skip(skip).limit(limit)
     async for document in cursor:
         doc = document.copy()
         if "_id" in doc:
