@@ -245,4 +245,24 @@ export const searchCompanies = async (query: string) => {
     return response.data;
 };
 
+export const getUserActivity = async () => {
+    const response = await api.get('/auth/activity');
+    return response.data;
+};
+
+export const getUserSessions = async () => {
+    const response = await api.get('/auth/sessions');
+    return response.data;
+};
+
+export const revokeSession = async (sessionId: string) => {
+    const response = await api.delete(`/auth/sessions/${sessionId}`);
+    return response.data;
+};
+
+export const getSavedReports = async () => {
+    const response = await api.get('/reports');
+    return response.data;
+};
+
 export default api;

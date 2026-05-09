@@ -25,6 +25,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get("/reports")
+async def get_my_reports(current_user: User = Depends(get_current_user)):
+    """
+    Fetch all saved intelligence reports for the current user.
+    """
+    if db.db is None: await db.connect()
+    cursor = db.db["reports"].find({"user_id": str(current_user.id)}).sort("generated_at", -1)
+    reports = await cursor.to_list(length=50)
+    for r in reports:
+        r["id"] = str(r.pop("_id"))
+        if isinstance(r.get("generated_at"), datetime):
+            r["generated_at"] = r["generated_at"].isoformat()
+    return reports
+
+
 @router.post("/scan", response_model=None)
 async def post_scan(
     body: ScanRequest,

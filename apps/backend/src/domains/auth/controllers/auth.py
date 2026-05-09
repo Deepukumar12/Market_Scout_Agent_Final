@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 
 from src.core import config
@@ -78,7 +78,7 @@ async def register(user: UserCreate):
 
 
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     OAuth2 password flow-compatible login endpoint that returns a signed JWT.
     Also logs basic timing so we can see where any slowdown is happening.
@@ -133,6 +133,31 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             expires_delta=access_token_expires,
         )
 
+        from src.services.activity_service import activity_service
+        from src.services.session_service import session_service
+        from datetime import datetime
+        
+        # Track session with real metadata
+        user_agent = request.headers.get("user-agent", "unknown")
+        ip_address = request.client.host if request.client else "unknown"
+        
+        await collection.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"last_login": datetime.utcnow()}}
+        )
+        
+        await session_service.track_session(
+            user_id=str(user["_id"]),
+            user_agent=user_agent,
+            ip_address=ip_address
+        )
+        
+        await activity_service.log_activity(
+            user_id=str(user["_id"]),
+            action="Login",
+            metadata={"ip": ip_address, "agent": user_agent}
+        )
+
         total_ms = (time.perf_counter() - start) * 1000
         print(
             f"DEBUG LOGIN: password_check_ms={(verify_end - verify_start)*1000:.1f}, "
@@ -156,6 +181,34 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     Get current logged in user details.
     """
     return current_user
+
+
+@router.get("/activity")
+async def get_my_activity(current_user: User = Depends(get_current_user)):
+    """
+    Fetch the activity history for the current user.
+    """
+    from src.services.activity_service import activity_service
+    return await activity_service.get_user_activity(str(current_user.id))
+
+
+@router.get("/sessions")
+async def get_my_sessions(current_user: User = Depends(get_current_user)):
+    """
+    Fetch active login sessions for the current user.
+    """
+    from src.services.session_service import session_service
+    return await session_service.get_active_sessions(str(current_user.id))
+
+
+@router.delete("/sessions/{session_id}")
+async def revoke_my_session(session_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Revoke a specific login session.
+    """
+    from src.services.session_service import session_service
+    await session_service.revoke_session(session_id, str(current_user.id))
+    return {"status": "success", "message": "Session revoked"}
 
 
 @router.put("/profile", response_model=User)
@@ -182,6 +235,13 @@ async def update_profile(
         {"$set": update_data}
     )
     
+    from src.services.activity_service import activity_service
+    await activity_service.log_activity(
+        user_id=str(current_user.id),
+        action="Profile Update",
+        metadata={"fields": list(update_data.keys())}
+    )
+
     updated_user = await collection.find_one({"_id": ObjectId(current_user.id)})
     updated_user["id"] = str(updated_user.pop("_id"))
     return User(**updated_user)
@@ -211,6 +271,13 @@ async def change_password(
         {"$set": {"hashed_password": new_hashed}}
     )
     
+    from src.services.activity_service import activity_service
+    await activity_service.log_activity(
+        user_id=str(current_user.id),
+        action="Security Update",
+        metadata={"type": "Password Change"}
+    )
+
     from src.domains.notifications.services.notification_service import notification_service
     from src.domains.notifications.models.notification import NotificationType
     await notification_service.create_notification(
