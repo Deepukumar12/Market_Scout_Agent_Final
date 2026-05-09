@@ -9,6 +9,54 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/utils';
 import { getCompetitors } from '@/services/api';
 
+const ThemeToggle = () => {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <button
+      onClick={toggleTheme}
+      className="relative w-14 h-8 rounded-full p-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:border-[#0071E3]/30 transition-all overflow-hidden flex items-center group shadow-inner"
+    >
+      <motion.div
+        animate={{ 
+          x: theme === 'dark' ? 24 : 0,
+          backgroundColor: theme === 'dark' ? '#0071E3' : '#FFFFFF'
+        }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        className="w-6 h-6 rounded-full flex items-center justify-center shadow-lg relative z-10"
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {theme === 'dark' ? (
+            <motion.div
+              key="moon"
+              initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+              animate={{ opacity: 1, rotate: 0, scale: 1 }}
+              exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Moon size={12} className="text-white fill-current" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="sun"
+              initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+              animate={{ opacity: 1, rotate: 0, scale: 1 }}
+              exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Sun size={12} className="text-[#F5A623] fill-current" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+      <div className="absolute inset-0 flex justify-between px-2 items-center opacity-20 pointer-events-none group-hover:opacity-40 transition-opacity">
+        <Sun size={12} className={theme === 'light' ? 'invisible' : ''} />
+        <Moon size={12} className={theme === 'dark' ? 'invisible' : ''} />
+      </div>
+    </button>
+  );
+};
+
 interface NavbarProps {
   onAnalyzeClick: () => void;
   onNotificationClick: () => void;
@@ -187,25 +235,8 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           <Plus size={16} strokeWidth={3} />
           Analyze Company
         </Button>
-        
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={toggleTheme}
-          className="p-2.5 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] text-[#6E6E73] dark:text-[#A1A1A6] transition-colors relative overflow-hidden"
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={theme}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            </motion.div>
-          </AnimatePresence>
-        </motion.button>
+
+        <ThemeToggle />
 
         <div className="flex items-center gap-2 pl-4 border-l border-[#E5E5EA] dark:border-white/10 relative">
           <button 

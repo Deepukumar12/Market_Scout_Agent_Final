@@ -11,9 +11,9 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('scout_theme');
+    const saved = localStorage.getItem('scoutforge_theme');
     if (saved === 'light' || saved === 'dark') return saved;
-    return 'light';
+    return 'light'; // Default to Light Mode
   });
 
   useEffect(() => {
@@ -21,7 +21,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
     root.setAttribute('data-theme', theme);
-    localStorage.setItem('scout_theme', theme);
+    localStorage.setItem('scoutforge_theme', theme);
+    
+    // Smooth transition
+    root.style.colorScheme = theme;
+    root.classList.add('switching-theme');
+    const timer = setTimeout(() => root.classList.remove('switching-theme'), 500);
+    return () => clearTimeout(timer);
   }, [theme]);
 
   const toggleTheme = () => {

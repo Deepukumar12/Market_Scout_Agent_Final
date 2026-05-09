@@ -197,10 +197,10 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
       
       <div className="glass-card w-full max-w-md p-10 rounded-[2.5rem] relative z-10 animate-fade-in">
         <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-600/40 mb-6 group hover:scale-110 transition-transform duration-500">
-            <Shield className="text-white w-8 h-8" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden mb-6 group hover:scale-110 transition-transform duration-500 shadow-2xl shadow-blue-600/40">
+            <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-4xl font-black text-[var(--text-primary)] tracking-tighter uppercase italic">SCOUT<span className="text-[#0071E3]">IQ</span></h1>
+          <h1 className="text-4xl font-black text-[var(--text-primary)] tracking-tighter uppercase italic">SCOUTFORGE<span className="text-[#0071E3]">AI</span></h1>
           <p className="text-[var(--text-secondary)] text-[10px] uppercase tracking-[0.3em] font-black mt-2 italic">Administrative Command</p>
         </div>
 
@@ -354,12 +354,12 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
       {/* Sidebar */}
       <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} glass-card border-r-0 border-white/5 transition-all duration-500 ease-in-out flex flex-col z-30`}>
         <div className="p-8 flex items-center gap-4">
-          <div className="w-12 h-12 bg-[#0071E3] rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30 group cursor-pointer shrink-0 transition-transform hover:scale-110">
-            <Shield className="text-white w-7 h-7" />
+          <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-blue-600/30 group cursor-pointer shrink-0 transition-transform hover:scale-110">
+            <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
           </div>
           {isSidebarOpen && (
             <div className="flex flex-col overflow-hidden">
-              <span className="font-black text-2xl tracking-tighter uppercase italic text-[var(--text-primary)]">SCOUT<span className="text-[#0071E3]">IQ</span></span>
+              <span className="font-black text-2xl tracking-tighter uppercase italic text-[var(--text-primary)]">SCOUTFORGE<span className="text-[#0071E3]">AI</span></span>
               <span className="text-[9px] uppercase tracking-[0.2em] text-[#0071E3] font-black italic">Mission Control</span>
             </div>
           )}
