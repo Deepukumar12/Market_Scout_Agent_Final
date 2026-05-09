@@ -1,4 +1,5 @@
 
+import React, { forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotificationStore, Notification } from '@/store/notificationStore';
 import { Bell, X, Check, Info, AlertTriangle, Zap, Clock } from 'lucide-react';
@@ -10,7 +11,7 @@ interface NotificationCenterProps {
   onClose: () => void;
 }
 
-const NotificationItem = ({ notification }: { notification: Notification }) => {
+const NotificationItem = forwardRef<HTMLDivElement, { notification: Notification }>(({ notification }, ref) => {
   const { markAsRead } = useNotificationStore();
 
   const getIcon = () => {
@@ -23,7 +24,7 @@ const NotificationItem = ({ notification }: { notification: Notification }) => {
   };
 
   return (
-    <motion.div
+    <motion.div 
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       className={cn(
@@ -61,7 +62,7 @@ const NotificationItem = ({ notification }: { notification: Notification }) => {
       )}
     </motion.div>
   );
-};
+});
 
 const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
   const { notifications, unreadCount, markAllAsRead, clearAll } = useNotificationStore();
@@ -70,14 +71,14 @@ const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
     <AnimatePresence>
       {isOpen && (
         <>
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
             onClick={onClose}
           />
-          <motion.div
+          <motion.div 
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -115,8 +116,8 @@ const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
                 </div>
               ) : (
                 <AnimatePresence mode="popLayout">
-                  {notifications.map((notification) => (
-                    <NotificationItem key={notification.id} notification={notification} />
+                  {notifications.map((notification, index) => (
+                    <NotificationItem key={notification.id || `notif-${index}`} notification={notification} />
                   ))}
                 </AnimatePresence>
               )}

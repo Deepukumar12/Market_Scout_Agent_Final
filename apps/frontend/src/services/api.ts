@@ -131,8 +131,8 @@ export const getGlobalMetrics = async () => {
     return response.data;
 };
 
-export const getIntelligenceStream = async (limit = 20) => {
-    const response = await api.get('/intelligence/stream', { params: { limit } });
+export const getIntelligenceStream = async (limit = 20, q?: string) => {
+    const response = await api.get('/intelligence/stream', { params: { limit, q } });
     return response.data;
 };
 
@@ -204,8 +204,8 @@ export const getRiskAssessment = async (competitorId: string) => {
     return response.data;
 };
 
-export const getActivityTimeline = async () => {
-    const response = await api.get('/intelligence/activity-timeline');
+export const getActivityTimeline = async (competitor?: string) => {
+    const response = await api.get('/intelligence/activity-timeline', { params: { competitor } });
     return response.data;
 };
 

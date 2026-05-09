@@ -73,3 +73,5 @@ class ActivityLog(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+

@@ -67,16 +67,16 @@ export const useIntelStore = create<IntelState>((set) => ({
 
   fetchHistory: async (query?: string) => {
     try {
-      const data = await getIntelligenceStream(50); // limit 50
+      const data = await getIntelligenceStream(50, query);
       set({ history: data.signals || [] });
     } catch (err) {
       console.error("Failed to fetch history:", err);
     }
   },
 
-  fetchSignals: async () => {
+  fetchSignals: async (query?: string) => {
     try {
-      const data = await getIntelligenceStream(50);
+      const data = await getIntelligenceStream(50, query);
       set({ signals: data.signals || [] });
     } catch (error) {
       console.error("Failed to fetch intelligence data:", error);
@@ -130,7 +130,7 @@ export const useIntelStore = create<IntelState>((set) => ({
 
   fetchActivityTimeline: async (query?: string) => {
     try {
-      const data = await getActivityTimeline();
+      const data = await getActivityTimeline(query);
       set({ activities: data.days || [] });
     } catch (err) {
       console.error("Failed to fetch activity timeline:", err);
@@ -197,9 +197,9 @@ export const useIntelStore = create<IntelState>((set) => ({
     }
   },
 
-  fetchCompetitors: async () => {
+  fetchCompetitors: async (query?: string) => {
     try {
-      const data = await getCompetitors();
+      const data = await getCompetitors(query);
       set({ competitors: data });
     } catch (err) {
       console.error("Failed to fetch competitors:", err);

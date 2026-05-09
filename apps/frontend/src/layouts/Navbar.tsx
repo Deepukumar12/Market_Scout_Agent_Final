@@ -7,6 +7,7 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/utils';
+import { getCompetitors } from '@/services/api';
 
 interface NavbarProps {
   onAnalyzeClick: () => void;
@@ -22,13 +23,45 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [searchQuery, setLocalSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        setShowResults(false);
+        return;
+      }
+      setIsSearching(true);
+      setShowResults(true);
+      try {
+        const data = await getCompetitors(searchQuery);
+        setSearchResults(data.slice(0, 5));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounce = setTimeout(fetchResults, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
+
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -60,16 +93,74 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           <span className="text-2xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">SCOUT<span className="text-blue-600">IQ</span></span>
         </motion.div>
 
-        <div className="relative max-w-md w-full group hidden md:block">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+        <div className="relative max-w-md w-full group hidden md:block" ref={searchRef}>
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none z-10">
             <Search size={18} className="text-[#6E6E73] dark:text-[#86868B] group-focus-within:text-[#0071E3] transition-colors" />
           </div>
-          <input
-            type="text"
-            placeholder="Search competitor..."
-            onChange={(e) => onSearch(e.target.value)}
-            className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-transparent focus:border-[#0071E3] focus:bg-white dark:focus:bg-white/10 rounded-xl py-2.5 pl-11 pr-4 text-sm text-[#1D1D1F] dark:text-white outline-none transition-all placeholder:text-[#6E6E73] dark:placeholder:text-[#86868B]"
-          />
+          <div className="relative w-full">
+            <input
+              type="text"
+              placeholder="Search competitor..."
+              value={searchQuery}
+              onChange={(e) => {
+                setLocalSearchQuery(e.target.value);
+                onSearch(e.target.value);
+              }}
+              onFocus={() => searchQuery && setShowResults(true)}
+              className="w-full bg-[#F5F5F7] dark:bg-white/5 border border-transparent focus:border-[#0071E3] focus:bg-white dark:focus:bg-white/10 rounded-xl py-2.5 pl-11 pr-4 text-sm text-[#1D1D1F] dark:text-white outline-none transition-all placeholder:text-[#6E6E73] dark:placeholder:text-[#86868B] shadow-sm"
+            />
+            {isSearching && (
+              <div className="absolute right-4 top-3">
+                <div className="w-4 h-4 border-2 border-[#0071E3]/20 border-t-[#0071E3] rounded-full animate-spin" />
+              </div>
+            )}
+            
+            <AnimatePresence>
+              {showResults && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute left-0 right-0 mt-2 bg-white/95 dark:bg-[#1D1D1F]/95 backdrop-blur-2xl rounded-2xl border border-[#E5E5EA] dark:border-white/10 shadow-2xl overflow-hidden z-[100] py-2"
+                >
+                  {searchResults.length > 0 ? (
+                    searchResults.map((result: any) => (
+                      <button
+                        key={result.id || result._id}
+                        onClick={() => {
+                          onSearch(result.name);
+                          setLocalSearchQuery(result.name);
+                          setShowResults(false);
+                          navigate('/dashboard/competitors');
+                        }}
+                        className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[#F5F5F7] dark:hover:bg-white/5 transition-colors text-left group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[#0071E3]/10 flex items-center justify-center text-[#0071E3] font-black italic uppercase text-[10px]">
+                          {result.name[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors">{result.name}</p>
+                          <p className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono truncate max-w-[200px]">{result.url}</p>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] font-medium italic">No matches found for "{searchQuery}"</p>
+                    </div>
+                  )}
+                  <div className="px-4 py-2 border-t border-[#F5F5F7] dark:border-white/5 mt-1">
+                    <button 
+                       onClick={() => { setShowResults(false); navigate('/dashboard/competitors'); }}
+                       className="text-[9px] font-black uppercase tracking-widest text-[#0071E3] hover:text-blue-700 transition-colors"
+                    >
+                      View All Entities
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
@@ -142,7 +233,11 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
                   </div>
 
                   <button 
-                    onClick={() => { navigate('/dashboard/settings'); setIsProfileOpen(false); }}
+                    onClick={() => { navigate('/dashboard/settings'); setIsProfileOpen(false);
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+ }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#1D1D1F] dark:text-white hover:bg-[#F5F5F7] dark:hover:bg-white/5 transition-colors text-left"
                   >
                     <Settings size={16} className="text-[#6E6E73] dark:text-[#86868B]" />
@@ -150,7 +245,11 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
                   </button>
 
                   <button 
-                    onClick={() => { navigate('/dashboard/risk'); setIsProfileOpen(false); }}
+                    onClick={() => { navigate('/dashboard/risk'); setIsProfileOpen(false);
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+ }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#1D1D1F] dark:text-white hover:bg-[#F5F5F7] dark:hover:bg-white/5 transition-colors text-left"
                   >
                     <Shield size={16} className="text-[#6E6E73] dark:text-[#86868B]" />

@@ -37,7 +37,11 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const data = await getCompetitors(query);
-            set({ competitors: data || [], loading: false });
+            const formattedData = (data || []).map((c: any) => ({
+                ...c,
+                id: c.id || c._id
+            }));
+            set({ competitors: formattedData, loading: false });
         } catch (err) {
             set({ error: 'Failed to fetch competitors', loading: false });
         }

@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, timezone
 from typing import Optional
 from enum import Enum
@@ -25,6 +25,6 @@ class Notification(NotificationBase):
     read: bool = False
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    class Config:
-        populate_by_name = True
-        extra = "ignore"
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="ignore")

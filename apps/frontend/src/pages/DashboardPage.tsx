@@ -97,7 +97,7 @@ const DashboardPage = () => {
   const refreshAllData = useCallback(() => {
     fetchCompetitors(searchQuery);
     fetchHistory(searchQuery);
-    fetchSignals();
+    fetchSignals(searchQuery);
     fetchActivityTimeline(searchQuery);
     fetchInnovationTrends();
     fetchGlobalMetrics();
@@ -266,7 +266,7 @@ const DashboardPage = () => {
                  
                  <div className="flex-1 space-y-8">
                     {innovationTrends?.sector_shift.slice(0, 5).map((shift: any, i: number) => (
-                       <div key={i} className="group relative">
+                       <div key={shift.sector || i} className="group relative">
                           <div className="flex items-center justify-between mb-3">
                              <div className="text-sm font-black uppercase tracking-tighter group-hover:text-blue-600 transition-colors">{shift.sector}</div>
                              <div className="flex items-center gap-2">
@@ -337,7 +337,7 @@ const DashboardPage = () => {
                  <div className="space-y-6">
                     {signals.slice(0, 4).map((signal, i) => (
                        <motion.div 
-                          key={i}
+                          key={signal.id || i}
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.1 }}
@@ -377,7 +377,7 @@ const DashboardPage = () => {
            
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {dashboardSources.map((source, i) => (
-                <SourceCard key={i} {...source} />
+                <SourceCard key={source.url || i} {...source} />
               ))}
            </div>
         </section>

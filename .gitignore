@@ -73,3 +73,8 @@ dump.rdb
 data/
 uploads/
 !uploads/.gitkeep
+
+# Scratch and local scripts
+**/scratch/
+**/scripts/
+

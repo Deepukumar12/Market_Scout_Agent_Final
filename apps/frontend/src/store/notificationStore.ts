@@ -88,8 +88,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         set({ loading: true });
         try {
             const data = await api.getNotifications();
+            const formattedData = data.map((n: any) => ({
+                ...n,
+                id: n.id || n._id || Math.random().toString(36).substr(2, 9)
+            }));
             set({
-                notifications: data,
+                notifications: formattedData,
                 unreadCount: data.filter((n: any) => !n.read).length,
                 loading: false
             });

@@ -39,6 +39,7 @@ interface SignalAnalytics {
 }
 
 const AnalyticsPage = () => {
+  const { searchQuery: globalSearchQuery } = useOutletContext<{ searchQuery: string }>();
   const { competitors, selectedCompetitorId, setSelectedCompetitorId, fetchCompetitors } = useCompetitorStore();
   const { token } = useAuthStore();
   const [data, setData] = useState<SignalAnalytics | null>(null);
@@ -84,7 +85,7 @@ const AnalyticsPage = () => {
             className="h-10 px-4 rounded-full border border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#2C2C2E] text-sm font-bold text-[#1D1D1F] dark:text-white focus:outline-none shadow-apple-sm"
           >
             <option value="" disabled>Select a competitor</option>
-            {competitors.map(c => (
+            {competitors.filter(c => c.name.toLowerCase().includes(globalSearchQuery.toLowerCase())).map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>

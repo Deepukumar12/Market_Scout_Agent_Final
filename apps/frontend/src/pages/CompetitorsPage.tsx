@@ -1,5 +1,6 @@
 import { useCompetitorStore } from '@/store/competitorStore';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useOutletContext } from 'react';
 import { motion } from 'framer-motion';
 import { PlusCircle, Radar, Globe2, Search, Shield, Target, ArrowUpRight, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -8,14 +9,15 @@ import { cn } from '@/utils/utils';
 import { useIntelStore } from '@/store/intelStore';
 
 const CompetitorsPage = () => {
+  const { searchQuery: globalSearchQuery, setSearchQuery } = useOutletContext<{ searchQuery: string, setSearchQuery: (q: string) => void }>();
   const { competitors, loading, error, fetchCompetitors, removeCompetitor } = useCompetitorStore();
   const { globalMetrics, fetchGlobalMetrics } = useIntelStore();
-  const [filterQuery, setFilterQuery] = useState('');
+  
   const navigate = useNavigate();
 
   useEffect(() => {
     const refresh = () => {
-      fetchCompetitors();
+      fetchCompetitors(globalSearchQuery);
       fetchGlobalMetrics();
     };
 
@@ -30,12 +32,12 @@ const CompetitorsPage = () => {
   }, [fetchCompetitors, fetchGlobalMetrics]);
 
   const filteredCompetitors = useMemo(() => {
-    if (!filterQuery.trim()) return competitors;
+    if (!globalSearchQuery.trim()) return competitors;
     return competitors.filter(c => 
-      c.name.toLowerCase().includes(filterQuery.toLowerCase()) || 
-      (c.url && c.url.toLowerCase().includes(filterQuery.toLowerCase()))
+      c.name.toLowerCase().includes(globalSearchQuery.toLowerCase()) || 
+      (c.url && c.url.toLowerCase().includes(globalSearchQuery.toLowerCase()))
     );
-  }, [competitors, filterQuery]);
+  }, [competitors, globalSearchQuery]);
 
   return (
     <div className="relative max-w-7xl mx-auto space-y-12 pb-20">
@@ -69,8 +71,8 @@ const CompetitorsPage = () => {
             <input 
               type="text"
               placeholder="SEARCH UNIVERSE..."
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
+              value={globalSearchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-white/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-xs font-black text-[#1D1D1F] dark:text-white uppercase tracking-[0.2em] placeholder:text-[#86868B] dark:placeholder:text-[#A1A1A6] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:border-[#0071E3]/30 transition-all w-full backdrop-blur-3xl italic"
             />
           </div>
@@ -173,7 +175,7 @@ const CompetitorsPage = () => {
                   <div>
                     <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">No Entities Detected</h3>
                     <p className="text-sm text-[#6E6E73] dark:text-[#86868B] max-w-xs mx-auto mt-2 font-medium italic">
-                       {filterQuery ? `Filter "${filterQuery}" returned zero signal nodes.` : "The competition universe is currently empty. Deploy an agent to begin surveillance."}
+                       {globalSearchQuery ? `Filter "${globalSearchQuery}" returned zero signal nodes.` : "The competition universe is currently empty. Deploy an agent to begin surveillance."}
                     </p>
                  </div>
               </div>

@@ -114,10 +114,10 @@ async def get_last_seven_days_releases(
         
         user_comp_names = []
         if competitor and competitor.strip():
-            user_comp_names = [competitor.strip()]
+            user_comp_names = [re.compile(f"^{re.escape(competitor.strip())}$", re.I)]
         else:
             cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-            user_comp_names = [c["name"] for c in await cursor.to_list(length=100)]
+            user_comp_names = [re.compile(f"^{re.escape(c['name'])}$", re.I) for c in await cursor.to_list(length=100)]
             
         if user_comp_names:
             cursor = db.db["feature_updates"].find({
@@ -176,7 +176,7 @@ async def get_intel_stream(
         
         if comp_names:
             # 2. Fetch from article_summaries (Raw Signals)
-            summary_query = {"query_tag": {"$in": comp_names}}
+            summary_query = {"query_tag": {"$in": [re.compile(f"^{re.escape(n)}$", re.I) for n in comp_names]}}
             summaries_cursor = db.db["article_summaries"].find(summary_query).sort("created_at", -1).limit(limit)
             async for s in summaries_cursor:
                 sent = s.get("sentiment", "Neutral")
@@ -207,7 +207,7 @@ async def get_intel_stream(
 
             # 3. Fetch from feature_updates (Refined technical updates)
             # These are generated during every scan and are high-quality
-            feature_query = {"company_name": {"$in": comp_names}}
+            feature_query = {"company_name": {"$in": [re.compile(f"^{re.escape(n)}$", re.I) for n in comp_names]}}
             features_cursor = db.db["feature_updates"].find(feature_query).sort("created_at", -1).limit(limit)
             async for f in features_cursor:
                 full_url = f.get("source_url", "https://scoutiq.ai")
@@ -1248,10 +1248,10 @@ async def get_activity_timeline(
         # Get user's competitor names to filter feature updates
         user_comp_names = []
         if competitor and competitor.strip():
-            user_comp_names = [competitor.strip()]
+            user_comp_names = [re.compile(f"^{re.escape(competitor.strip())}$", re.I)]
         else:
             cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-            user_comp_names = [c["name"] for c in await cursor.to_list(length=100)]
+            user_comp_names = [re.compile(f"^{re.escape(c['name'])}$", re.I) for c in await cursor.to_list(length=100)]
             
         # We will build a dictionary of activities keyed by date string YYYY-MM-DD
         grouped_activities = { (now - timedelta(days=i)).strftime("%Y-%m-%d"): [] for i in range(7) }
@@ -1536,7 +1536,7 @@ async def get_mission_briefing(current_user: User = Depends(get_current_user)):
         
         # Get user's competitor names for filtering latest features
         cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-        user_comp_names = [c["name"] for c in await cursor.to_list(length=100)]
+        user_comp_names = [re.compile(f"^{re.escape(c['name'])}$", re.I) for c in await cursor.to_list(length=100)]
         
         # Get latest technical features for risk/opportunity extraction (filtered by user competitors)
         latest_features = []
