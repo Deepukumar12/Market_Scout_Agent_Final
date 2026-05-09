@@ -188,12 +188,24 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           Analyze Company
         </Button>
         
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={toggleTheme}
-          className="p-2.5 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] text-[#6E6E73] dark:text-[#A1A1A6] transition-colors"
+          className="p-2.5 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] text-[#6E6E73] dark:text-[#A1A1A6] transition-colors relative overflow-hidden"
         >
-          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-        </button>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={theme}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </motion.div>
+          </AnimatePresence>
+        </motion.button>
 
         <div className="flex items-center gap-2 pl-4 border-l border-[#E5E5EA] dark:border-white/10 relative">
           <button 
