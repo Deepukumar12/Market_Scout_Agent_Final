@@ -1,54 +1,89 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
 import { cn } from '@/utils/utils';
+import CircularGauge from './CircularGauge';
 
 interface StatCardProps {
   title: string;
   value: string | number;
-  change: string;
-  trend: 'up' | 'down' | 'neutral';
+  trendValue: number;
   icon: React.ElementType;
   className?: string;
+  loading?: boolean;
+  sourceUrl?: string;
+  showGauge?: boolean;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ 
   title, 
   value, 
-  change, 
-  trend, 
+  trendValue, 
   icon: Icon,
-  className 
+  className,
+  loading,
+  sourceUrl,
+  showGauge
 }) => {
-  const isPositive = trend === 'up';
+  const isPositive = trendValue >= 0;
+  const absTrend = Math.abs(trendValue);
   
   return (
     <motion.div
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileHover={{ y: -8, transition: { duration: 0.3 } }}
       className={cn(
-        "bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl p-8 rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple flex flex-col justify-between h-full",
+        "premium-card p-10 lg:p-12 h-full group relative overflow-hidden flex flex-col justify-between",
         className
       )}
     >
-      <div className="flex items-start justify-between">
-        <div className="p-3 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white">
-          <Icon size={22} strokeWidth={2} />
+      {/* Decorative Glow */}
+      <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-blue-500/10 transition-colors" />
+
+      <div className="flex items-start justify-between relative z-10">
+        <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] dark:bg-white/5 flex items-center justify-center text-[#1D1D1F] dark:text-white group-hover:scale-110 transition-transform shadow-apple-sm border border-[#E5E5EA] dark:border-white/10">
+          <Icon size={24} strokeWidth={2.5} />
         </div>
         <div className={cn(
-          "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold",
-          isPositive ? "bg-[#34C759]/10 text-[#34C759]" : "bg-red-500/10 text-red-500"
+          "flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] italic border",
+          isPositive ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-rose-500/10 text-rose-500 border-rose-500/20"
         )}>
-          {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-          {change}
+          {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+          {absTrend}% WoW
         </div>
       </div>
       
-      <div className="mt-8">
-        <p className="text-[#86868B] dark:text-[#A1A1A6] text-[10px] font-black uppercase tracking-[0.2em] mb-1 italic">{title}</p>
-        <h3 className="text-4xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic">{value}</h3>
+      <div className="flex items-end justify-between mt-12 relative z-10">
+        <div className="flex-1 pr-6">
+          <p className="text-[#86868B] dark:text-[#A1A1A6] text-[10px] lg:text-[11px] font-black uppercase tracking-[0.3em] mb-3 italic opacity-60 leading-none">{title}</p>
+          <h3 className="text-4xl lg:text-6xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-[0.85]">{value}</h3>
+        </div>
+        {showGauge && (
+          <div className="scale-110 flex-shrink-0 relative">
+             <CircularGauge 
+               value={typeof value === 'number' ? Math.min(100, value) : 75} 
+               size={90} 
+               strokeWidth={10} 
+               color={isPositive ? "#34C759" : "#FF3B30"} 
+             />
+          </div>
+        )}
       </div>
+
+      {sourceUrl && (
+        <div className="pt-10 mt-10 border-t border-[#F0F0F3] dark:border-white/5 flex justify-between items-center relative z-10">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#86868B] italic opacity-40">Intelligence Asset</span>
+          <a 
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0071E3] bg-[#0071E3]/5 px-6 py-2.5 rounded-2xl border border-[#0071E3]/20 hover:bg-[#0071E3] hover:text-white transition-all flex items-center gap-2 backdrop-blur-sm italic shadow-apple-sm"
+          >
+            Verify <ExternalLink size={14} />
+          </a>
+        </div>
+      )}
     </motion.div>
   );
 };
 
-export default StatCard;
+export default React.memo(StatCard);

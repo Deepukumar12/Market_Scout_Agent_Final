@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { ShieldAlert, Lightbulb, Activity } from 'lucide-react';
+import { ShieldAlert, Lightbulb, Activity, TrendingUp, AlertTriangle } from 'lucide-react';
 import { MissionBriefingData } from '@/store/intelStore';
+import CircularGauge from './CircularGauge';
 
 interface MissionBriefingProps {
   data: MissionBriefingData | null;
@@ -8,95 +9,115 @@ interface MissionBriefingProps {
 
 const MissionBriefing = ({ data }: MissionBriefingProps) => {
   if (!data) return (
-    <div className="p-10 rounded-[40px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple animate-pulse">
-      <div className="h-6 w-48 bg-gray-200 dark:bg-white/5 rounded-full mb-6" />
-      <div className="space-y-4">
-        <div className="h-4 w-full bg-gray-100 dark:bg-white/5 rounded-full" />
-        <div className="h-4 w-3/4 bg-gray-100 dark:bg-white/5 rounded-full" />
-      </div>
-    </div>
+    <div className="w-full h-48 rounded-[32px] bg-white dark:bg-[#0A0A0C] border border-[#E5E5EA] dark:border-white/10 shadow-apple animate-pulse" />
   );
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">
-            Strategic <span className="text-[#0071E3]">Briefing</span>
-          </h1>
-          <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mt-1 italic">Automated Market Intelligence Summary</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="px-4 py-2 rounded-full bg-blue-50 dark:bg-[#0071E3]/20 border border-[#0071E3]/20 flex items-center gap-2">
-            <Activity size={14} className="text-[#0071E3]" />
-            <span className="text-[10px] font-black text-[#0071E3] uppercase tracking-widest italic">{data.sentiment_pulse}</span>
-          </div>
-          <p className="text-[9px] font-bold text-[#86868B] uppercase tracking-widest italic">Updated: {new Date(data.last_updated).toLocaleTimeString('en-IN')}</p>
-        </div>
-      </div>
+    <section className="space-y-6">
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sticky top-6 z-10 transition-all">
-        {/* Executive Summary Card */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+      {/* ── Row 1: Wide horizontal summary banner ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full flex flex-col lg:flex-row items-stretch gap-0 rounded-[36px] overflow-hidden border border-[#E5E5EA] dark:border-white/10 shadow-apple bg-white dark:bg-[#0A0A0C]"
+      >
+        {/* Left – summary text */}
+        <div className="flex-1 px-10 py-8 flex flex-col justify-center gap-4 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent pointer-events-none" />
+
+          {/* header row */}
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#22c55e]" />
+            <span className="text-[10px] font-black text-[#86868B] uppercase tracking-[0.3em] italic">
+              Operational Intelligence Stream
+            </span>
+            <div className="ml-auto flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-[#0071E3]/20 border border-[#0071E3]/20">
+              <Activity size={12} className="text-[#0071E3]" />
+              <span className="text-[10px] font-black text-[#0071E3] uppercase tracking-widest italic">{data.sentiment_pulse}</span>
+            </div>
+          </div>
+
+          {/* executive summary */}
+          <h2 className="text-xl lg:text-2xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic leading-tight max-w-2xl relative z-10">
+            {data.executive_summary}
+          </h2>
+
+          {/* tags */}
+          <div className="flex flex-wrap gap-2 relative z-10">
+            {['Accuracy: 100%', 'Verified Source', '7-Day Window'].map((tag) => (
+              <span key={tag} className="px-4 py-1.5 rounded-xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[9px] font-black text-[#1D1D1F] dark:text-white uppercase tracking-widest italic">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="hidden lg:block w-[1px] bg-[#E5E5EA] dark:bg-white/10 self-stretch" />
+
+        {/* Right – gauges panel (wide, short) */}
+        <div className="flex items-center justify-center gap-12 px-14 py-8 bg-[#FAFAFA] dark:bg-[#111] shrink-0">
+          <CircularGauge value={88} size={80} strokeWidth={9} color="#0071E3" label="88" sublabel="Confidence" />
+          <div className="self-stretch w-[1px] bg-[#E5E5EA] dark:bg-white/10 rounded-full" />
+          <CircularGauge value={94} size={80} strokeWidth={9} color="#34C759" label="94" sublabel="Integrity" />
+        </div>
+      </motion.div>
+
+      {/* ── Row 2: Risks + Opportunities side-by-side ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* Technical Risks */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-12 p-10 rounded-[40px] bg-gradient-to-br from-white/90 to-[#F5F5F7]/90 dark:from-[#1D1D1F]/90 dark:to-[#2C2C2E]/90 backdrop-blur-2xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-lg relative overflow-hidden group"
+          transition={{ delay: 0.1 }}
+          className="rounded-[28px] border border-rose-500/20 bg-white dark:bg-[#0A0A0C] shadow-apple p-8 group hover:border-rose-500/40 transition-all"
         >
-          {/* Decorative Gloss */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
-          
-          <div className="relative z-10 flex flex-col md:flex-row gap-12 items-start">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse" />
-                <span className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.25em] italic">Live Intelligence Stream</span>
-              </div>
-              <h2 className="text-2xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic leading-snug mb-6 max-w-2xl">
-                {data.executive_summary}
-              </h2>
-              
-              <div className="flex flex-wrap gap-4 mt-8">
-                {['Accuracy: 100%', 'Status: Verified', 'Cycle: 7-Day Window'].map((tag) => (
-                  <span key={tag} className="px-4 py-2 rounded-full bg-white/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[9px] font-black text-[#1D1D1F] dark:text-white uppercase tracking-widest italic shadow-apple-sm">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-apple-sm">
+              <ShieldAlert size={18} />
             </div>
-
-            <div className="w-full md:w-[350px] space-y-6">
-              {/* Risks Section */}
-              <div className="p-6 rounded-[32px] bg-white/50 dark:bg-black/20 border border-[#E5E5EA] dark:border-white/5 backdrop-blur-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <ShieldAlert size={16} className="text-[#FF3B30]" />
-                  <span className="text-[10px] font-black text-[#FF3B30] uppercase tracking-widest italic">Technical Risks</span>
-                </div>
-                <ul className="space-y-3">
-                  {data.technical_risks.map((risk, i) => (
-                    <li key={i} className="text-[11px] font-bold text-[#1D1D1F] dark:text-white dark:text-[#A1A1A6] leading-relaxed flex items-start gap-2 italic">
-                      <span className="text-[#FF3B30]">•</span> {risk}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Opportunities Section */}
-              <div className="p-6 rounded-[32px] bg-[#0071E3]/5 border border-[#0071E3]/10 backdrop-blur-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <Lightbulb size={16} className="text-[#0071E3]" />
-                  <span className="text-[10px] font-black text-[#0071E3] uppercase tracking-widest italic">Market Opportunities</span>
-                </div>
-                <ul className="space-y-3">
-                  {data.market_opportunities.map((opp, i) => (
-                    <li key={i} className="text-[11px] font-bold text-[#1D1D1F] dark:text-white leading-relaxed flex items-start gap-2 italic">
-                      <span className="text-[#0071E3]">•</span> {opp}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div>
+              <p className="text-[9px] font-black text-rose-500 uppercase tracking-[0.25em] italic">Intelligence Alert</p>
+              <h4 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-tight leading-none mt-0.5">Technical Risks</h4>
             </div>
           </div>
+          <ul className="space-y-3">
+            {data.technical_risks.map((risk, i) => (
+              <li key={i} className="flex items-start gap-3 text-[13px] font-semibold text-[#6E6E73] dark:text-[#A1A1A6] leading-relaxed italic group-hover:text-[#1D1D1F] dark:group-hover:text-white transition-colors">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-[6px] shrink-0 shadow-[0_0_6px_rgba(244,63,94,0.6)]" />
+                {risk}
+              </li>
+            ))}
+          </ul>
         </motion.div>
+
+        {/* Market Opportunities */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-[28px] border border-[#0071E3]/20 bg-[#0071E3]/5 dark:bg-[#0071E3]/5 shadow-apple p-8 group hover:border-[#0071E3]/40 transition-all"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-2xl bg-[#0071E3]/10 flex items-center justify-center text-[#0071E3] border border-[#0071E3]/20 shadow-apple-sm">
+              <Lightbulb size={18} />
+            </div>
+            <div>
+              <p className="text-[9px] font-black text-[#0071E3] uppercase tracking-[0.25em] italic">Strategic Vector</p>
+              <h4 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-tight leading-none mt-0.5">Market Opportunities</h4>
+            </div>
+          </div>
+          <ul className="space-y-3">
+            {data.market_opportunities.map((opp, i) => (
+              <li key={i} className="flex items-start gap-3 text-[13px] font-semibold text-[#6E6E73] dark:text-[#A1A1A6] leading-relaxed italic group-hover:text-[#1D1D1F] dark:group-hover:text-white transition-colors">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] mt-[6px] shrink-0 shadow-[0_0_6px_rgba(0,113,227,0.6)]" />
+                {opp}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+
       </div>
     </section>
   );

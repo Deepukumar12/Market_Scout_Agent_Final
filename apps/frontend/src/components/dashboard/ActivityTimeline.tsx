@@ -55,7 +55,7 @@ const ActivityTimeline = ({ days }: ActivityTimelineProps) => {
   return (
     <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl rounded-[40px] p-10 border border-[#E5E5EA] dark:border-white/10 shadow-sm font-inter">
 
-      <div className="space-y-8">
+      <div className="space-y-8 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
         {days.map((day, dayIdx) => {
           const validUpdatesCount = day.activities.filter(a => a.type !== 'none').length;
           

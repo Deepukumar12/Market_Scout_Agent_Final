@@ -11,11 +11,170 @@ import {
   getMarketComparison,
   getLastSevenDays,
   getMissionBriefing,
-  getStrategicPlan
+  getStrategicPlan,
+  getLatestReport,
+  getSystemStats
 } from '@/services/api';
 import { useNotificationStore } from '@/store/notificationStore';
 
-// ... (types and error helper remain same) ...
+// --- TYPES ---
+
+export interface IntelSignal {
+  id: string;
+  company_name: string;
+  sector: string;
+  signal_type: string;
+  confidence_score: number;
+  timestamp: string;
+  summary: string;
+  source: string;
+  url: string;
+  sentiment: string;
+  impact_score: number;
+}
+
+export interface GlobalMetrics {
+  total_competitors: number;
+  competitors_trend: number;
+  features_found: number;
+  features_trend: number;
+  articles_processed: number;
+  articles_trend: number;
+  system_latency: number;
+  last_update: string;
+}
+
+export interface MissionBriefingData {
+  executive_summary: string;
+  technical_risks: string[];
+  market_opportunities: string[];
+  sentiment_pulse: string;
+  last_updated: string;
+}
+
+export interface SevenDaySignal {
+  company_name: string;
+  feature_name: string;
+  category: string;
+  release_date: string;
+  source_url?: string;
+  hash_id: string;
+  summary?: string;
+  source_type: string;
+}
+
+export interface InnovationTrends {
+  timeline: {
+    date: string;
+    releases: Record<string, number>;
+  }[];
+  top_innovators: {
+    name: string;
+    score: number;
+    top_feature: string;
+  }[];
+  sector_shift: {
+    sector: string;
+    velocity: string;
+    delta: number;
+  }[];
+}
+
+export interface MarketComparisonMetric {
+  competitor: string;
+  sector: string;
+  features_count: number;
+  innovation_score: number;
+  risk_level: string;
+  sentiment: string;
+  velocity: string;
+}
+
+export interface StrategicPlan {
+  id: string;
+  title: string;
+  summary: string;
+  impact: string;
+  confidence: number;
+  timeToMarket: string;
+  estimatedROI: string;
+  marketTrigger: string;
+  marketGap: string;
+  targetAudience: string;
+  coreCapabilities: string[];
+  implementation: { step: string; detail: string }[];
+  risks: string[];
+  tags: string[];
+  financialProjections: { month: string; value: number; cost: number }[];
+}
+
+export interface ScanReport {
+  competitor: string;
+  scan_date: string;
+  time_window_days: number;
+  total_sources_scanned: number;
+  total_valid_updates: number;
+  features: any[];
+  company?: any;
+  financials?: any;
+  news: any[];
+  search_visibility?: any;
+  social: any[];
+}
+
+export interface SystemStats {
+  status: string;
+  nodes: number;
+  cpu: number;
+  memory: number;
+  uptime: string;
+  region: string;
+  last_heartbeat: string;
+}
+
+interface IntelState {
+  report: any | null;
+  scanReport: ScanReport | null;
+  agentReport: any | null;
+  history: IntelSignal[];
+  signals: IntelSignal[];
+  recommendations: any[];
+  activities: any[];
+  innovationTrends: InnovationTrends | null;
+  globalMetrics: GlobalMetrics | null;
+  systemStats: SystemStats | null;
+  comparisonMatrix: MarketComparisonMetric[];
+  lastSevenDays: SevenDaySignal[];
+  missionBriefing: MissionBriefingData | null;
+  strategicPlan: StrategicPlan | null;
+  competitors: any[];
+  loading: boolean;
+  error: string | null;
+
+  fetchLatestReport: () => Promise<void>;
+  runScan: (competitorId: string) => Promise<void>;
+  fetchHistory: (query?: string) => Promise<void>;
+  fetchSignals: (query?: string) => Promise<void>;
+  fetchRecommendations: () => Promise<void>;
+  runMarketScan: (payload: any) => Promise<void>;
+  fetchActivityTimeline: (query?: string) => Promise<void>;
+  fetchInnovationTrends: () => Promise<void>;
+  fetchGlobalMetrics: () => Promise<void>;
+  fetchSystemStats: () => Promise<void>;
+  fetchMarketComparison: () => Promise<void>;
+  fetchLastSevenDays: (query?: string) => Promise<void>;
+  fetchMissionBriefing: () => Promise<void>;
+  fetchStrategicPlan: (competitorId: string, focusArea: string, riskLevel: string) => Promise<void>;
+  fetchCompetitors: (query?: string) => Promise<void>;
+  clear: () => void;
+}
+
+const getScanErrorMessage = (res: any) => {
+  if (!res) return 'Network surveillance timeout.';
+  if (res.detail === 'Ollama unreachable') return 'Local AI node offline.';
+  if (res.detail === 'Gemini quota exceeded') return 'Global intelligence quota reached.';
+  return res.detail || 'Strategic link failure.';
+};
 
 export const useIntelStore = create<IntelState>((set) => ({
   report: null,
@@ -34,6 +193,15 @@ export const useIntelStore = create<IntelState>((set) => ({
   competitors: [],
   loading: false,
   error: null,
+
+  fetchLatestReport: async () => {
+    try {
+      const data = await getLatestReport();
+      if (data) set({ scanReport: data });
+    } catch (err) {
+      console.error("Failed to fetch latest report:", err);
+    }
+  },
 
   runScan: async (competitorId: string) => {
     set({ loading: true, error: null });
@@ -152,6 +320,15 @@ export const useIntelStore = create<IntelState>((set) => ({
       set({ globalMetrics: data });
     } catch (err) {
       console.error("Failed to fetch global metrics:", err);
+    }
+  },
+
+  fetchSystemStats: async () => {
+    try {
+      const data = await getSystemStats();
+      set({ systemStats: data });
+    } catch (err) {
+      console.error("Failed to fetch system stats:", err);
     }
   },
 

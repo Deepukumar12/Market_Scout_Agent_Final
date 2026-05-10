@@ -44,4 +44,4 @@ const SourceCard: React.FC<SourceCardProps> = ({ title, source, date, url }) => 
   );
 };
 
-export default SourceCard;
+export default React.memo(SourceCard);

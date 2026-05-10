@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Loader2, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { searchCompanies } from '@/services/api';
+import { cn } from '@/utils/utils';
 
 interface CompanySuggestion {
   name: string;
@@ -338,6 +339,3 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
 
 export default AnalyzeModal;
 
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
-}

@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
+import { TrendingUp } from 'lucide-react';
 
 import { getCompetitorColor, getCompetitorColorId } from '@/utils/utils';
 
@@ -19,12 +20,19 @@ interface FeatureChartProps {
 
 const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
   return (
-    <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl p-8 rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple h-[450px] w-full overflow-hidden">
-      <div className="flex items-center justify-between mb-8">
+    <div className="bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl p-6 lg:p-8 rounded-[32px] lg:rounded-[40px] border border-[#E5E5EA] dark:border-white/10 shadow-apple h-[450px] w-full overflow-hidden group relative">
+      <div className="flex items-center justify-between mb-8 relative z-10">
         <div>
-          <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Feature Release <span className="text-[#0071E3]">Timeline</span></h3>
-          <p className="text-[#6E6E73] dark:text-[#86868B] text-sm font-medium italic">Innovation trends across top competitors</p>
+          <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter leading-none">Feature Release <span className="text-[#0071E3]">Timeline</span></h3>
+          <p className="text-[#6E6E73] dark:text-[#86868B] text-[10px] font-black uppercase tracking-widest mt-2 italic opacity-60">Innovation trends across top competitors</p>
         </div>
+        <a 
+          href="/api/v1/intelligence/innovation-trends" 
+          target="_blank"
+          className="p-3 rounded-2xl bg-[#F5F5F7] dark:bg-white/5 text-[#86868B] hover:text-[#0071E3] transition-all opacity-0 group-hover:opacity-100"
+        >
+          <TrendingUp size={18} />
+        </a>
       </div>
       
       <div className="h-[320px] w-full">

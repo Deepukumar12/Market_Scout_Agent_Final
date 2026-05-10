@@ -192,7 +192,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch (err: any) {
             set({ error: err.response?.data?.detail || 'Account deletion failed', loading: false });
             throw err;
-            set({ loading: false });
         }
     },
 

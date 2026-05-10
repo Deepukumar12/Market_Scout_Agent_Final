@@ -1,10 +1,9 @@
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useOutletContext } from 'react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { PlusCircle, Radar, Globe2, Search, Shield, Target, ArrowUpRight, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/utils';
 import { useIntelStore } from '@/store/intelStore';
 
@@ -55,12 +54,12 @@ const CompetitorsPage = () => {
              </div>
           </div>
           <div>
-            <h1 className="text-5xl font-black text-[#1D1D1F] dark:text-white tracking-tighter mb-2 uppercase italic leading-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-[#1D1D1F] dark:text-white tracking-tighter mb-2 uppercase italic leading-tight">
                Competitor <span className="text-[#0071E3]">Universe</span>
             </h1>
-            <p className="text-lg text-[#6E6E73] dark:text-[#86868B] dark:text-[#86868B] dark:text-[#A1A1A6] max-w-2xl font-medium leading-relaxed italic">
+            <p className="text-lg text-[#6E6E73] dark:text-[#86868B] dark:text-[#A1A1A6] max-w-2xl font-medium leading-relaxed italic">
                Master surveillance grid of all identified entities. 
-               Autonomous agents are currently verifying <span className="text-[#1D1D1F] dark:text-white">global footprints</span>.
+               Toggle mission-critical data streams or execute deep-level technical scans.
             </p>
           </div>
         </div>

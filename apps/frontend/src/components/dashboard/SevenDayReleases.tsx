@@ -1,5 +1,4 @@
-import { motion } from 'framer-motion';
-import { Zap, ExternalLink, Calendar, Tag } from 'lucide-react';
+import { Zap, ExternalLink, Calendar, Tag, ChevronRight } from 'lucide-react';
 import { SevenDaySignal } from '@/store/intelStore';
 
 interface SevenDayReleasesProps {
@@ -13,10 +12,15 @@ const SevenDayReleases = ({
   title = "7-Day Innovation Pulse", 
   subtitle = "Week-over-week technical releases and signals." 
 }: SevenDayReleasesProps) => {
-  if (!features || features.length === 0) return null;
+  const groupedFeatures = features.reduce((acc, feature) => {
+    const key = feature.company_name;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(feature);
+    return acc;
+  }, {} as Record<string, SevenDaySignal[]>);
 
   return (
-    <section className="space-y-8">
+    <section className="space-y-12">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">
@@ -32,58 +36,72 @@ const SevenDayReleases = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {features.map((feature, idx) => (
-          <motion.div
-            key={feature.hash_id || idx}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.05 }}
-            className="group relative p-6 rounded-[32px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple hover:shadow-apple-lg transition-all"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#AF52DE]/10 flex items-center justify-center text-[#AF52DE]">
-                  <Zap size={16} />
-                </div>
-                <div>
-                  <h3 className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest leading-none">
-                    {feature.company_name}
-                  </h3>
-                  <div className="text-[9px] font-bold text-[#AF52DE] uppercase mt-1">{feature.source_type || 'Signal'}</div>
-                </div>
-              </div>
-              <span className="text-[9px] font-mono text-[#86868B] bg-[#F5F5F7] dark:bg-white/5 px-2 py-1 rounded">
-                {feature.release_date}
-              </span>
+      <div className="space-y-16">
+        {Object.entries(groupedFeatures).map(([company, companyFeatures], cIdx) => (
+          <div key={company} className="space-y-6">
+            <div className="flex items-center gap-4 px-8">
+              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#E5E5EA] dark:via-white/10 to-transparent" />
+              <h3 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase tracking-[0.3em] italic opacity-60">
+                {company} <span className="text-[#AF52DE] ml-2">[{companyFeatures.length} Releases]</span>
+              </h3>
+              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#E5E5EA] dark:via-white/10 to-transparent" />
             </div>
 
-            <h4 className="text-sm font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tight mb-3 group-hover:text-[#AF52DE] transition-colors line-clamp-2">
-              {feature.feature_name}
-            </h4>
-
-            <p className="text-[11px] text-[#6E6E73] dark:text-[#86868B] font-medium italic leading-relaxed mb-6 line-clamp-3">
-              {feature.summary || "Technical innovation detected within the surveillance window. Analyzing impact on market trajectory."}
-            </p>
-
-            <div className="flex items-center justify-between pt-4 border-t border-[#E5E5EA] dark:border-white/5">
-              <div className="flex items-center gap-2">
-                <Tag size={12} className="text-[#AF52DE]" />
-                <span className="text-[9px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest italic">{feature.category}</span>
-              </div>
-              
-              {feature.source_url && (
-                <a 
-                  href={feature.source_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-full bg-[#F5F5F7] dark:bg-white/5 text-[#86868B] hover:text-[#AF52DE] hover:bg-[#AF52DE]/10 transition-all"
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {companyFeatures.map((feature, idx) => (
+                <div
+                  key={feature.hash_id || idx}
+                  className="h-full"
                 >
-                  <ExternalLink size={12} />
-                </a>
-              )}
+                  <div className="group relative p-8 rounded-[32px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl border border-[#E5E5EA] dark:border-white/10 shadow-apple hover:shadow-apple-lg transition-all h-full flex flex-col"
+                  >
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-[#AF52DE]/10 flex items-center justify-center text-[#AF52DE] border border-[#AF52DE]/20">
+                          <Zap size={20} />
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-black text-[#AF52DE] uppercase tracking-widest">{feature.source_type || 'Signal'}</div>
+                          <div className="text-[11px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.1em] leading-none mt-1">
+                            {feature.category}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black text-[#86868B] bg-[#F5F5F7] dark:bg-white/5 px-3 py-1 rounded-full uppercase tracking-widest border border-[#E5E5EA] dark:border-white/10">
+                        {feature.release_date && feature.release_date !== 'YYYY-MM-DD' ? feature.release_date : new Date().toLocaleDateString('en-IN')}
+                      </span>
+                    </div>
+
+                    <h4 className="text-base font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tight mb-4 group-hover:text-[#AF52DE] transition-colors leading-tight">
+                      {feature.feature_name}
+                    </h4>
+
+                    <div className="max-h-[160px] overflow-y-auto custom-scrollbar pr-2 mb-8 flex-1">
+                      <p className="text-[12px] text-[#6E6E73] dark:text-[#86868B] font-medium italic leading-relaxed">
+                        {feature.summary 
+                          ? feature.summary.replace(/Google Cloud Logo News|Skip to content|Home Search|Contact Sales|Try for free/gi, '').trim() 
+                          : "Technical innovation detected within the surveillance window. Analyzing impact on market trajectory."}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-6 border-t border-[#E5E5EA] dark:border-white/5 mt-auto">
+                      <span className="text-[10px] font-black text-[#86868B] uppercase tracking-widest italic opacity-60">Verified Signal</span>
+                      {feature.source_url && (
+                        <a 
+                          href={feature.source_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#AF52DE]/10 text-[#AF52DE] text-[10px] font-black uppercase tracking-widest hover:bg-[#AF52DE] hover:text-white transition-all italic border border-[#AF52DE]/20"
+                        >
+                          View Source <ChevronRight size={12} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
     </section>

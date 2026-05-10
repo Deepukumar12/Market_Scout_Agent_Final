@@ -209,6 +209,16 @@ export const getActivityTimeline = async (competitor?: string) => {
     return response.data;
 };
 
+export const getLatestReport = async () => {
+    const response = await api.get('/intelligence/latest-report');
+    return response.data;
+};
+
+export const getSystemStats = async () => {
+    const response = await api.get('/meta/stats');
+    return response.data;
+};
+
 // Notification Endpoints
 export const getNotifications = async (limit = 50) => {
     const response = await api.get('/notifications', { params: { limit } });

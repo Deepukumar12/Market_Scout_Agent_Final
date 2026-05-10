@@ -13,14 +13,23 @@ const MarketComparison = ({ data }: MarketComparisonProps) => {
   return (
     <section className="mt-10">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-sm font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic mb-2">Market Comparison Matrix</h2>
-        <div className="px-3 py-1 rounded-full bg-blue-50 dark:bg-[#0071E3]/20 text-[#0071E3] text-[10px] font-black uppercase tracking-widest italic">
-          Live Analysis
+        <div>
+          <h2 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter leading-none">Market <span className="text-blue-600">Comparison</span></h2>
+          <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mt-2 italic opacity-60">Comparative Data Points Matrix</p>
+        </div>
+        <div className="flex items-center gap-4">
+           <a 
+            href="/api/v1/intelligence/market-comparison" 
+            target="_blank"
+            className="text-[10px] font-black uppercase tracking-widest text-[#0071E3] bg-[#0071E3]/10 px-4 py-2 rounded-full border border-[#0071E3]/20 hover:scale-105 transition-all italic"
+           >
+             Verify Matrix Data
+           </a>
         </div>
       </div>
       
       <div className="overflow-hidden rounded-[40px] border border-[#E5E5EA] dark:border-white/10 bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl shadow-apple">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#F5F5F7] dark:border-white/5">

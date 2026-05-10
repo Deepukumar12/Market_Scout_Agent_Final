@@ -20,8 +20,11 @@ router = APIRouter()
 # --- MODELS ---
 class GlobalMetrics(BaseModel):
     total_competitors: int
+    competitors_trend: float = 0.0
     features_found: int
+    features_trend: float = 0.0
     articles_processed: int
+    articles_trend: float = 0.0
     system_latency: float
     last_update: datetime
 
@@ -359,13 +362,29 @@ async def get_global_metrics(current_user: User = Depends(get_current_user)):
         if feature_count == 0 and article_count > 0:
             feature_count = article_count # Fallback if scans exist but delta not processed yet
 
+        # 3. Calculate Trends (Compare against last 7 days)
+        last_week = get_now_ist() - timedelta(days=7)
+        
+        c_count_old_task = db.db["competitors"].count_documents({"user_id": uid_str, "created_at": {"$lt": last_week}})
+        art_count_old_task = db.db["article_summaries"].count_documents({"query_tag": {"$in": comp_names}, "created_at": {"$lt": last_week}}) if comp_names else asyncio.sleep(0, result=0)
+        feat_count_old_task = db.db["feature_updates"].count_documents({"company_name": {"$in": comp_names}, "created_at": {"$lt": last_week}}) if comp_names else asyncio.sleep(0, result=0)
+        
+        c_old, art_old, feat_old = await asyncio.gather(c_count_old_task, art_count_old_task, feat_count_old_task)
+
+        def calc_trend(current, old):
+            if old == 0: return 100.0 if current > 0 else 0.0
+            return float(round(((current - old) / old) * 100, 1))
+
         end_time = time.perf_counter()
         latency = (end_time - start_time) * 1000.0  # ms
 
         return GlobalMetrics(
             total_competitors=comp_count,
+            competitors_trend=calc_trend(comp_count, c_old),
             features_found=feature_count,
+            features_trend=calc_trend(feature_count, feat_old),
             articles_processed=article_count,
+            articles_trend=calc_trend(article_count, art_old),
             system_latency=float(round(latency, 1)), 
             last_update=get_now_ist()
         )
@@ -520,16 +539,16 @@ async def run_predictive_pipeline(current_user: User = Depends(get_current_user)
                     pos = feature_count
                     total_sent = feature_count
 
-            # Calculate scores based on volume and novelty
-            velocity = min(98, 20 + (reports_count * 15) + (signals_count * 5) + (feature_count * 2))
-            innovation = min(98, 30 + (feature_count * 8) + (reports_count * 5))
+            # Calculate scores based on volume and novelty - 100% Data Driven
+            velocity = min(100, (reports_count * 20) + (signals_count * 8) + (feature_count * 12))
+            innovation = min(100, (feature_count * 25) + (reports_count * 15))
             
             # Trend calculation
             trend = "Stable"
-            if velocity > 65 and sentiment_label == "Positive" and innovation > 50: trend = "Expansion"
-            elif velocity < 30 and feature_count == 0: trend = "Stagnant"
+            if velocity > 50 and sentiment_label == "Positive" and innovation > 40: trend = "Expansion"
+            elif velocity < 10 and feature_count == 0: trend = "Stagnant"
 
-            prob = float(round(min(0.98, 0.4 + (velocity / 200) + (pos / (total_sent or 1) * 0.2)), 2))
+            prob = float(round(min(1.0, (velocity / 150) + (pos / (total_sent or 1) * 0.3)), 2))
             
             metrics.append(PerformerMetric(
                 competitor_id=comp_id,
@@ -1497,15 +1516,18 @@ async def get_market_comparison(current_user: User = Depends(get_current_user)):
             delta_count = await db.db["feature_updates"].count_documents({"company_name": comp_name})
             total_features = feature_count + delta_count
             
-            # Calculate innovation score (0-100) purely on feature count
-            innovation_score = min(100, total_features * 10)
+            # Calculate innovation score (0-100) purely on feature count - 100% Data Driven
+            innovation_score = min(100, total_features * 15)
             
             # Risk Level based on pure actual volume
-            risk_score = min(100, total_features * 15)
+            risk_score = min(100, total_features * 20)
+            
+            # Extract industry from firmographics or use 'Technology' only as last resort
+            sector = comp.get("firmographics", {}).get("industry") or comp.get("sector") or "General Tech"
             
             comparison.append(MarketComparisonMetric(
                 competitor=comp_name,
-                sector=comp.get("sector", "Technology"),
+                sector=sector,
                 features_count=total_features,
                 innovation_score=innovation_score,
                 risk_level=await get_risk_level(risk_score),
@@ -1680,3 +1702,28 @@ async def generate_strategic_plan(
         print(f"Strategic Plan Error: {e}")
         from fastapi import HTTPException
         raise HTTPException(status_code=503, detail="Strategic plan generation service is currently unavailable or LLM failed.")
+
+@router.get("/latest-report")
+async def get_latest_report(current_user: User = Depends(get_current_user)):
+    """
+    Returns the most recent intelligence report for the current user.
+    """
+    uid_str = str(current_user.id)
+    try:
+        if db.db is None: await db.connect()
+        
+        # Get latest report from 'reports' collection
+        report = await db.db["reports"].find_one(
+            {"user_id": uid_str},
+            sort=[("created_at", -1)]
+        )
+        
+        if not report:
+            return None
+            
+        report["_id"] = str(report["_id"])
+        return report
+        
+    except Exception as e:
+        print(f"Latest Report Error: {e}")
+        return None

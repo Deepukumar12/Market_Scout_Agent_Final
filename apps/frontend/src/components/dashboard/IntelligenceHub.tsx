@@ -11,7 +11,8 @@ import {
   Users,
   ExternalLink,
   Globe,
-  PieChart
+  PieChart,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { ScanReport } from '@/store/intelStore';
@@ -46,13 +47,22 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
             <p className="text-sm text-[#6E6E73] dark:text-[#A1A1A6] font-medium leading-relaxed max-w-xl italic">
               {report.company?.description || "Technical profile analysis in progress..."}
             </p>
-            <div className="flex gap-4 pt-2">
-              <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#0071E3] bg-[#0071E3]/10 px-3 py-1 rounded-full border border-[#0071E3]/20">
-                <Globe className="w-3 h-3" /> {report.company?.industry || "Tech Sector"}
-              </span>
-              <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                <Users className="w-3 h-3" /> {report.company?.metrics?.employees || "---"} Employees
-              </span>
+            <div className="flex flex-wrap gap-4 pt-2">
+              {(report.company?.industry || report.company?.sector) && (
+                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#0071E3] bg-[#0071E3]/10 px-3 py-1 rounded-full border border-[#0071E3]/20">
+                  <Globe className="w-3 h-3" /> {report.company?.industry || report.company?.sector}
+                </span>
+              )}
+              {report.company?.metrics?.employees && (
+                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                  <Users className="w-3 h-3" /> {report.company.metrics.employees} Employees
+                </span>
+              )}
+              {report.company?.location && (
+                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
+                  <MapPin className="w-3 h-3" /> {report.company.location}
+                </span>
+              )}
             </div>
           </div>
         </motion.div>
@@ -110,7 +120,7 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
                 <div className="text-[9px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-3 flex items-center gap-2 italic">
                   {item.source} • {new Date(item.published_at).toLocaleDateString('en-IN')}
                 </div>
-                <h4 className="text-sm font-black text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors line-clamp-2 uppercase italic tracking-tight">
+                <h4 className="text-sm font-black text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors line-clamp-3 uppercase italic tracking-tight min-h-[3rem]">
                   {item.title}
                 </h4>
                 <p className="text-xs text-[#6E6E73] dark:text-[#86868B] mt-3 line-clamp-2 leading-relaxed font-medium italic">
@@ -177,7 +187,14 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
                       <div className="text-[11px] font-bold text-[#1D1D1F] dark:text-white truncate uppercase italic">{s.title}</div>
                       <div className="text-[9px] text-[#86868B] uppercase tracking-widest">{s.subreddit || s.channel || 'Social'} • {s.score || s.published_at?.split('T')[0]}</div>
                    </div>
-                   <ExternalLink className="w-3 h-3 text-[#86868B]" />
+                   <a 
+                    href={s.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                   >
+                    <ExternalLink className="w-3 h-3 text-[#86868B] hover:text-[#0071E3]" />
+                   </a>
                 </div>
              ))}
           </div>

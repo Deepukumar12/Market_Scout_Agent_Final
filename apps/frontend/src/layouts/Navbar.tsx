@@ -104,12 +104,12 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setIsProfileOpen(false);
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowResults(false);
       }
-
+      if (searchRef.current && !searchRef.current.contains(target)) {
+        setShowResults(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -291,11 +291,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
                   </div>
 
                   <button 
-                    onClick={() => { navigate('/dashboard/settings'); setIsProfileOpen(false);
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowResults(false);
-      }
- }}
+                    onClick={() => { navigate('/dashboard/settings'); setIsProfileOpen(false); }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#1D1D1F] dark:text-white hover:bg-[#F5F5F7] dark:hover:bg-white/5 transition-colors text-left"
                   >
                     <Settings size={16} className="text-[#6E6E73] dark:text-[#86868B]" />
@@ -303,11 +299,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
                   </button>
 
                   <button 
-                    onClick={() => { navigate('/dashboard/risk'); setIsProfileOpen(false);
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowResults(false);
-      }
- }}
+                    onClick={() => { navigate('/dashboard/risk'); setIsProfileOpen(false); }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#1D1D1F] dark:text-white hover:bg-[#F5F5F7] dark:hover:bg-white/5 transition-colors text-left"
                   >
                     <Shield size={16} className="text-[#6E6E73] dark:text-[#86868B]" />
