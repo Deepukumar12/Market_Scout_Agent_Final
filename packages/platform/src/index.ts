@@ -163,6 +163,51 @@ export class PlatformClient {
       throw error;
     }
   }
+
+  /**
+   * Admin: Fetch all users in the system.
+   */
+  async getAdminUsers() {
+    try {
+      const response = await axios.get(`${this.config.backendUrl}/api/v1/admin/users`, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch admin users:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Admin: Manually create a new user.
+   */
+  async createAdminUser(data: any) {
+    try {
+      const response = await axios.post(`${this.config.backendUrl}/api/v1/admin/users`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create admin user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Admin: Delete a user and purge their data.
+   */
+  async deleteAdminUser(userId: string) {
+    try {
+      const response = await axios.delete(`${this.config.backendUrl}/api/v1/admin/users/${userId}`, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to delete admin user:', error);
+      throw error;
+    }
+  }
 }
 
 const getBackendUrl = () => {

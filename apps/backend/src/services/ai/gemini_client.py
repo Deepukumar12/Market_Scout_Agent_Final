@@ -91,6 +91,7 @@ class GeminiClient:
             "contents": [{"role": "user", "parts": [{"text": text}]}],
             "generationConfig": {
                 "maxOutputTokens": 512,
+                "temperature": 0.0,
                 "responseMimeType": "application/json",
                 "responseSchema": schema,
             },
@@ -217,6 +218,7 @@ IMPORTANT:
             ],
             "generationConfig": {
                 "maxOutputTokens": settings.GEMINI_MAX_OUTPUT_TOKENS,
+                "temperature": 0.0,
                 "responseMimeType": "application/json",
                 "responseSchema": schema,
             },
@@ -303,6 +305,7 @@ Return only the JSON object. No additional text or explanation.
             ],
             "generationConfig": {
                 "maxOutputTokens": settings.GEMINI_MAX_OUTPUT_TOKENS,
+                "temperature": 0.0,
                 "responseMimeType": "application/json",
                 "responseSchema": schema,
             },

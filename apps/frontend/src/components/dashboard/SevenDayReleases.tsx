@@ -8,16 +8,32 @@ interface SevenDayReleasesProps {
 }
 
 const SevenDayReleases = ({ 
-  features, 
+  features = [], 
   title = "7-Day Innovation Pulse", 
   subtitle = "Week-over-week technical releases and signals." 
 }: SevenDayReleasesProps) => {
-  const groupedFeatures = features.reduce((acc, feature) => {
-    const key = feature.company_name;
+  const safeFeatures = Array.isArray(features) ? features : [];
+  
+  const groupedFeatures = safeFeatures.reduce((acc, feature) => {
+    const key = feature.company_name || 'Uncategorized';
     if (!acc[key]) acc[key] = [];
     acc[key].push(feature);
     return acc;
   }, {} as Record<string, SevenDaySignal[]>);
+
+  if (safeFeatures.length === 0) {
+    return (
+      <div className="py-20 text-center">
+        <h2 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter mb-4">
+          {title.split(' ')[0]} <span className="text-[#AF52DE]">{title.split(' ').slice(1).join(' ')}</span>
+        </h2>
+        <div className="p-10 rounded-3xl bg-[#F5F5F7] dark:bg-white/5 border border-dashed border-[#E5E5EA] dark:border-white/10">
+          <p className="text-[10px] font-black text-[#86868B] uppercase tracking-widest italic mb-2">No innovation signals detected</p>
+          <p className="text-xs font-medium text-[#6E6E73] italic">Technical releases within the 7-day window will appear here automatically.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="space-y-12">

@@ -14,7 +14,12 @@ logger = logging.getLogger(__name__)
 class SearchServiceError(Exception):
     """Search API unavailable or misconfigured."""
 
-async def search_web_multi(query: str, company_name: Optional[str] = None, num_results: int = 10) -> List[Dict[str, Any]]:
+async def search_web_multi(
+    query: str, 
+    company_name: Optional[str] = None, 
+    num_results: int = 10,
+    site_filter: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """
     Run a search using available search providers (Zenserp, Tavily, Brave) and pool results.
     Each result: {"url": str, "title": str, "snippet": str, "source": str}
@@ -28,10 +33,6 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
     results: List[Dict[str, Any]] = []
     seen_urls = set()
 
-    # Time restriction logic (Last 7 days)
-    # Different APIs have different ways to handle time, we'll configure as best we can
-
-    # Helper to add results
     def add_result(url: str, title: str, snippet: str, source: str, published_date: Optional[str] = None):
         if url and url not in seen_urls and not url.lower().endswith(".pdf") and url.startswith("http"):
             seen_urls.add(url)
@@ -43,21 +44,19 @@ async def search_web_multi(query: str, company_name: Optional[str] = None, num_r
                 "published_date": published_date
             })
 
-
-
     # 1. Tavily — broad web search covering news, blogs, press releases, product pages, etc.
     if settings.TAVILY_API_KEY and len(results) < num_results:
-        logger.info(f"Running Tavily search for: {query}")
+        logger.info(f"Running Tavily search for: {query} (Site: {site_filter or 'Any'})")
         url = "https://api.tavily.com/search"
         payload = {
             "api_key": settings.TAVILY_API_KEY,
             "query": query,
-            "search_depth": "advanced",  # deeper to surface blogs/news not just top results
+            "search_depth": "advanced",
             "include_answer": False,
-            "include_domains": [],       # open to ALL domains: news, blogs, product sites
+            "include_domains": [site_filter] if site_filter else [],
             "exclude_domains": [],
-            "max_results": max(num_results, 10),  # get more per query for diversity
-            "days": 7                    # Tavily param: only last 7 days
+            "max_results": max(num_results, 10),
+            "days": 7
         }
         try:
             async with httpx.AsyncClient(timeout=15) as client:

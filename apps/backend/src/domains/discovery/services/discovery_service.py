@@ -10,84 +10,45 @@ logger = logging.getLogger(__name__)
 
 class DiscoveryService:
     """
-    Enterprise-grade organization discovery service.
-    Features: Multi-provider fallback, result normalization, and high-performance Redis caching.
+    Lean organization discovery service.
+    Uses search-based resolution and domain extraction to identify competitors.
     """
 
     def __init__(self):
         self.client = httpx.AsyncClient(timeout=10.0, follow_redirects=True)
-        self.cache_ttl = 86400  # 24 hours
-        self.clearbit_api_key = settings.CLEARBIT_API_KEY
-        self.crunchbase_api_key = settings.CRUNCHBASE_API_KEY
-        self.serpapi_api_key = settings.SERPAPI_API_KEY
-        self.pdl_api_key = settings.PEOPLE_DATA_LABS_API_KEY
-        self.google_api_key = settings.GOOGLE_SEARCH_API_KEY
-        self.google_cx = settings.GOOGLE_SEARCH_CX
+        self.cache_ttl = 86400
 
     async def search_organizations(self, query: str) -> List[Dict[str, Any]]:
         """
-        Hyper-dynamic unified search with parallel provider execution and Redis caching.
-        Designed to provide 100% real-time global discovery from the first character.
+        Unified discovery using Clearbit Autocomplete (Fast) and Web Search (Deep).
         """
         query = query.strip().lower()
-        if not query:
-            return []
+        if not query: return []
 
-        # 1. Check Redis Cache (Fastest Path)
         cache_key = f"discovery:search:{query}"
         cached_results = await redis_service.get(cache_key)
-        if cached_results:
-            logger.info(f"🚀 Cache hit for query: {query}")
-            return cached_results
+        if cached_results: return cached_results
 
-        # 2. Parallel Search Execution (Deep Discovery)
-        # We run all primary providers in parallel to ensure 100% dynamic data from the start
-        tasks = []
-        
-        # Fast Autocomplete
-        tasks.append(self._clearbit_autocomplete(query))
-        
-        # High Fidelity Metadata
-        if self.pdl_api_key:
-            tasks.append(self._pdl_search(query))
-        
-        # Startup & Private Company Intelligence
-        if self.crunchbase_api_key:
-            tasks.append(self._crunchbase_search(query))
+        # 1. Primary: Clearbit Autocomplete (Free & Fast)
+        results = await self._clearbit_autocomplete(query)
 
-        # Gather all results concurrently
-        results_lists = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        results = []
-        for r_list in results_lists:
-            if isinstance(r_list, list):
-                results.extend(r_list)
-            elif isinstance(r_list, Exception):
-                logger.error(f"Provider task failed: {r_list}")
+        # 2. Secondary: Web discovery if clearbit is empty or for deeper search
+        if not results or len(query) > 3:
+            web_results = await self._web_discovery(query)
+            # Merge and deduplicate
+            seen_domains = {r["domain"] for r in results}
+            for wr in web_results:
+                if wr["domain"] not in seen_domains:
+                    results.append(wr)
+                    seen_domains.add(wr["domain"])
 
-        # 3. Last Resort Fallbacks (Google/SerpAPI) - Only if results are sparse
-        if len(results) < 5:
-            fallback_tasks = []
-            if self.google_api_key and self.google_cx:
-                fallback_tasks.append(self._google_search_discovery(query))
-            elif self.serpapi_api_key:
-                fallback_tasks.append(self._serpapi_discovery(query))
-            
-            if fallback_tasks:
-                fallback_results = await asyncio.gather(*fallback_tasks)
-                for f_list in fallback_results:
-                    results.extend(f_list)
-
-        # 4. Global Normalization and Intelligent Deduplication
-        final_results = self._deduplicate_and_normalize(results)
-
-        # 5. Store in Redis for future speed
-        if final_results:
-            await redis_service.set(cache_key, final_results, expire=self.cache_ttl)
-        
-        return final_results
+        # 3. Store and Return
+        if results:
+            await redis_service.set(cache_key, results, expire=self.cache_ttl)
+        return results
 
     async def _clearbit_autocomplete(self, query: str) -> List[Dict[str, Any]]:
+        """Free autocomplete API for fast suggestions."""
         url = f"https://autocomplete.clearbit.com/v1/companies/suggest?query={query}"
         try:
             response = await self.client.get(url)
@@ -97,136 +58,35 @@ class DiscoveryService:
                     "name": item.get("name"),
                     "domain": item.get("domain"),
                     "logo": item.get("logo"),
-                    "industry": None,
-                    "country": None,
-                    "employee_count": None,
-                    "source": "clearbit"
+                    "source": "clearbit_autocomplete"
                 } for item in data]
             return []
         except Exception as e:
             logger.error(f"Clearbit Autocomplete error: {e}")
             return []
 
-    async def _pdl_search(self, query: str) -> List[Dict[str, Any]]:
-        """People Data Labs Company Search API - High Fidelity Global Data."""
-        if not self.pdl_api_key: return []
+    async def _web_discovery(self, query: str) -> List[Dict[str, Any]]:
+        """Identify organizations via search patterns."""
+        from src.services.data.search_service import search_web_multi
         
-        url = "https://api.peopledatalabs.com/v5/company/search"
-        headers = {"X-Api-Key": self.pdl_api_key}
-        # PDL supports SQL-like queries for complex discovery
-        sql = f"SELECT * FROM company WHERE name LIKE '{query}%' OR website LIKE '{query}%' OR display_name LIKE '{query}%'"
-        params = {"sql": sql, "size": 10}
+        # Pattern-based search for discovery
+        search_query = f"{query} official company website"
+        search_results = await search_web_multi(search_query, num_results=5)
         
-        try:
-            response = await self.client.get(url, headers=headers, params=params)
-            if response.status_code == 200:
-                data = response.json()
-                return [{
-                    "name": item.get("name") or item.get("display_name"),
-                    "domain": item.get("website"),
-                    "logo": f"https://logo.clearbit.com/{item.get('website')}" if item.get('website') else None,
-                    "industry": item.get("industry"),
-                    "country": item.get("location", {}).get("country"),
-                    "employee_count": item.get("size"),
-                    "source": "pdl"
-                } for item in data.get("data", [])]
-            return []
-        except Exception as e:
-            logger.error(f"PDL Search error: {e}")
-            return []
-
-    async def _crunchbase_search(self, query: str) -> List[Dict[str, Any]]:
-        """Crunchbase Autocomplete - Best for Startups & Private Companies."""
-        if not self.crunchbase_api_key: return []
+        orgs = []
+        seen_domains = set()
         
-        url = "https://api.crunchbase.com/api/v4/autocompletes"
-        params = {
-            "user_key": self.crunchbase_api_key,
-            "query": query,
-            "collection_ids": "organizations",
-            "limit": 10
-        }
-        try:
-            response = await self.client.get(url, params=params)
-            if response.status_code == 200:
-                data = response.json()
-                return [{
-                    "name": item.get("facet_identifier", {}).get("value"),
-                    "domain": item.get("facet_identifier", {}).get("domain"),
-                    "logo": f"https://logo.clearbit.com/{item.get('facet_identifier', {}).get('domain')}" if item.get('facet_identifier', {}).get('domain') else None,
-                    "industry": None,
-                    "country": None,
-                    "employee_count": None,
-                    "source": "crunchbase"
-                } for item in data.get("entities", [])]
-            return []
-        except Exception as e:
-            logger.error(f"Crunchbase Search error: {e}")
-            return []
-
-    async def _google_search_discovery(self, query: str) -> List[Dict[str, Any]]:
-        """Google Custom Search API - Reliable fallback for identifying domains."""
-        url = "https://www.googleapis.com/customsearch/v1"
-        params = {
-            "q": f"{query} official website company",
-            "key": self.google_api_key,
-            "cx": self.google_cx,
-            "num": 5
-        }
-        try:
-            response = await self.client.get(url, params=params)
-            if response.status_code == 200:
-                data = response.json()
-                results = []
-                for item in data.get("items", []):
-                    domain = self._extract_domain(item.get("link", ""))
-                    if domain:
-                        results.append({
-                            "name": item.get("title").split(":")[0].split("-")[0].strip(),
-                            "domain": domain,
-                            "logo": f"https://logo.clearbit.com/{domain}",
-                            "industry": None,
-                            "country": None,
-                            "employee_count": None,
-                            "source": "google"
-                        })
-                return results
-            return []
-        except Exception as e:
-            logger.error(f"Google Search error: {e}")
-            return []
-
-    async def _serpapi_discovery(self, query: str) -> List[Dict[str, Any]]:
-        """SerpAPI - Secondary fallback for web-based organization identification."""
-        url = "https://serpapi.com/search"
-        params = {
-            "q": f"{query} official company website",
-            "api_key": self.serpapi_api_key,
-            "engine": "google",
-            "num": 5
-        }
-        try:
-            response = await self.client.get(url, params=params)
-            if response.status_code == 200:
-                data = response.json()
-                results = []
-                for result in data.get("organic_results", []):
-                    domain = self._extract_domain(result.get("link", ""))
-                    if domain:
-                        results.append({
-                            "name": result.get("title").split(" - ")[0].split(" | ")[0].strip(),
-                            "domain": domain,
-                            "logo": f"https://logo.clearbit.com/{domain}",
-                            "industry": None,
-                            "country": None,
-                            "employee_count": None,
-                            "source": "serpapi"
-                        })
-                return results
-            return []
-        except Exception as e:
-            logger.error(f"SerpAPI Discovery error: {e}")
-            return []
+        for r in search_results:
+            domain = self._extract_domain(r["url"])
+            if domain and domain not in seen_domains and "." in domain:
+                seen_domains.add(domain)
+                orgs.append({
+                    "name": r["title"].split("-")[0].split("|")[0].strip(),
+                    "domain": domain,
+                    "logo": f"https://logo.clearbit.com/{domain}",
+                    "source": "web_discovery"
+                })
+        return orgs
 
     def _extract_domain(self, url: str) -> Optional[str]:
         try:
@@ -235,29 +95,5 @@ class DiscoveryService:
             return netloc.replace("www.", "").lower()
         except:
             return None
-
-    def _deduplicate_and_normalize(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Deduplicates results by domain and merges metadata where available."""
-        unique_orgs = {}
-        
-        for r in results:
-            domain = r.get("domain", "").lower() if r.get("domain") else r.get("name", "").lower()
-            if not domain: continue
-            
-            if domain not in unique_orgs:
-                unique_orgs[domain] = r
-            else:
-                # Merge logic: keep the existing result but fill in Nones if the new result has data
-                for key in ["industry", "country", "employee_count", "logo"]:
-                    if not unique_orgs[domain].get(key) and r.get(key):
-                        unique_orgs[domain][key] = r[key]
-        
-        # Sort by relevance (prefer PDL/Crunchbase over search engines)
-        sorted_results = sorted(
-            unique_orgs.values(),
-            key=lambda x: 1 if x.get("source") in ["pdl", "crunchbase"] else 2
-        )
-        
-        return list(sorted_results)
 
 discovery_service = DiscoveryService()

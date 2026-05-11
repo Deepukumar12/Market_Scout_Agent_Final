@@ -1,7 +1,7 @@
 import logging
 import os
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 from src.domains.competitors.services.competitor_service import get_all_competitors
 from src.domains.users.services.user_service import get_user_email, get_user_preferences
@@ -52,23 +52,56 @@ async def async_run_auto_scan():
             # 3️⃣ Scan and Fetch 7-day data for each competitor
             for comp in comps:
                 company = comp.get("name")
-                logger.info(f"🔍 Processing: {company} for {email}")
+                website = comp.get("website", "")
+                logger.info(f"🔍 Autonomous processing: {company} for {email}")
 
                 try:
-                    # ✅ Check if we already have fresh features (last 24h)
+                    now = datetime.now(timezone.utc)
+                    
+                    # ✅ 1. Check for fresh data (24h)
                     fresh_features = await get_cached_features(company, limit=1, days=1)
-                    
-                    if not fresh_features:
-                        logger.info(f"🔄 No fresh data for {company}, running live scan...")
-                        request = ScanRequest(company_name=company, time_window_days=7)
-                        await run_scan(request) # This populates DB features
-                    else:
-                        logger.info(f"✅ Fresh data already exists for {company}, skipping search phase.")
-                    
-                    # ✅ Fetch last 7 days of stored features from DB for the report
-                    historical_features = await get_cached_features(company, limit=20, days=7)
+                    scan_result = None
 
-                    # Convert dicts back to ScanFeature models
+                    if not fresh_features:
+                        logger.info(f"🔄 Node stale for {company}, triggering background surveillance...")
+                        request = ScanRequest(company_name=company, website=website, time_window_days=7)
+                        scan_result = await run_scan(request)
+                        
+                        if scan_result:
+                            # ✅ A. Store Features
+                            if scan_result.features:
+                                from src.services.data.delta_engine import store_new_features
+                                await store_new_features(company, scan_result.features)
+                            
+                            # ✅ B. Store Market Signals (Article Summaries)
+                            all_signals = []
+                            for n in (scan_result.news or []):
+                                all_signals.append({
+                                    "query_tag": company,
+                                    "url": n.get("url") or n.get("link"),
+                                    "article_summary": n.get("snippet") or n.get("description") or "Market signal detected.",
+                                    "sentiment": "Neutral",
+                                    "scraped_at": now,
+                                    "created_at": now,
+                                    "user_id": user_id
+                                })
+                            if all_signals:
+                                await db.db["article_summaries"].insert_many(all_signals)
+
+                            # ✅ C. Store Strategic Report
+                            report_doc = scan_result.model_dump()
+                            report_doc.update({
+                                "user_id": user_id,
+                                "target_company": company,
+                                "generated_at": now,
+                                "status": "Completed",
+                                "source_url": website
+                            })
+                            await db.db["reports"].insert_one(report_doc)
+                            logger.info(f"📊 Stored background report for {company}")
+                    
+                    # ✅ 2. Collect 7-day data for the summary brief
+                    historical_features = await get_cached_features(company, limit=20, days=7)
                     features = []
                     for h in historical_features:
                         features.append(ScanFeature(
@@ -78,7 +111,7 @@ async def async_run_auto_scan():
                             source_url=h.get("source_url", ""),
                             source_domain=h.get("source_domain", "Unknown"),
                             category=h.get("category", "Platform"),
-                            confidence_score=float(h.get("confidence_score") or 70.0) # Fixed type mismatch
+                            confidence_score=float(h.get("confidence_score") or 75.0)
                         ))
 
                     user_reports.append({
@@ -87,58 +120,64 @@ async def async_run_auto_scan():
                     })
 
                 except Exception as e:
-                    logger.error(f"❌ Error processing {company}: {e}")
+                    logger.error(f"❌ Autonomous cycle error for {company}: {e}")
+                    user_reports.append({
+                        "company": company,
+                        "features": [],
+                        "error": str(e)
+                    })
 
             if not user_reports:
-                logger.warning(f"⚠️ No reports generated for user {email}, skipping")
+                logger.warning(f"⚠️ No intelligence nodes processed for user {email}, skipping brief.")
                 continue
 
-            # 4️⃣ Send Email Report if enabled in system settings
+            # 4️⃣ Dispatch Intelligence Briefing (Email)
             scheduler_settings = await db.db.system_settings.find_one({"_id": "scheduler"})
             if scheduler_settings and scheduler_settings.get("email_enabled"):
-                # ✅ Refactored to await async preferences lookup
                 prefs = await get_user_preferences(user_id)
                 if prefs and not prefs.get("emailAlerts", True):
-                    logger.info(f"⏭️ User {email} has disabled email alerts. Skipping dispatch.")
+                    logger.info(f"⏭️ User {email} alerts disabled.")
                 else:
-                    logger.info(f"📧 Dispatching intelligence report to {email}...")
+                    logger.info(f"📧 Dispatching briefed intelligence to {email}...")
                     
-                    report_content = f"ScoutForge AI Intelligence Briefing - {datetime.now().strftime('%Y-%m-%d')}\n\n"
-                    report_content += f"Automated surveillance cycle completed for {len(user_reports)} targets.\n\n"
+                    report_content = f"ScoutForge AI: Autonomous Intelligence Briefing - {datetime.now().strftime('%Y-%m-%d')}\n\n"
+                    report_content += f"Surveillance cycle completed for {len(user_reports)} targets.\n\n"
                     
                     for report in user_reports:
                         report_content += f"--- {report['company'].upper()} ---\n"
                         if not report['features']:
                             report_content += "No new technical signals detected in this cycle.\n"
                         else:
-                            for f in report['features'][:5]: # Top 5 signals
+                            for f in report['features'][:5]:
                                 report_content += f"• {f.feature_title}: {f.technical_summary[:150]}...\n"
-                                report_content += f"  Source: {f.source_url}\n\n"
                         report_content += "\n"
                     
-                    report_content += "\nThis is an automated briefing from your ScoutForge AI console."
+                    report_content += "\nSecure Mission Briefing: Command Center Updated."
                     
-                    send_email_report(
-                        to_email=email,
-                        subject=f"ScoutForge AI: Strategic Intelligence Briefing ({len(user_reports)} Targets)",
-                        content=report_content
-                    )
+                    try:
+                        send_email_report(
+                            to_email=email,
+                            subject=f"ScoutForge AI: Daily Intelligence Briefing ({len(user_reports)} Targets)",
+                            content=report_content
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to dispatch email: {e}")
 
-            # 5️⃣ Background processing completed.
+            # 5️⃣ System Notification
             from src.domains.notifications.services.notification_service import notification_service
             from src.domains.notifications.models.notification import NotificationType
             
             await notification_service.create_notification(
                 user_id=user_id,
-                title="Surveillance Cycle Complete",
-                message=f"Automated intelligence sync for {len(user_reports)} targets successful. Command center updated.",
+                title="Intelligence Sync Complete",
+                message=f"Automated briefing for {len(user_reports)} targets is now available in your command nexus.",
                 type=NotificationType.INFO
             )
             
-            logger.info(f"✅ Background intelligence synchronization completed for user {email}")
+            logger.info(f"✅ Mission successful: Global heartbeat synchronized for user {email}")
 
     except Exception as e:
-        logger.critical(f"❌ Auto scan failed completely: {e}", exc_info=True)
+        logger.critical(f"❌ Background intelligence mission failure: {e}", exc_info=True)
 
 
 async def run_auto_scan():

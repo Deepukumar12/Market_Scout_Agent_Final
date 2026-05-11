@@ -146,16 +146,34 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
              {/* Social Metrics */}
              <div className="p-8 rounded-[40px] bg-white border border-[#E5E5EA] dark:bg-[#1D1D1F] dark:border-white/10 shadow-apple-sm">
                 <PieChart className="w-6 h-6 text-[#AF52DE] mb-4" />
-                <div className="space-y-4">
+                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
                     <span className="text-[10px] font-black text-[#86868B] uppercase italic tracking-widest">Visibility Index</span>
-                    <span className="text-2xl font-black text-[#1D1D1F] dark:text-white">{report.search_visibility?.ad_count > 0 ? 'HIGH' : 'STABLE'}</span>
+                    <span className="text-2xl font-black text-[#1D1D1F] dark:text-white">
+                      {(() => {
+                        const total = parseInt(String(report.search_visibility?.total_results || '0').replace(/,/g, ''));
+                        if (total > 10000000) return 'MAX';
+                        if (total > 5000000) return 'HIGH';
+                        if (total > 1000000) return 'STRONG';
+                        return 'STABLE';
+                      })()}
+                    </span>
                   </div>
                   <div className="h-2 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#AF52DE] w-[75%]" />
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ 
+                        width: (() => {
+                          const total = parseInt(String(report.search_visibility?.total_results || '0').replace(/,/g, ''));
+                          const percent = Math.min(100, Math.max(10, (Math.log10(total || 1) / 8) * 100));
+                          return `${percent}%`;
+                        })()
+                      }}
+                      className="h-full bg-[#AF52DE]" 
+                    />
                   </div>
                   <p className="text-[10px] text-[#6E6E73] dark:text-[#A1A1A6] font-medium italic">
-                    Detected {report.social.length} active community threads in the last 30 days.
+                    Detected {report.social.length} active community threads and {report.search_visibility?.total_results || '0'} search signals.
                   </p>
                 </div>
              </div>
@@ -180,7 +198,7 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
           </div>
 
           <div className="space-y-3">
-             {report.social.slice(0, 3).map((s, i) => (
+             {report.social.slice(0, 10).map((s, i) => (
                 <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10">
                    {s.video_id ? <Youtube className="text-rose-500 w-5 h-5 flex-shrink-0" /> : <MessageSquare className="text-orange-500 w-5 h-5 flex-shrink-0" />}
                    <div className="flex-1 min-w-0">

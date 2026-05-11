@@ -12,6 +12,7 @@ from src.domains.github.controllers.github import router as github_router
 from src.domains.notifications.controllers.notifications import router as notifications_router
 from src.domains.telemetry.controllers.meta import router as meta_router
 from src.domains.settings.controllers.settings import router as settings_router
+from src.domains.admin.controllers.users import router as admin_users_router
 
 from src.domains.discovery.controllers.discovery import router as discovery_router
 
@@ -29,3 +30,4 @@ api_router.include_router(github_router, prefix="/api/v1/github", tags=["github"
 api_router.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
 api_router.include_router(meta_router, prefix="/api/v1/meta", tags=["meta"])
 api_router.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
+api_router.include_router(admin_users_router, prefix="/api/v1/admin", tags=["admin"])

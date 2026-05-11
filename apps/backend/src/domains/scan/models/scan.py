@@ -13,6 +13,7 @@ class ScanRequest(BaseModel):
     company_name: str = Field(..., min_length=1, description="Company to scan (required)")
     website: Optional[str] = Field(default=None, description="Optional; used to prioritize domain during search")
     time_window_days: int = Field(default=7, ge=1, le=30, description="Only include updates within this many days")
+    force_refresh: bool = Field(default=False, description="If True, bypasses cache and performs a fresh scan")
 
 
 class ScanFeature(BaseModel):

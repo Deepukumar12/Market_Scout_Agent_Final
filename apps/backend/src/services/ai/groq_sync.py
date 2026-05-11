@@ -15,7 +15,7 @@ def _groq_generate_text(
     prompt: str,
     system_instruction: Optional[str] = None,
     max_tokens: int = 2048,
-    temperature: float = 0.2,
+    temperature: float = 0.0,
 ) -> str:
     """
     Sync call to Groq Chat Completions API (Llama 3).

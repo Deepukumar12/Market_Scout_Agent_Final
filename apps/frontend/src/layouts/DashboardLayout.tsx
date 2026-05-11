@@ -10,6 +10,7 @@ import { useCompetitorStore } from '@/store/competitorStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { motion } from 'framer-motion';
 import { useExecutionStore } from '@/store/executionStore';
+import { useIntelStore } from '@/store/intelStore';
 import { analyzeCompany } from '@/services/api';
 
 const DashboardLayout = () => {
@@ -23,6 +24,7 @@ const DashboardLayout = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { currentStep: realStep, setStep, startExecution, stopExecution } = useExecutionStore();
+  const { setScanReport } = useIntelStore(state => ({ setScanReport: (data: any) => useIntelStore.setState({ scanReport: data }) }));
   
   const progressSteps = [
     'Initializing AI Scout agents...',
@@ -49,7 +51,7 @@ const DashboardLayout = () => {
     fetchCompetitors();
   }, [location.pathname, fetchCompetitors]);
 
-  const handleAnalyze = async (company: { name: string, domain: string }) => {
+  const handleAnalyze = async (company: { name: string, domain: string }, forceRefresh = false) => {
     setAnalyzeStatus('running');
     startExecution(progressSteps.length);
     
@@ -65,13 +67,14 @@ const DashboardLayout = () => {
     }, 4500); 
     
     try {
-      console.log(`Starting mission for ${company.name}...`);
-      await analyzeCompany(company);
+      console.log(`Starting mission for ${company.name} (Force Refresh: ${forceRefresh})...`);
+      const scanResult = await analyzeCompany(company, forceRefresh);
       
       // Critical Path Success
       clearInterval(progressInterval);
       setStep(progressSteps.length - 1);
       setAnalyzeStatus('completed');
+      setScanReport(scanResult);
       stopExecution();
       
       // Non-blocking UI Refresh: Trigger full intelligence re-sync

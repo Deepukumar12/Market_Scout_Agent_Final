@@ -234,7 +234,7 @@ const DashboardPage = () => {
            {/* 7-Day Innovation Pulse - High Priority Visibility */}
            <div className="col-span-12">
              <AnimatePresence>
-               {lastSevenDays && lastSevenDays.length > 0 && (
+               {lastSevenDays && (
                  <motion.section 
                    initial={{ opacity: 0, y: 20 }}
                    animate={{ opacity: 1, y: 0 }}
@@ -442,7 +442,7 @@ const DashboardPage = () => {
            <div className="max-h-[640px] overflow-y-auto custom-scrollbar pr-2 rounded-[32px]">
            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {signals.length > 0 ? (
-                  signals.slice(0, 12).map((source, i) => (
+                  signals.map((source, i) => (
                     <SourceCard 
                      key={source.id || i} 
                      title={source.summary}

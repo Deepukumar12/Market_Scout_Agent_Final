@@ -57,9 +57,9 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
 
         {/* Right – gauges panel (wide, short) */}
         <div className="flex items-center justify-center gap-12 px-14 py-8 bg-[#FAFAFA] dark:bg-[#111] shrink-0">
-          <CircularGauge value={88} size={80} strokeWidth={9} color="#0071E3" label="88" sublabel="Confidence" />
+          <CircularGauge value={data.confidence_score} size={80} strokeWidth={9} color="#0071E3" label={data.confidence_score.toString()} sublabel="Confidence" />
           <div className="self-stretch w-[1px] bg-[#E5E5EA] dark:bg-white/10 rounded-full" />
-          <CircularGauge value={94} size={80} strokeWidth={9} color="#34C759" label="94" sublabel="Integrity" />
+          <CircularGauge value={data.integrity_score} size={80} strokeWidth={9} color="#34C759" label={data.integrity_score.toString()} sublabel="Integrity" />
         </div>
       </motion.div>
 

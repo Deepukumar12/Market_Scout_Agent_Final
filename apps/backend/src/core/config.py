@@ -67,118 +67,51 @@ class Settings(BaseSettings):
     # LLM PRIORITY CONTROL
     # ---------------------------------------------------
     # Options: ollama | groq | gemini
-    LLM_PROVIDER: str = "ollama"
+    LLM_PROVIDER: str = "groq"
 
 
     # ---------------------------------------------------
-    # OLLAMA (LOCAL LLM)
+    # OLLAMA (LOCAL LLM FALLBACK)
     # ---------------------------------------------------
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3"
 
 
     # ---------------------------------------------------
-    # GEMINI
+    # GEMINI (SYNTHESIS & ANALYSIS)
     # ---------------------------------------------------
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-1.5-flash"
     GEMINI_API_BASE: str = "https://generativelanguage.googleapis.com/v1beta"
     GEMINI_MAX_OUTPUT_TOKENS: int = 2048
 
 
     # ---------------------------------------------------
-    # GROQ
+    # GROQ (INFERENCE SPEED)
     # ---------------------------------------------------
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
 
     # ---------------------------------------------------
-    # OPENAI (Optional / Future Support)
-    # ---------------------------------------------------
-    OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o"
-
-    # ---------------------------------------------------
-    # ANTHROPIC (Optional / Future Support)
-    # ---------------------------------------------------
-    ANTHROPIC_API_KEY: str = ""
-    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20240620"
-
-
-    # ---------------------------------------------------
-    # SEARCH APIs
+    # SEARCH & DISCOVERY APIs
     # ---------------------------------------------------
     TAVILY_API_KEY: str = ""
-    SERPAPI_API_KEY: str = ""
     EXA_API_KEY: str = ""
-    GOOGLE_SEARCH_API_KEY: str = ""
-    GOOGLE_SEARCH_CX: str = ""
-
-
-    # ---------------------------------------------------
-    # COMPANY INTELLIGENCE APIs
-    # ---------------------------------------------------
-    CRUNCHBASE_API_KEY: str = ""
     CLEARBIT_API_KEY: str = ""
-    PEOPLE_DATA_LABS_API_KEY: str = ""
 
 
     # ---------------------------------------------------
-    # FINANCIAL APIs
+    # FINANCIAL INTELLIGENCE
     # ---------------------------------------------------
     ALPHA_VANTAGE_API_KEY: str = ""
-    FINNHUB_API_KEY: str = ""
-    FMP_API_KEY: str = ""  # Financial Modeling Prep
 
 
     # ---------------------------------------------------
-    # NEWS APIs
+    # DEVELOPMENT & HYGIENE
     # ---------------------------------------------------
-    NEWSAPI_API_KEY: str = ""
-    GNEWS_API_KEY: str = ""
-
-
-    # ---------------------------------------------------
-    # COMMUNITY & SOCIAL APIs
-    # ---------------------------------------------------
-    REDDIT_CLIENT_ID: str = ""
-    REDDIT_CLIENT_SECRET: str = ""
-    REDDIT_USER_AGENT: str = "ScoutForge AI/1.0"
-    YOUTUBE_API_KEY: str = ""
-
-
-    # ---------------------------------------------------
-    # SCRAPING
-    # ---------------------------------------------------
-    FIRECRAWL_API_KEY: str = ""
-
-
-    # ---------------------------------------------------
-    # VECTOR DB
-    # ---------------------------------------------------
-    CHROMA_PERSIST_DIR: str = "./chroma_db"
-
-
-    # ---------------------------------------------------
-    # GITHUB (optional intelligence source)
-    # ---------------------------------------------------
-    GITHUB_TOKEN: str = ""
-
-
-    # ---------------------------------------------------
-    # PAYMENTS & MONETIZATION
-    # ---------------------------------------------------
-    STRIPE_SECRET_KEY: str = ""
-    STRIPE_WEBHOOK_SECRET: str = ""
-
-
-    # ---------------------------------------------------
-    # MOCK MODE (IMPORTANT)
-    # ---------------------------------------------------
-    # If True → fake search results
-    # If False → real web search + scraping
     MOCK_MODE: bool = False
+    GITHUB_TOKEN: str = ""
 
 
     # ---------------------------------------------------

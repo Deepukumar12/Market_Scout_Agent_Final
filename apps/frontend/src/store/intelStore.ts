@@ -49,6 +49,8 @@ export interface MissionBriefingData {
   technical_risks: string[];
   market_opportunities: string[];
   sentiment_pulse: string;
+  confidence_score: number;
+  integrity_score: number;
   last_updated: string;
 }
 

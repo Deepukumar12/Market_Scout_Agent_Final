@@ -60,14 +60,15 @@ export const runScan = async (payload: {
     company_name: string;
     website?: string | null;
     time_window_days?: number;
+    force_refresh?: boolean;
 }) => {
-    // The backend expects ScanRequest: { company_name, website, time_window_days }
+    // The backend expects ScanRequest: { company_name, website, time_window_days, force_refresh }
     const response = await api.post('/scan', payload);
     return response.data;
 };
 
-export const analyzeCompany = async (company: { name: string, domain: string }) => {
-    return runScan({ company_name: company.name, website: company.domain });
+export const analyzeCompany = async (company: { name: string, domain: string }, forceRefresh = false) => {
+    return runScan({ company_name: company.name, website: company.domain, force_refresh: forceRefresh });
 };
 
 

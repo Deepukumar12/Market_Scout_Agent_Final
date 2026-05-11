@@ -50,7 +50,6 @@ async def get_user_email(user_id: str):
             logger.warning(f"⚠️ Email field missing for user: {user_object_id}")
             return None
 
-        logger.info(f"✅ Found user email: {email}")
         return email
 
     except Exception as e:

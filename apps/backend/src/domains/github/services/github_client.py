@@ -203,14 +203,33 @@ async def fetch_company_github_data(company_name: str, max_repos: int = 15) -> d
                             "updated_at": r.get("updated_at"),
                             "topics": r.get("topics", [])[:5],
                         })
-        # Dedupe and sort by stars
+        # 🔒 Project-Wide Enforcement: strictly cap GitHub data to the last 7 days
+        from datetime import timedelta, timezone
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        
+        # Dedupe, Filter by 7-day window, and sort by stars
         seen = set()
         unique = []
         for r in result["repos"]:
             fn = r.get("full_name")
-            if fn and fn not in seen:
-                seen.add(fn)
-                unique.append(r)
+            up_str = r.get("updated_at")
+            if not fn or fn in seen:
+                continue
+            
+            # Date check
+            if up_str:
+                # Use a simple split/replace to handle basic ISO dates from GitHub
+                try:
+                    from datetime import datetime
+                    # GitHub format: 2011-01-26T19:01:12Z
+                    up_dt = datetime.fromisoformat(up_str.replace("Z", "+00:00"))
+                    if up_dt < cutoff:
+                        continue # Repository is too stale
+                except:
+                    pass # Keep if date parsing fails to avoid missing data
+            
+            seen.add(fn)
+            unique.append(r)
         result["repos"] = sorted(unique, key=lambda x: x.get("stargazers_count", 0), reverse=True)[:max_repos]
     except GitHubClientError as e:
         result["error"] = str(e)

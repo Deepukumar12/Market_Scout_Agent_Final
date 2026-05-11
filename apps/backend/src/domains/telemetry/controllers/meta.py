@@ -35,6 +35,13 @@ class SystemStats(BaseModel):
     active_tasks: int
     latency: str
     latency_change: str
+    status: str
+    nodes: int
+    region: str
+    uptime: str
+    last_heartbeat: str
+    cpu: float
+    memory: float
 
 class SecurityLog(BaseModel):
     event: str
@@ -96,7 +103,14 @@ async def get_system_stats(current_user: User = Depends(get_current_user)):
         success_rate=success_rate,
         active_tasks=competitor_count // 2,
         latency=f"{int(5 + (cpu_usage/10))}ms",
-        latency_change="0ms"
+        latency_change="0ms",
+        status="Healthy" if cpu_usage < 80 else "Strained",
+        nodes=max(1, competitor_count),
+        region="Global (Primary)",
+        uptime="99.99%",
+        last_heartbeat=datetime.utcnow().isoformat(),
+        cpu=float(round(cpu_usage, 1)),
+        memory=float(round(mem_usage, 1))
     )
 
 @router.get("/logs", response_model=List[SecurityLog])

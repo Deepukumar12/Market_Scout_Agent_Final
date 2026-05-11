@@ -18,7 +18,7 @@ interface CompanySuggestion {
 interface AnalyzeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAnalyze: (suggestion: CompanySuggestion) => Promise<void>;
+  onAnalyze: (suggestion: CompanySuggestion, forceRefresh?: boolean) => Promise<void>;
   status: 'idle' | 'running' | 'completed' | 'error';
   progressSteps: string[];
   currentStep: number;
@@ -37,6 +37,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [isSearching, setIsSearching] = useState(false);
+  const [forceRefresh, setForceRefresh] = useState(false);
 
   React.useEffect(() => {
     const timer = setTimeout(async () => {
@@ -84,7 +85,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
     e.preventDefault();
     if (company.trim()) {
       const selected = suggestions.find(s => s.name === company) || { name: company, domain: '', logo: '' };
-      onAnalyze(selected);
+      onAnalyze(selected, forceRefresh);
     }
   };
 
@@ -228,6 +229,18 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                         </motion.div>
                       )}
                     </AnimatePresence>
+                    <div className="flex items-center gap-3 px-2 mt-4">
+                      <input 
+                        type="checkbox" 
+                        id="forceRefresh"
+                        checked={forceRefresh}
+                        onChange={(e) => setForceRefresh(e.target.checked)}
+                        className="w-5 h-5 rounded-lg border-[#E5E5EA] dark:border-white/10 bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#0071E3] focus:ring-[#0071E3] transition-all cursor-pointer"
+                      />
+                      <label htmlFor="forceRefresh" className="text-sm font-bold text-[#6E6E73] dark:text-[#86868B] cursor-pointer select-none uppercase tracking-widest italic">
+                        Force Deep Refresh <span className="text-[10px] opacity-40">(Bypass 24h Cache)</span>
+                      </label>
+                    </div>
                   </div>
                   
                   <div className="pt-4">

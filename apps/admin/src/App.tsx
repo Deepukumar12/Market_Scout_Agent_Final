@@ -17,9 +17,11 @@ import {
   Globe,
   Zap,
   Lock,
-  BarChart3,
   Sun,
-  Moon
+  Moon,
+  Users,
+  UserPlus,
+  Trash2
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -87,7 +89,6 @@ const ThemeToggle = () => {
 };
 
 const Gauge = ({ value, label, color }: any) => {
-  const { theme } = useTheme();
   const data = [
     { value: value },
     { value: 100 - value },
@@ -130,35 +131,43 @@ const Gauge = ({ value, label, color }: any) => {
 
 const StatCard = ({ title, value, change, icon: Icon, trend, color = 'blue' }: any) => {
   const colorMap: any = {
-    blue: 'from-blue-500/20 to-blue-500/5 text-[#0071E3] border-blue-500/20',
-    emerald: 'from-emerald-500/20 to-emerald-500/5 text-emerald-400 border-emerald-500/20',
-    rose: 'from-rose-500/20 to-rose-500/5 text-rose-400 border-rose-500/20',
-    amber: 'from-amber-500/20 to-amber-500/5 text-amber-400 border-amber-500/20',
+    blue: 'from-blue-500/20 to-blue-500/5 text-[#0071E3] border-blue-500/20 shadow-blue-500/10',
+    emerald: 'from-emerald-500/20 to-emerald-500/5 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10',
+    rose: 'from-rose-500/20 to-rose-500/5 text-rose-400 border-rose-500/20 shadow-rose-500/10',
+    amber: 'from-amber-500/20 to-amber-500/5 text-amber-400 border-amber-500/20 shadow-amber-500/10',
   };
 
   return (
-    <div className="glass-card p-6 rounded-2xl relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 min-h-[140px]">
-      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${colorMap[color]} blur-3xl opacity-20 group-hover:opacity-40 transition-opacity`} />
-      
-      <div className="flex justify-between items-start mb-4 relative z-10">
-        <div className={`p-3 rounded-xl bg-gradient-to-br ${colorMap[color]} border shadow-inner`}>
-          <Icon className="w-6 h-6" />
+    <motion.div 
+      whileHover={{ scale: 1.02, translateY: -5 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`glass-card p-8 rounded-[40px] bg-gradient-to-br ${colorMap[color]} shadow-xl relative overflow-hidden group`}
+    >
+      <div className="absolute top-0 right-0 w-32 h-32 bg-current opacity-[0.03] blur-2xl rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000" />
+      <div className="flex justify-between items-start mb-6">
+        <div className={`p-4 rounded-2xl bg-white/5 border border-white/5 group-hover:glow-${color} transition-all duration-500`}>
+          <Icon size={24} className="group-hover:scale-110 transition-transform duration-500" />
         </div>
         {change && (
-          <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full ${
-            trend === 'up' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-          }`}>
-            {trend === 'up' ? <TrendingUp size={10} /> : <TrendingUp size={10} className="rotate-180" />}
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest italic`}>
+            {trend === 'up' ? <TrendingUp size={12} /> : <TrendingUp size={12} className="rotate-180" />}
             {change}
           </div>
         )}
       </div>
-      
-      <div className="relative z-10">
-        <h3 className="text-[var(--text-secondary)] text-[10px] font-bold tracking-widest uppercase mb-1">{title}</h3>
-        <p className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">{value || '---'}</p>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 mb-1 italic">{title}</p>
+        <h4 className="text-3xl font-black tracking-tighter text-[var(--text-primary)] italic uppercase leading-none">{value || '---'}</h4>
       </div>
-    </div>
+      
+      {/* Decorative pulse */}
+      <div className="absolute bottom-4 right-8 flex items-center gap-1 opacity-20">
+        <div className="w-1 h-1 rounded-full bg-current animate-pulse" />
+        <div className="w-1 h-3 rounded-full bg-current animate-pulse delay-75" />
+        <div className="w-1 h-2 rounded-full bg-current animate-pulse delay-150" />
+      </div>
+    </motion.div>
   );
 };
 
@@ -290,7 +299,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const [stats, setStats] = useState<any>(null);
   const [competitors, setCompetitors] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
@@ -299,6 +308,11 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [users, setUsers] = useState<any[]>([]);
+  const [isAddUserModalOpen, setAddUserModalOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ email: '', full_name: '', password: '', role: 'user' });
+  const [actionLoading, setActionLoading] = useState(false);
+  const [lastSync, setLastSync] = useState<Date>(new Date());
 
   useEffect(() => {
     // Check if user is already authenticated (token exists in localStorage via PlatformClient)
@@ -314,13 +328,14 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
   const fetchData = async () => {
     if (!isAuthenticated) return;
     try {
-      const [systemStats, compList, auditLogs, workerNodes, signals, vaultData] = await Promise.all([
+      const [systemStats, compList, auditLogs, workerNodes, signals, vaultData, userList] = await Promise.all([
         platformClient.getSystemStats(),
         platformClient.getCompetitors(),
         platformClient.getAuditLogs(),
         platformClient.getWorkers(),
         platformClient.getChartData(),
-        platformClient.getVault()
+        platformClient.getVault(),
+        platformClient.getAdminUsers()
       ]);
       setStats(systemStats);
       setCompetitors(compList);
@@ -328,6 +343,8 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
       setWorkers(workerNodes);
       setChartData(signals);
       setVault(vaultData);
+      setUsers(userList);
+      setLastSync(new Date());
     } catch (err: any) {
       console.error("Failed to fetch live admin data", err);
       if (err.response?.status === 401) {
@@ -341,7 +358,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
   useEffect(() => {
     if (isAuthenticated) {
       fetchData();
-      const interval = setInterval(fetchData, 2000);
+      const interval = setInterval(fetchData, 5000); // 5s Ultra-High Frequency Live Feed
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
@@ -368,10 +385,10 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
         <nav className="flex-1 px-6 mt-8 space-y-3 overflow-y-auto custom-scrollbar">
           {[
             { id: 'overview', icon: Activity, label: 'Global Intel' },
+            { id: 'security', icon: Shield, label: 'Security Nexus' },
+            { id: 'users', icon: Users, label: 'User Universe' },
             { id: 'workers', icon: Cpu, label: 'Compute Nodes' },
-            { id: 'logs', icon: Terminal, label: 'System Logs' },
             { id: 'database', icon: Database, label: 'Data Clusters' },
-            { id: 'security', icon: Lock, label: 'Encrypted Vault' },
             { id: 'settings', icon: Settings, label: 'Configuration' },
           ].map((item) => (
             <button
@@ -504,12 +521,30 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
 
               {/* Gauges Row */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="glass-card p-8 rounded-3xl flex flex-col items-center">
-                  <h3 className="font-bold text-lg mb-6 self-start text-[var(--text-primary)]">Operational Pulse</h3>
-                  <div className="flex justify-around w-full gap-2 sm:gap-4 overflow-x-auto no-scrollbar">
-                    <Gauge value={stats?.cpu_usage || 24} label="CPU Load" color="#0071E3" />
-                    <Gauge value={stats?.memory_usage || 58} label="Memory" color="#8b5cf6" />
-                    <Gauge value={stats?.success_rate || 98} label="Success" color="#10b981" />
+                <div className="glass-card p-8 rounded-[40px] flex flex-col items-center">
+                  <h3 className="text-lg font-black mb-8 self-start text-[var(--text-primary)] uppercase italic tracking-tighter">
+                    <Activity className="inline mr-2 text-[#0071E3]" size={18} />
+                    Dynamic <span className="text-[#0071E3]">Telemetry Pulse</span>
+                  </h3>
+                  <div className="flex justify-around w-full gap-4 py-4">
+                    <div className="flex flex-col items-center gap-3 group">
+                      <Gauge value={stats?.cpu_usage || 0} label="CPU Core" color="#0071E3" />
+                      <div className="h-1 w-12 bg-[#0071E3]/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#0071E3] transition-all duration-500" style={{ width: `${stats?.cpu_usage || 0}%` }} />
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-3 group">
+                      <Gauge value={stats?.memory_usage || 0} label="Retention" color="#AF52DE" />
+                      <div className="h-1 w-12 bg-[#AF52DE]/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#AF52DE] transition-all duration-500" style={{ width: `${stats?.memory_usage || 0}%` }} />
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-3 group">
+                      <Gauge value={stats?.success_rate || 100} label="Integrity" color="#34C759" />
+                      <div className="h-1 w-12 bg-[#34C759]/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#34C759] transition-all duration-500" style={{ width: `${stats?.success_rate || 100}%` }} />
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
@@ -586,8 +621,11 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
 
                 <div className="glass-card p-8 rounded-3xl flex flex-col min-h-[400px]">
                   <div className="flex items-center justify-between mb-8">
-                    <h3 className="font-black text-xl text-[var(--text-primary)] uppercase italic tracking-tighter">Security Pulse</h3>
-                    <Shield size={18} className="text-[#0071E3]" />
+                    <h3 className="font-black text-xl text-[var(--text-primary)] uppercase italic tracking-tighter">Security Heartbeat</h3>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                      <Shield size={18} className="text-[#0071E3]" />
+                    </div>
                   </div>
                   <div className="space-y-5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                     {logs.filter(l => l.event.toLowerCase().includes(searchQuery.toLowerCase()) || l.user.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? logs.filter(l => l.event.toLowerCase().includes(searchQuery.toLowerCase()) || l.user.toLowerCase().includes(searchQuery.toLowerCase())).map((alert, i) => (
@@ -713,7 +751,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
                      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full -mr-32 -mt-32" />
                      <h3 className="text-2xl font-black text-[var(--text-primary)] uppercase italic tracking-tighter mb-10 flex items-center gap-4">
                         <Lock className="text-[#0071E3]" size={32} />
-                        Encrypted <span className="text-[#0071E3]">Credential Vault</span>
+                        Identity <span className="text-[#0071E3]">Vault & Security</span>
                      </h3>
 
                      <div className="space-y-6">
@@ -849,7 +887,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
                           <p className="text-2xl font-black text-[var(--text-primary)] italic">{(stats?.total_competitors * 142 + (stats?.active_tasks * 12)) || '0'}</p>
                        </div>
                        <div className="p-6 rounded-[32px] bg-white/5 border border-white/5">
-                          <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic mb-2">Storage Used</p>
+                          <p className="text-[10px] text(--text-secondary)] font-black uppercase tracking-widest italic mb-2">Storage Used</p>
                           <p className="text-2xl font-black text-[var(--text-primary)] italic">{((stats?.total_competitors * 2.4) + (stats?.active_tasks * 0.5)).toFixed(1)} MB</p>
                        </div>
                        <div className="p-6 rounded-[32px] bg-white/5 border border-white/5">
@@ -960,6 +998,255 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
                      <p className="text-[10px] font-black uppercase tracking-[0.3em] italic">No Satellite Nodes Connected</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+          {activeTab === 'users' && (
+            <div className="space-y-10 fade-in">
+              <div className="glass-card rounded-3xl overflow-hidden shadow-2xl">
+                <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5">
+                  <div>
+                    <h3 className="text-2xl font-black text-[var(--text-primary)] uppercase italic tracking-tighter">User <span className="text-blue-500">Universe</span></h3>
+                    <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic mt-1">Managing {users.length} active intelligence accounts</p>
+                  </div>
+                  <button 
+                    onClick={() => setAddUserModalOpen(true)}
+                    className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 py-4 bg-blue-500 hover:bg-blue-400 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 active:scale-95 italic"
+                  >
+                    <UserPlus size={16} />
+                    Provision New Identity
+                  </button>
+                </div>
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left min-w-[800px]">
+                    <thead className="bg-black/5 text-[var(--text-secondary)] text-[10px] uppercase tracking-[0.2em] font-black italic">
+                      <tr>
+                        <th className="px-8 py-5">Identity Profile</th>
+                        <th className="px-8 py-5">Role Protocol</th>
+                        <th className="px-8 py-5">Status</th>
+                        <th className="px-8 py-5">Enrolled Date</th>
+                        <th className="px-8 py-5 text-right">Administrative Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-sm">
+                      {users.length > 0 ? users.filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || u.full_name?.toLowerCase().includes(searchQuery.toLowerCase())).map((user, i) => (
+                        <tr key={i} className="hover:bg-white/[0.02] transition-colors group">
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 p-[1px] group-hover:scale-110 transition-transform">
+                                <div className="w-full h-full rounded-full bg-[var(--bg-primary)] flex items-center justify-center text-[10px] font-black text-[var(--text-primary)] uppercase">
+                                  {user.full_name?.[0] || user.email[0]}
+                                </div>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-[var(--text-primary)] italic uppercase tracking-tight leading-tight">{user.full_name || 'Anonymous Agent'}</span>
+                                <span className="text-[10px] text-[var(--text-secondary)] opacity-50 font-mono italic">{user.email}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-2">
+                              <Shield size={12} className={user.role === 'admin' ? 'text-amber-500' : 'text-blue-500'} />
+                              <span className={cn(
+                                "text-[10px] font-black uppercase tracking-widest italic",
+                                user.role === 'admin' ? "text-amber-500" : "text-blue-500"
+                              )}>{user.role}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                             <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest italic text-emerald-400">Active</span>
+                             </div>
+                          </td>
+                          <td className="px-8 py-6 text-[var(--text-secondary)] font-black uppercase text-[10px] italic tracking-widest">
+                            {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Historical'}
+                          </td>
+                          <td className="px-8 py-6 text-right">
+                             <div className="flex justify-end gap-2">
+                               <button 
+                                 onClick={async () => {
+                                   if (window.confirm(`Purge identity ${user.email} and all associated intelligence data? This action is irreversible.`)) {
+                                     setActionLoading(true);
+                                     try {
+                                       await platformClient.deleteAdminUser(user.id);
+                                       fetchData();
+                                     } finally {
+                                       setActionLoading(false);
+                                     }
+                                   }
+                                 }}
+                                 disabled={actionLoading || user.email === 'deeputhakur0986@gmail.com'}
+                                 className="p-3 rounded-xl bg-white/5 hover:bg-rose-500 text-rose-400 hover:text-white transition-all border border-white/5 disabled:opacity-30 disabled:hover:bg-white/5 disabled:hover:text-rose-400"
+                               >
+                                 <Trash2 size={16} />
+                               </button>
+                             </div>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan={5} className="px-8 py-20 text-center opacity-20 italic font-black uppercase tracking-widest text-[10px]">No Identities Found</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add User Modal */}
+          <AnimatePresence>
+            {isAddUserModalOpen && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl bg-black/60">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  className="glass-card w-full max-w-lg p-10 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full -mr-32 -mt-32" />
+                  
+                  <h3 className="text-3xl font-black text-[var(--text-primary)] uppercase italic tracking-tighter mb-8 flex items-center gap-4">
+                    <UserPlus className="text-blue-500" size={32} />
+                    Identity <span className="text-blue-500">Provisioning</span>
+                  </h3>
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] italic ml-2">Full Identity Name</label>
+                      <input 
+                        type="text" 
+                        value={newUser.full_name}
+                        onChange={(e) => setNewUser({...newUser, full_name: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-[var(--text-primary)] font-bold italic outline-none focus:ring-2 focus:ring-blue-500/30" 
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] italic ml-2">Cipher Email</label>
+                      <input 
+                        type="email" 
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-[var(--text-primary)] font-bold italic outline-none focus:ring-2 focus:ring-blue-500/30" 
+                        placeholder="agent@scoutforge.ai"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] italic ml-2">Security Hash</label>
+                        <input 
+                          type="password" 
+                          value={newUser.password}
+                          onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-[var(--text-primary)] font-bold italic outline-none focus:ring-2 focus:ring-blue-500/30" 
+                          placeholder="••••••••"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] italic ml-2">Protocol Role</label>
+                        <select 
+                          value={newUser.role}
+                          onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-[var(--text-primary)] font-bold italic outline-none focus:ring-2 focus:ring-blue-500/30"
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Administrator</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 mt-10">
+                    <button 
+                      onClick={() => setAddUserModalOpen(false)}
+                      className="flex-1 py-5 bg-white/5 hover:bg-white/10 text-[var(--text-primary)] rounded-[24px] font-black uppercase tracking-widest text-xs italic border border-white/10 transition-all"
+                    >
+                      Abort
+                    </button>
+                    <button 
+                      disabled={actionLoading || !newUser.email || !newUser.password}
+                      onClick={async () => {
+                        setActionLoading(true);
+                        try {
+                          await platformClient.createAdminUser(newUser);
+                          setAddUserModalOpen(false);
+                          setNewUser({ email: '', full_name: '', password: '', role: 'user' });
+                          fetchData();
+                        } finally {
+                          setActionLoading(false);
+                        }
+                      }}
+                      className="flex-1 py-5 bg-blue-500 hover:bg-blue-400 text-white rounded-[24px] font-black uppercase tracking-widest text-xs italic shadow-xl shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-30"
+                    >
+                      {actionLoading ? 'Initializing...' : 'Authorize Identity'}
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+          {activeTab === 'settings' && (
+            <div className="space-y-10 fade-in">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="glass-card p-10 rounded-[48px] relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full -mr-32 -mt-32" />
+                  <h3 className="text-2xl font-black text-[var(--text-primary)] uppercase italic tracking-tighter mb-10 flex items-center gap-4">
+                    <Activity className="text-[#0071E3]" size={32} />
+                    Global <span className="text-[#0071E3]">Scheduler</span>
+                  </h3>
+                  <div className="space-y-8">
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] italic">Surveillance Pulse Frequency</label>
+                      <div className="flex gap-4">
+                        <input type="number" defaultValue={1} className="flex-1 bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-[var(--text-primary)] font-bold italic outline-none focus:ring-2 focus:ring-blue-500/30" />
+                        <select className="bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-[var(--text-primary)] font-bold italic outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer">
+                          <option value="minutes">Minutes</option>
+                          <option value="hours">Hours</option>
+                          <option value="days">Days</option>
+                          <option value="weeks">Weeks</option>
+                          <option value="months">Months</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-6 rounded-[32px] bg-white/5 border border-white/5">
+                      <div className="space-y-1">
+                        <p className="text-sm font-black text-[var(--text-primary)] uppercase italic tracking-tight">Email Briefing Protocol</p>
+                        <p className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest italic opacity-50">Dispatch intelligence reports automatically</p>
+                      </div>
+                      <div className="relative w-14 h-8 rounded-full bg-[#0071E3] p-1 cursor-pointer">
+                         <div className="w-6 h-6 rounded-full bg-white ml-6" />
+                      </div>
+                    </div>
+                    <div className="pt-6">
+                      <button className="w-full py-5 bg-[#0071E3] hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs italic shadow-xl shadow-blue-600/20 transition-all active:scale-95">Update Global Heartbeat</button>
+                    </div>
+                  </div>
+                </div>
+                <div className="glass-card p-10 rounded-[48px]">
+                  <h3 className="text-2xl font-black text-[var(--text-primary)] uppercase italic tracking-tighter mb-10 flex items-center gap-4">
+                    <Shield className="text-rose-500" size={32} />
+                    Admin <span className="text-rose-500">Node Safety</span>
+                  </h3>
+                  <div className="space-y-6">
+                     <div className="p-6 rounded-[32px] bg-white/5 border border-white/5 flex items-center justify-between group cursor-pointer hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-4">
+                           <Lock className="text-[var(--text-secondary)] group-hover:text-rose-400 transition-colors" size={20} />
+                           <span className="text-sm font-black text-[var(--text-primary)] uppercase italic tracking-tight">Rotate Security Keys</span>
+                        </div>
+                        <ChevronRight size={18} className="text-[var(--text-secondary)]" />
+                     </div>
+                     <div className="p-6 rounded-[32px] bg-white/5 border border-white/5 flex items-center justify-between group cursor-pointer hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-4">
+                           <Terminal className="text-[var(--text-secondary)] group-hover:text-blue-400 transition-colors" size={20} />
+                           <span className="text-sm font-black text-[var(--text-primary)] uppercase italic tracking-tight">Export Audit Logs</span>
+                        </div>
+                        <ChevronRight size={18} className="text-[var(--text-secondary)]" />
+                     </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

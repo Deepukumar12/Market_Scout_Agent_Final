@@ -1,6 +1,6 @@
 """
 Intel pipeline: runs ScoutForge AI scan for a competitor with:
-- Two-phase scan: first scan 14 days, subsequent 7 days
+- Two-phase scan: first scan 7 days, subsequent 7 days
 - Delta detection and feature storage
 - Adaptive scan frequency (72h after 3 empty, 12h when active)
 """
@@ -38,7 +38,7 @@ async def run_competitor_scan(
 ) -> Optional[ScanResponse]:
     """
     Run ScoutForge AI scan for this competitor.
-    Uses two-phase window (14 days first, 7 days delta).
+    Uses two-phase window (7 days first, 7 days delta).
     Persists features via delta engine, updates competitor with adaptive frequency.
     Returns ScanResponse on success, None when Gemini is unavailable.
     """
@@ -106,8 +106,8 @@ async def run_competitor_scan(
                 confidence_score=float(h.get("confidence_score") or 70.0)
             ))
             seen_keys.add(key)
-
-    # Simple risk score: higher frequency of technical releases = higher risk
+    
+    # Strategic intervention recommended within 7 days.
     new_risk = min(1.0, len(merged_features) * 0.1) 
 
     next_check = compute_next_check(freq)

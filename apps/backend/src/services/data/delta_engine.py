@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 COLLECTION = "feature_updates"
 
 # Two-phase scan: first scan uses wider window
-SCAN_FIRST_WINDOW_DAYS = 14  # First scan: look back 14 days
+SCAN_FIRST_WINDOW_DAYS = 7  # First scan: look back 7 days
 SCAN_DELTA_WINDOW_DAYS = 7   # Subsequent scans: strict 7 days
 
 # Adaptive frequency

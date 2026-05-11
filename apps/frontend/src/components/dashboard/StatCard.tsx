@@ -60,7 +60,11 @@ const StatCard: React.FC<StatCardProps> = ({
         {showGauge && (
           <div className="scale-110 flex-shrink-0 relative">
              <CircularGauge 
-               value={typeof value === 'number' ? Math.min(100, value) : 75} 
+               value={(() => {
+                 if (typeof value === 'number') return Math.min(100, value);
+                 const parsed = parseFloat(String(value).replace(/[^0-9.]/g, ''));
+                 return isNaN(parsed) ? 75 : Math.min(100, parsed);
+               })()} 
                size={90} 
                strokeWidth={10} 
                color={isPositive ? "#34C759" : "#FF3B30"} 

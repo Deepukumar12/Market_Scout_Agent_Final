@@ -105,7 +105,7 @@ const RiskPage = () => {
 
                <div className="w-full mt-10 p-8 rounded-3xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10">
                   <p className="text-xl font-black text-[#1D1D1F] dark:text-white mb-2 uppercase italic tracking-tighter">{data.threat_level} Priority</p>
-                  <p className="text-xs text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed italic">Strategic intervention recommended within 14 days.</p>
+                  <p className="text-xs text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed italic">Strategic intervention recommended within 7 days.</p>
                </div>
             </div>
 

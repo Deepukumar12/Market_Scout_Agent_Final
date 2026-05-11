@@ -10,7 +10,7 @@ from src.core.database import db
 router = APIRouter()
 
 class SchedulerConfig(BaseModel):
-    interval_unit: Literal["minutes", "hours", "days"]
+    interval_unit: Literal["minutes", "hours", "days", "weeks", "months"]
     interval_value: int
     email_enabled: bool = False
 
@@ -55,7 +55,12 @@ async def update_scheduler_config(config: SchedulerConfig):
             scheduler.remove_job("auto_scan_job")
             
     # Add new job with updated trigger
-    kwargs = {config.interval_unit: config.interval_value}
+    # APScheduler interval doesn't support 'months' directly, so we map it to days
+    if config.interval_unit == "months":
+        kwargs = {"days": config.interval_value * 30}
+    else:
+        kwargs = {config.interval_unit: config.interval_value}
+        
     scheduler.add_job(
         run_auto_scan, 
         "interval", 
