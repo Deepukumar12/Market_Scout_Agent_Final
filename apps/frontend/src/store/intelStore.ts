@@ -44,14 +44,25 @@ export interface GlobalMetrics {
   last_update: string;
 }
 
+export interface IntelligenceInsight {
+  text: str;
+  url?: string;
+}
+
+export interface IntelligenceTag {
+  name: string;
+  url?: string;
+}
+
 export interface MissionBriefingData {
   executive_summary: string;
-  technical_risks: string[];
-  market_opportunities: string[];
+  technical_risks: IntelligenceInsight[];
+  market_opportunities: IntelligenceInsight[];
   sentiment_pulse: string;
   confidence_score: number;
   integrity_score: number;
   last_updated: string;
+  tags: IntelligenceTag[];
 }
 
 export interface SevenDaySignal {
@@ -74,11 +85,13 @@ export interface InnovationTrends {
     name: string;
     score: number;
     top_feature: string;
+    url?: string;
   }[];
   sector_shift: {
     sector: string;
     velocity: string;
     delta: number;
+    url?: string;
   }[];
 }
 
@@ -90,6 +103,7 @@ export interface MarketComparisonMetric {
   risk_level: string;
   sentiment: string;
   velocity: string;
+  url?: string;
 }
 
 export interface StrategicPlan {
@@ -108,6 +122,7 @@ export interface StrategicPlan {
   risks: string[];
   tags: string[];
   financialProjections: { month: string; value: number; cost: number }[];
+  source_urls?: string[];
 }
 
 export interface ScanReport {
@@ -212,7 +227,6 @@ export const useIntelStore = create<IntelState>((set) => ({
     try {
       const data = await runCompetitorScan(competitorId);
       set({ scanReport: data, loading: false });
-
       if (data.total_valid_updates > 0) {
         addNotification({
           title: `Intelligence Found: ${data.competitor}`,
@@ -221,6 +235,9 @@ export const useIntelStore = create<IntelState>((set) => ({
           competitorId
         });
       }
+      
+      // Broadcast real-time refresh to all listeners
+      window.dispatchEvent(new CustomEvent('intelligence-refresh'));
     } catch (err: any) {
       console.error('Scan error:', err);
       const res = err.response?.data;
