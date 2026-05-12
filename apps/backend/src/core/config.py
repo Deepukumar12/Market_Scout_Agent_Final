@@ -108,9 +108,8 @@ class Settings(BaseSettings):
 
 
     # ---------------------------------------------------
-    # DEVELOPMENT & HYGIENE
+    # DEVELOPMENT & HYGIENE (Mock Mode Removed for 100% Dynamic Telemetry)
     # ---------------------------------------------------
-    MOCK_MODE: bool = False
     GITHUB_TOKEN: str = ""
 
 
