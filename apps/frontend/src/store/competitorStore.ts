@@ -8,6 +8,15 @@ interface Competitor {
     _id?: string;
     name: string;
     url: string;
+    status?: string;
+    last_scan?: string;
+    firmographics?: {
+        logo?: string;
+        industry?: string;
+        location?: string;
+        employees?: number;
+        market_cap?: string;
+    };
     count?: number;
     total_sources_scanned_cumulative?: number;
     total_updates_cumulative?: number;
@@ -62,6 +71,9 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
                 message: `${name} has been added to surveillance network. Initial scan scheduled.`,
                 type: 'success'
             });
+
+            // Broadcast real-time refresh to all listeners
+            window.dispatchEvent(new CustomEvent('intelligence-refresh'));
 
             return newOne;
         } catch (err) {

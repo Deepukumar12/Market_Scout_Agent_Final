@@ -40,6 +40,7 @@ class Competitor(CompetitorBase):
     user_id: Optional[str] = None # Added for ownership authorization
     status: CompetitorStatus = CompetitorStatus.ACTIVE
     last_scan: Optional[datetime] = None
+    firmographics: Optional[dict] = Field(default_factory=dict)
     scan_success_rate: float = 0.0
     risk_score: float = 0.0
     confidence_score: float = 0.0

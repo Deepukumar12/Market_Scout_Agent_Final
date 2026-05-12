@@ -65,6 +65,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                     };
 
                     const updatedNotifications = [newNotification, ...state.notifications];
+                    
+                    // Trigger dynamic dashboard refresh if a scan completed
+                    if (data.title?.toLowerCase().includes('complete') || data.title?.toLowerCase().includes('intelligence')) {
+                        window.dispatchEvent(new CustomEvent('intelligence-refresh'));
+                    }
+                    
                     return {
                         notifications: updatedNotifications,
                         unreadCount: updatedNotifications.filter(n => !n.read).length

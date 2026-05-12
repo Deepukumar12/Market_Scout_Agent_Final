@@ -94,7 +94,7 @@ const router = createBrowserRouter([
           { path: "analytics", element: <AnalyticsPage /> },
           { path: "risk", element: <RiskPage /> },
           { path: "settings", element: <SettingsPage /> },
-          { path: "ai-suggestion", element: <AiSuggestionPage /> },
+          { path: "ai-suggestions", element: <AiSuggestionPage /> },
         ],
       },
     ],

@@ -14,24 +14,12 @@ async def init_scheduler():
     settings = await db.db.system_settings.find_one({"_id": "scheduler"}) if db.db is not None else None
     if settings:
         interval_unit = settings.get("interval_unit", "days")
-        interval_value = settings.get("interval_value", 1)
+        interval_value = settings.get("interval_value", 7)
     else:
         interval_unit = "days"
-        interval_value = 1
+        interval_value = 7
         
-    # Map UI units to APScheduler interval units
-    unit_map = {
-        "minutes": "minutes",
-        "hours": "hours",
-        "days": "days",
-        "weeks": "weeks",
-        "months": "weeks" # APScheduler interval doesn't have months, map to weeks (approx)
-    }
-    
-    final_unit = unit_map.get(interval_unit, "days")
-    final_value = interval_value * 4 if interval_unit == "months" else interval_value
-    
-    kwargs = {final_unit: final_value}
+    kwargs = {interval_unit: interval_value}
     
     scheduler.add_job(
         run_auto_scan, 
@@ -48,3 +36,4 @@ def stop_scheduler():
     if scheduler.running:
         scheduler.shutdown()
         print("🕒 Scheduler (Daily Reports) stopped.")
+

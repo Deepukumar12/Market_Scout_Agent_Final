@@ -10,16 +10,18 @@ import {
   TrendingUp,
   Smile,
   Globe,
-  ShieldAlert
+  ShieldAlert,
+  Cpu
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
+import { useAuthStore } from '@/store/authStore';
 
 const menuItems = [
   { icon: LayoutDashboard, text: 'Dashboard', path: '/dashboard' },
   { icon: BarChart3, text: 'Analytics', path: '/dashboard/analytics' },
   { icon: Users, text: 'Competitors', path: '/dashboard/competitors' },
 
-  { icon: Sparkles, text: 'Insights', path: '/dashboard/ai-suggestion' },
+  { icon: Sparkles, text: 'Insights', path: '/dashboard/ai-suggestions' },
   { icon: TrendingUp, text: 'Predictive', path: '/dashboard/predictive-analytics' },
   { icon: Smile, text: 'Sentiment', path: '/dashboard/sentiment-analysis' },
   { icon: Globe, text: 'Target Universe', path: '/dashboard/target-universe' },
@@ -31,6 +33,17 @@ const menuItems = [
 import ThemeToggle from './ThemeToggle';
 
 const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen, onClose }) => {
+  const { user } = useAuthStore();
+  
+  const activeMenuItems = React.useMemo(() => {
+    const baseItems = [...menuItems];
+    if (user?.role === 'admin') {
+      baseItems.push({ icon: Cpu, text: 'Global Scheduler', path: '/dashboard/settings?tab=system' });
+      baseItems.push({ icon: ShieldAlert, text: 'Admin Center', path: 'http://localhost:5174' });
+    }
+    return baseItems;
+  }, [user]);
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -46,27 +59,52 @@ const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen,
         isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
       )}>
         <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === '/dashboard'}
-            onClick={onClose}
-            className={({ isActive }) => cn(
-              "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",
-              isActive 
-                ? "bg-[#0071E3] text-white shadow-apple-blue font-bold" 
-                : "text-[#6E6E73] dark:text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:text-white dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E]"
-            )}
-          >
-            {({ isActive }) => (
-              <>
-                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-                <span className="text-[15px]">{item.text}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
+        {activeMenuItems.map((item) => {
+          const isExternal = item.path.startsWith('http');
+          const content = (
+            <>
+              <item.icon size={20} strokeWidth={2} />
+              <span className="text-[15px]">{item.text}</span>
+            </>
+          );
+          
+          if (isExternal) {
+            return (
+              <a
+                key={item.path}
+                href={item.path}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",
+                  "text-[#6E6E73] dark:text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:text-white dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E]"
+                )}
+              >
+                {content}
+              </a>
+            );
+          }
+
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/dashboard'}
+              onClick={onClose}
+              className={({ isActive }) => cn(
+                "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",
+                isActive 
+                  ? "bg-[#0071E3] text-white shadow-apple-blue font-bold" 
+                  : "text-[#6E6E73] dark:text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:text-white dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E]"
+              )}
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                  <span className="text-[15px]">{item.text}</span>
+                </>
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
 
       <div className="px-6 mt-auto space-y-4">
