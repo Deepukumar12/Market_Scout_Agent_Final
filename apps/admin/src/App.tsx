@@ -405,6 +405,17 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
               {activeTab === item.id && isSidebarOpen && <ChevronRight size={16} className="ml-auto opacity-50" />}
             </button>
           ))}
+          
+          <div className="pt-6 border-t border-white/5 mt-6">
+            <a
+              href="http://localhost:5173"
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group whitespace-nowrap text-blue-400 hover:bg-blue-500/10 hover:text-blue-300`}
+            >
+              <Globe size={22} className="shrink-0" />
+              {isSidebarOpen && <span className="font-bold italic uppercase tracking-tighter">Mission Control</span>}
+              {isSidebarOpen && <ChevronRight size={16} className="ml-auto opacity-50" />}
+            </a>
+          </div>
         </nav>
 
         <div className="p-6 border-t border-white/5 mt-auto">
