@@ -99,12 +99,8 @@ async def search_web_multi(
         except Exception as e:
             logger.error(f"DuckDuckGo fallback error: {e}")
 
-    # 3. Mock results ONLY if MOCK_MODE is True
-    if settings.MOCK_MODE:
-        logger.info(f"MOCK_MODE: Returning synthetic results for query '{query}'")
-        for i in range(num_results):
-            add_result(f"https://example.com/mock-news-{i}", f"Mock: {query}", "Synthetic result", "mock")
-        return results[:num_results]
+    # 100% Dynamic search orchestration - MOCK_MODE removed
+    return results[:num_results]
 
     tavily_results = results[:num_results]
 
@@ -121,8 +117,6 @@ async def search_specialized(query: str, engine: str, num_results: int = 3) -> L
     """
     Run specialized search (images, maps, youtube, shopping) by translating into high-intent queries.
     """
-    if settings.MOCK_MODE:
-        return [{"url": f"https://mock-{engine}.com/{i}", "title": f"Mock {engine}", "snippet": "Synthetic"} for i in range(num_results)]
 
     # Translate engine to query prefix for better intent
     intent_query = query
