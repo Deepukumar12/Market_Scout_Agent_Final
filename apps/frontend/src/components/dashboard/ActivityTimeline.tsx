@@ -123,7 +123,11 @@ const ActivityTimeline = ({ days }: ActivityTimelineProps) => {
                             )}
                             
                             <h6 className="text-base font-bold text-[#1D1D1F] dark:text-white tracking-tight mb-2">
-                              {activity.title}
+                              {activity.url ? (
+                                <a href={activity.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 hover:underline decoration-blue-500/30 underline-offset-4 transition-all">
+                                  {activity.title}
+                                </a>
+                              ) : activity.title}
                             </h6>
                             
                             <p className="text-[13px] text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed max-w-2xl">

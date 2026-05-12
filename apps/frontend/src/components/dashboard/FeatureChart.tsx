@@ -61,8 +61,11 @@ const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
             <YAxis 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'currentColor', fontSize: 10, fontWeight: 500 }}
+              tick={{ fill: 'currentColor', fontSize: 10, fontWeight: 700 }}
               className="text-[#86868B] dark:text-[#A1A1A6]"
+              allowDecimals={false}
+              domain={[0, 'auto']}
+              tickCount={6}
             />
             <Tooltip 
               contentStyle={{ 

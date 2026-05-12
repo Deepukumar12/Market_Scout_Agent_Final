@@ -22,7 +22,9 @@ const SourceCard: React.FC<SourceCardProps> = ({ title, source, date, url }) => 
           </span>
         </div>
         <h4 className="text-base font-bold text-[#1D1D1F] dark:text-white line-clamp-2 leading-tight mb-3">
-          {title}
+          <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 hover:underline decoration-blue-500/30 underline-offset-4 transition-all">
+            {title}
+          </a>
         </h4>
       </div>
       

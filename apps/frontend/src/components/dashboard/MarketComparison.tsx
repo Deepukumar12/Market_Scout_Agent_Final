@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Shield, Zap, BarChart3 } from 'lucide-react';
+import { Shield, Zap, BarChart3, ExternalLink } from 'lucide-react';
 import { MarketComparisonMetric } from '@/store/intelStore';
 import { cn, getCompetitorColor } from '@/utils/utils';
 
@@ -18,16 +18,16 @@ const MarketComparison = ({ data }: MarketComparisonProps) => {
           <p className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mt-2 italic opacity-60">Comparative Data Points Matrix</p>
         </div>
         <div className="flex items-center gap-4">
-           <a 
-            href="/api/v1/intelligence/market-comparison" 
+          <a
+            href="/api/v1/intelligence/market-comparison"
             target="_blank"
             className="text-[10px] font-black uppercase tracking-widest text-[#0071E3] bg-[#0071E3]/10 px-4 py-2 rounded-full border border-[#0071E3]/20 hover:scale-105 transition-all italic"
-           >
-             Verify Matrix Data
-           </a>
+          >
+            Verify Matrix Data
+          </a>
         </div>
       </div>
-      
+
       <div className="overflow-hidden rounded-[40px] border border-[#E5E5EA] dark:border-white/10 bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-xl shadow-apple">
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
@@ -42,7 +42,7 @@ const MarketComparison = ({ data }: MarketComparisonProps) => {
             </thead>
             <tbody>
               {data.map((row, i) => (
-                <motion.tr 
+                <motion.tr
                   key={row.competitor}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -50,12 +50,25 @@ const MarketComparison = ({ data }: MarketComparisonProps) => {
                   className="group hover:bg-[#F5F5F7]/50 dark:hover:bg-white/5 transition-colors border-b border-[#F5F5F7] dark:border-white/5 last:border-0"
                 >
                   <td className="px-8 py-6">
-                    <div 
-                      className="font-black uppercase tracking-tighter italic"
-                      style={{ color: getCompetitorColor(row.competitor) }}
-                    >
-                      {row.competitor}
-                    </div>
+                    {row.url ? (
+                      <a
+                        href={row.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-black uppercase tracking-tighter italic hover:underline decoration-blue-500/30 underline-offset-4 transition-all inline-flex items-center gap-2"
+                        style={{ color: getCompetitorColor(row.competitor) }}
+                      >
+                        {row.competitor}
+                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </a>
+                    ) : (
+                      <div
+                        className="font-black uppercase tracking-tighter italic"
+                        style={{ color: getCompetitorColor(row.competitor) }}
+                      >
+                        {row.competitor}
+                      </div>
+                    )}
                     <div className="text-[10px] font-bold text-[#34C759] uppercase">{row.sentiment} Sentiment</div>
                   </td>
                   <td className="px-8 py-6 text-center">
@@ -67,7 +80,7 @@ const MarketComparison = ({ data }: MarketComparisonProps) => {
                         {row.innovation_score}/100
                       </span>
                       <div className="w-24 h-1.5 bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-full overflow-hidden">
-                        <motion.div 
+                        <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${row.innovation_score}%` }}
                           className="h-full rounded-full"
@@ -80,10 +93,10 @@ const MarketComparison = ({ data }: MarketComparisonProps) => {
                     <div className="flex justify-center">
                       <span className={cn(
                         "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] italic flex items-center gap-2 border",
-                        row.risk_level === 'Low' 
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-                          : row.risk_level === 'Medium' 
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
+                        row.risk_level === 'Low'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          : row.risk_level === 'Medium'
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                             : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                       )}>
                         <Shield size={10} className="fill-current" /> {row.risk_level}
@@ -92,9 +105,8 @@ const MarketComparison = ({ data }: MarketComparisonProps) => {
                   </td>
                   <td className="px-8 py-6 text-center">
                     <div className="flex justify-center">
-                      <span className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest italic ${
-                        row.velocity === 'High' ? 'text-[#AF52DE]' : 'text-[#86868B]'
-                      }`}>
+                      <span className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest italic ${row.velocity === 'High' ? 'text-[#AF52DE]' : 'text-[#86868B]'
+                        }`}>
                         {row.velocity === 'High' ? <Zap size={12} fill="currentColor" /> : <BarChart3 size={12} />}
                         {row.velocity}
                       </span>

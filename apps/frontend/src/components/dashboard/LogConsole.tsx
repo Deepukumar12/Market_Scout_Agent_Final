@@ -3,6 +3,7 @@ import { Terminal, Minimize2 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
+import { useExecutionStore } from '@/store/executionStore';
 
 interface LogEntry {
   message: string;

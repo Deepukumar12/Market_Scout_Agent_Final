@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ShieldAlert, Lightbulb, Activity, TrendingUp, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, Lightbulb, Activity, TrendingUp, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { MissionBriefingData } from '@/store/intelStore';
 import CircularGauge from './CircularGauge';
 
@@ -38,16 +38,29 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
           </div>
 
           {/* executive summary */}
-          <h2 className="text-xl lg:text-2xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic leading-tight max-w-2xl relative z-10">
+          <h2 className="text-xl lg:text-2xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tight italic leading-tight max-w-2xl relative z-10">
             {data.executive_summary}
           </h2>
 
           {/* tags */}
           <div className="flex flex-wrap gap-2 relative z-10">
-            {['Accuracy: 100%', 'Verified Source', '7-Day Window'].map((tag) => (
-              <span key={tag} className="px-4 py-1.5 rounded-xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[9px] font-black text-[#1D1D1F] dark:text-white uppercase tracking-widest italic">
-                {tag}
-              </span>
+            {(data.tags || []).map((tag, i) => (
+              tag.url ? (
+                <a 
+                  key={i} 
+                  href={tag.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-4 py-1.5 rounded-xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[9px] font-black text-[#1D1D1F] dark:text-white uppercase tracking-widest italic hover:bg-white/10 hover:border-blue-500/30 transition-all flex items-center gap-1 group/tag"
+                >
+                  {tag.name}
+                  <ArrowUpRight size={8} className="opacity-0 group-hover/tag:opacity-100 transition-opacity" />
+                </a>
+              ) : (
+                <span key={i} className="px-4 py-1.5 rounded-xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[9px] font-black text-[#1D1D1F] dark:text-white uppercase tracking-widest italic">
+                  {tag.name}
+                </span>
+              )
             ))}
           </div>
         </div>
@@ -86,7 +99,11 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
             {data.technical_risks.map((risk, i) => (
               <li key={i} className="flex items-start gap-3 text-[13px] font-semibold text-[#6E6E73] dark:text-[#A1A1A6] leading-relaxed italic group-hover:text-[#1D1D1F] dark:group-hover:text-white transition-colors">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-[6px] shrink-0 shadow-[0_0_6px_rgba(244,63,94,0.6)]" />
-                {risk}
+                {risk.url ? (
+                  <a href={risk.url} target="_blank" rel="noopener noreferrer" className="hover:text-rose-600 dark:hover:text-rose-400 hover:underline decoration-rose-500/30 underline-offset-4 transition-all">
+                    {risk.text}
+                  </a>
+                ) : risk.text}
               </li>
             ))}
           </ul>
@@ -112,7 +129,11 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
             {data.market_opportunities.map((opp, i) => (
               <li key={i} className="flex items-start gap-3 text-[13px] font-semibold text-[#6E6E73] dark:text-[#A1A1A6] leading-relaxed italic group-hover:text-[#1D1D1F] dark:group-hover:text-white transition-colors">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] mt-[6px] shrink-0 shadow-[0_0_6px_rgba(0,113,227,0.6)]" />
-                {opp}
+                {opp.url ? (
+                  <a href={opp.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline decoration-blue-500/30 underline-offset-4 transition-all">
+                    {opp.text}
+                  </a>
+                ) : opp.text}
               </li>
             ))}
           </ul>
