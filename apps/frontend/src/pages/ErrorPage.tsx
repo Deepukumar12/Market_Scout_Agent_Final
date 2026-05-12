@@ -1,6 +1,6 @@
 import { useRouteError, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
-import { AlertTriangle, Home, RefreshCw, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Home, RotateCw, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const ErrorPage = () => {
@@ -46,7 +46,7 @@ const ErrorPage = () => {
             onClick={() => window.location.reload()}
             className="w-full sm:w-auto h-14 px-10 rounded-full bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-[11px] shadow-2xl transition-all active:scale-95"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RotateCw className="w-4 h-4 mr-2" />
             Recalibrate Console
           </Button>
           <Button 

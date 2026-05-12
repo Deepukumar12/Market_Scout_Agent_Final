@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
     Activity, Globe, Zap, Search,
-    ArrowUpRight, Plus, Terminal, RefreshCw, Layers
+    ArrowUpRight, Plus, Terminal, RotateCw, Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
@@ -21,6 +21,7 @@ interface IntelSignal {
     source: string;
     sentiment: string;
     impact_score: number;
+    url: string;
 }
 
 interface Recommendation {
@@ -85,18 +86,28 @@ const getSectorIcon = (sector: string) => {
             return acc;
         }, {});
         
-        return Object.keys(counts).map(key => ({ 
+        let data = Object.keys(counts).map(key => ({ 
             subject: key, 
             A: counts[key], 
-            fullMark: 100 
+            fullMark: Math.max(...(Object.values(counts) as number[]), 10)
         }));
+
+        // Ensure at least 3 axes for a proper radar shape
+        const placeholders = ['Innovation', 'Infrastructure', 'Market'];
+        placeholders.forEach(p => {
+            if (!counts[p] && data.length < 5) {
+                data.push({ subject: p, A: 0, fullMark: 10 });
+            }
+        });
+
+        return data;
     }, [signals]);
 
     return (
         <div className="space-y-6 min-h-screen">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-5xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic flex items-center gap-3">
+                    <h1 className="text-5xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tight italic flex items-center gap-3 pr-8">
                         Target <span className="text-[#0071E3]">Universe</span>
                     </h1>
                     <p className="text-[#6E6E73] dark:text-[#86868B] text-lg font-medium italic mt-2">
@@ -104,8 +115,8 @@ const getSectorIcon = (sector: string) => {
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline" onClick={fetchData} className="border-[#E5E5EA] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/5 text-[#6E6E73] dark:text-[#86868B] rounded-2xl h-12 font-black uppercase tracking-widest text-[10px]">
-                        <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                    <Button variant="outline" onClick={fetchData} className="border-[#E5E5EA] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/5 text-[#6E6E73] dark:text-[#86868B] rounded-2xl h-12 px-8 font-black uppercase tracking-widest text-[10px]">
+                        <RotateCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                         SYNC STREAM
                     </Button>
                 </div>
@@ -116,7 +127,7 @@ const getSectorIcon = (sector: string) => {
                 <div className="lg:col-span-2 space-y-10">
                 <div className="bg-white/70 dark:bg-[#1D1D1F]/70 border border-[#E5E5EA] dark:border-white/10 rounded-[48px] overflow-hidden backdrop-blur-3xl shadow-apple-large transition-all duration-500">
                     <div className="px-8 py-6 border-b border-[#E5E5EA] dark:border-white/10 flex items-center justify-between bg-white/40 dark:bg-white/5">
-                        <h2 className="text-[10px] font-black text-[#0071E3] uppercase tracking-[0.2em] flex items-center gap-3 italic">
+                        <h2 className="text-[10px] font-black text-[#0071E3] uppercase tracking-[0.2em] flex items-center gap-3 italic pr-8">
                             <Activity className="w-4 h-4 animate-pulse" />
                             Live Signal Intercepts
                         </h2>
@@ -166,13 +177,30 @@ const getSectorIcon = (sector: string) => {
                                     <div className="pl-16 flex items-center justify-between">
                                         <div className="flex items-center gap-6">
                                             <span className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono flex items-center gap-2">
-                                                <span className="opacity-50">SOURCE:</span> <span className="text-[#1D1D1F] dark:text-white font-black">{signal.source}</span>
+                                                <span className="opacity-50">SOURCE:</span> 
+                                                <a 
+                                                    href={signal.url} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer" 
+                                                    className="text-[#0071E3] hover:underline font-black"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {signal.source}
+                                                </a>
                                             </span>
                                             <span className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono flex items-center gap-2">
                                                 <span className="opacity-50">TYPE:</span> <span className="text-[#0071E3] font-black">{signal.signal_type}</span>
                                             </span>
                                         </div>
-                                        <Button size="sm" variant="ghost" className="h-8 text-[10px] font-black text-[#0071E3] hover:text-white hover:bg-[#0071E3] uppercase tracking-widest rounded-xl transition-all">
+                                        <Button 
+                                            size="sm" 
+                                            variant="ghost" 
+                                            className="h-8 text-[10px] font-black text-[#0071E3] hover:text-white hover:bg-[#0071E3] uppercase tracking-widest rounded-xl transition-all"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                window.open(signal.url, '_blank', 'noopener,noreferrer');
+                                            }}
+                                        >
                                             Investigate <ArrowUpRight className="w-3 h-3 ml-2" />
                                         </Button>
                                     </div>
@@ -191,7 +219,7 @@ const getSectorIcon = (sector: string) => {
                         </h3>
                         <div className="h-[300px] w-full relative z-10 transition-transform group-hover:scale-105">
                             <ResponsiveContainer width="100%" height="100%">
-                                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
+                                <RadarChart cx="50%" cy="50%" outerRadius="45%" data={chartData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
                                     <PolarGrid stroke="#86868B" opacity={0.2} />
                                     <PolarAngleAxis dataKey="subject" tick={{ fill: '#86868B', fontSize: 10, fontWeight: 900 }} />
                                     <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />

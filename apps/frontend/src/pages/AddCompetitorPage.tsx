@@ -34,6 +34,16 @@ const AddCompetitorPage = () => {
     'Generating intelligence report...'
   ];
 
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (loading && realStep < progressSteps.length - 1) {
+      interval = setInterval(() => {
+        setStep(Math.min(realStep + 1, progressSteps.length - 2));
+      }, 3500); // Progress through steps every 3.5s
+    }
+    return () => clearInterval(interval);
+  }, [loading, realStep, setStep, progressSteps.length]);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) return;
@@ -60,10 +70,12 @@ const AddCompetitorPage = () => {
       });
 
       if (data && !data.error) {
-        setStep(progressSteps.length - 1);
+        setStep(progressSteps.length - 1); // Finalize
         setSuccess(true);
         setUrl('');
         fetchCompetitors();
+        // Trigger global intelligence refresh
+        window.dispatchEvent(new CustomEvent('intelligence-refresh'));
       } else {
         setError(data?.error || 'Intelligence scan returned internal error.');
       }
@@ -192,7 +204,7 @@ const AddCompetitorPage = () => {
             <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 flex items-center justify-center text-[#0071E3] mx-auto mb-6 shadow-sm">
               <item.icon size={24} />
             </div>
-            <h4 className="text-lg font-black text-[#1D1D1F] dark:text-white mb-2 uppercase italic tracking-tighter">{item.title}</h4>
+            <h4 className="text-lg font-black text-[#1D1D1F] dark:text-white mb-2 uppercase italic tracking-tight pr-8">{item.title}</h4>
             <p className="text-sm text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed italic">{item.desc}</p>
           </div>
         ))}

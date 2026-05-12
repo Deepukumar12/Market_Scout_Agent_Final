@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Settings, ShieldCheck, User, LogOut, Check,
   Sparkles, AlertTriangle, Activity, Monitor, History,
   ExternalLink, Trash2, Smartphone, Globe, Lock,
-  BarChart3, MapPin, Cpu, Zap, Camera, RefreshCw,
+  BarChart3, MapPin, Cpu, Zap, Camera, RotateCw,
   Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -31,6 +31,7 @@ const formatDate = (dateStr: string | null) => {
 const SettingsPage = () => {
   const { user, logout, updateProfile, changePassword, fetchUser } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   
   // 1. Core State Hooks
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,15 @@ const SettingsPage = () => {
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'intelligence' | 'activity' | 'system'>('profile');
+  
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab && ['profile', 'security', 'intelligence', 'activity', 'system'].includes(tab)) {
+      setActiveTab(tab as any);
+    }
+  }, [location]);
+
   const [schedulerConfig, setSchedulerConfig] = useState({ interval_unit: 'days', interval_value: 7, email_enabled: false });
 
   // 2. Real-time Data Store
@@ -75,6 +85,27 @@ const SettingsPage = () => {
   });
 
   // 4. Intelligence Sync Effects
+  const fetchTelemetry = useCallback(async () => {
+    try {
+      const [act, sess, reports] = await Promise.all([
+        getUserActivity(),
+        getUserSessions(),
+        getSavedReports()
+      ]);
+      setActivities(act || []);
+      setSessions(sess || []);
+      setSavedReports(reports || []);
+      
+      if (user?.role === 'admin') {
+        getSchedulerConfig()
+          .then(setSchedulerConfig)
+          .catch(e => console.warn('Scheduler access restricted:', e));
+      }
+    } catch (err) {
+      console.error('Telemetry sync failed:', err);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (user) {
       setProfileForm({
@@ -92,29 +123,19 @@ const SettingsPage = () => {
   }, [user]);
 
   useEffect(() => {
-    const fetchTelemetry = async () => {
-      try {
-        const [act, sess, reports] = await Promise.all([
-          getUserActivity(),
-          getUserSessions(),
-          getSavedReports()
-        ]);
-        setActivities(act || []);
-        setSessions(sess || []);
-        setSavedReports(reports || []);
-      } catch (err) {
-        console.error('Telemetry sync failed:', err);
-      }
-    };
-
-    if (user) fetchTelemetry();
-    
-    if (user?.role === 'admin') {
-      getSchedulerConfig()
-        .then(setSchedulerConfig)
-        .catch(e => console.warn('Scheduler access restricted:', e));
+    if (user) {
+      fetchTelemetry();
+      
+      // Real-time synchronization
+      window.addEventListener('intelligence-refresh', fetchTelemetry);
+      const interval = setInterval(fetchTelemetry, 30000);
+      
+      return () => {
+        window.removeEventListener('intelligence-refresh', fetchTelemetry);
+        clearInterval(interval);
+      };
     }
-  }, [user]);
+  }, [user, fetchTelemetry]);
 
   const handleForceRefresh = async () => {
     setLoading(true);
@@ -280,7 +301,7 @@ const SettingsPage = () => {
               "bg-white dark:bg-white/5 text-[#1D1D1F] dark:text-white border border-[#F0F0F3] dark:border-white/5"
             )}
           >
-            {loading ? <RefreshCw size={14} className="animate-spin" /> : 
+            {loading ? <RotateCw size={14} className="animate-spin" /> : 
              success ? "✓ Protocols Updated" : 
              "Commit Changes"}
           </Button>
@@ -290,7 +311,7 @@ const SettingsPage = () => {
             onClick={handleForceRefresh}
             className="h-12 w-12 rounded-2xl border-[#F0F0F3] dark:border-white/5 flex items-center justify-center p-0"
           >
-            <RefreshCw size={16} className={cn(loading && "animate-spin")} />
+            <RotateCw size={16} className={cn(loading && "animate-spin")} />
           </Button>
         </div>
       </header>
@@ -649,7 +670,7 @@ const SettingsPage = () => {
                                value={schedulerConfig.interval_value.toString()} 
                                onChange={(v) => { setSchedulerConfig({...schedulerConfig, interval_value: parseInt(v)}); setIsDirty(true); }} 
                                placeholder="7"
-                               icon={<RefreshCw size={14} />}
+                               icon={<RotateCw size={14} />}
                              />
                           </div>
                           

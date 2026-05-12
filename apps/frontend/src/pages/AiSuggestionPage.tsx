@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Sparkles, BrainCircuit, RefreshCw,
-  Target, TrendingUp, ShieldAlert, Clock, CheckCircle2 
+  Sparkles, BrainCircuit, RotateCw,
+  Target, TrendingUp, ShieldAlert, Clock, CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useIntelStore } from '@/store/intelStore';
@@ -43,29 +45,54 @@ const LoadingState = () => (
 );
 
 const MetricCard = ({ icon: Icon, label, value, sub }: { icon: any, label: string, value: string, sub: string }) => (
-  <div className="p-6 rounded-3xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 shadow-sm group hover:scale-105 transition-all">
-    <div className="flex items-center gap-3 mb-3">
-      <div className="p-2 rounded-xl bg-white dark:bg-[#1D1D1F] border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm">
+  <div className="p-5 lg:p-6 rounded-3xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 shadow-sm group hover:scale-[1.02] transition-all flex flex-col h-full min-w-0">
+    <div className="flex items-center gap-2 mb-3 min-w-0">
+      <div className="p-2 rounded-xl bg-white dark:bg-[#1D1D1F] border border-[#E5E5EA] dark:border-white/10 shadow-apple-sm shrink-0">
         <Icon className="w-4 h-4 text-blue-600" />
       </div>
-      <span className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest">{label}</span>
+      <span className="text-[9px] lg:text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest truncate">{label}</span>
     </div>
-    <div className="text-2xl font-black text-[#1D1D1F] dark:text-white italic tracking-tighter">{value}</div>
-    <div className="text-[9px] text-[#6E6E73] dark:text-[#86868B] mt-1 uppercase font-bold italic tracking-wide">{sub}</div>
+    <div className="text-xl lg:text-2xl font-black text-[#1D1D1F] dark:text-white italic tracking-tighter leading-none break-words mb-auto">{value}</div>
+    <div className="text-[8px] lg:text-[9px] text-[#6E6E73] dark:text-[#86868B] mt-2 uppercase font-bold italic tracking-wide opacity-80">{sub}</div>
   </div>
 );
 
 const AiSuggestionPage = () => {
+  const location = useLocation();
   const { fetchStrategicPlan, strategicPlan: idea, loading, competitors, fetchCompetitors } = useIntelStore();
   
   // Config State
   const [focusArea, setFocusArea] = useState<FocusArea>('Innovation');
   const [riskLevel, setRiskLevel] = useState<RiskLevel>('Medium');
-  const [selectedComp, setSelectedComp] = useState<string>('');
+  const [selectedComp, setSelectedComp] = useState<string>(location.state?.competitor || '');
 
   useEffect(() => {
     fetchCompetitors();
   }, [fetchCompetitors]);
+
+  useEffect(() => {
+    if (competitors.length > 0 && !selectedComp) {
+      setSelectedComp(competitors[0].name);
+    }
+  }, [competitors, selectedComp]);
+
+  useEffect(() => {
+    // Automatically trigger generation if coming from RiskPage with a specific competitor
+    if (location.state?.competitor && competitors.length > 0) {
+      handleGenerate();
+      // Clear state to prevent re-trigger on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [competitors]);
+
+  useEffect(() => {
+    // Listen for manual refreshes from the modal completion or websocket
+    window.addEventListener('intelligence-refresh', handleGenerate);
+    
+    return () => {
+      window.removeEventListener('intelligence-refresh', handleGenerate);
+    };
+  }, [selectedComp, focusArea, riskLevel]);
 
   const handleGenerate = async () => {
     const cid = selectedComp || (competitors.length > 0 ? competitors[0].name : 'Market');
@@ -77,18 +104,100 @@ const AiSuggestionPage = () => {
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-5xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic">Strategic <span className="text-[#0071E3]">Initiatives</span></h1>
-          <p className="text-[#6E6E73] dark:text-[#86868B] text-lg font-medium italic mt-2">Synthesize product pivots and revenue strategies from live market signals.</p>
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic">Strategic <span className="text-[#0071E3]">Initiatives</span></h1>
+          <p className="text-[#6E6E73] dark:text-[#86868B] text-base md:text-lg font-medium italic mt-2">Synthesize product pivots and revenue strategies from live market signals.</p>
         </div>
-        {!idea && !loading && (
-          <Button 
-            onClick={handleGenerate}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-10 h-16 text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-blue-500/20 gap-3 group transition-all hover:scale-105 active:scale-95"
-          >
-            <Sparkles className="w-5 h-5 fill-current group-hover:animate-pulse" />
-            Synthesize Strategic Plan
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          {idea && (
+            <Button 
+              onClick={handleGenerate}
+              disabled={loading}
+              variant="outline"
+              className="h-14 px-6 rounded-2xl border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#1D1D1F] text-[#1D1D1F] dark:text-white font-black uppercase tracking-widest text-[10px] italic flex items-center gap-2 group shadow-apple-sm transition-all hover:scale-105"
+            >
+               <RotateCw className={cn("w-3.5 h-3.5 text-blue-600 group-hover:rotate-180 transition-transform duration-500", loading && "animate-spin")} />
+               Recalibrate
+            </Button>
+          )}
+          {!idea && !loading && (
+            <Button 
+              onClick={handleGenerate}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-10 h-16 text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-blue-500/20 gap-3 group transition-all hover:scale-105 active:scale-95"
+            >
+              <Sparkles className="w-5 h-5 fill-current group-hover:animate-pulse" />
+              Synthesize Strategic Plan
+            </Button>
+          )}
+          {idea && (
+            <Button 
+              onClick={() => {
+                const reportWindow = window.open('', '_blank');
+                if (!reportWindow) return;
+                const html = `
+                  <html>
+                    <head>
+                      <title>Strategic Intelligence Report - ${selectedComp}</title>
+                      <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #1d1d1f; line-height: 1.6; }
+                        .header { border-bottom: 2px solid #0071e3; padding-bottom: 20px; margin-bottom: 40px; }
+                        h1 { margin: 0; font-size: 32px; font-weight: 900; text-transform: uppercase; font-style: italic; color: #0071e3; }
+                        .meta { color: #86868b; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px; }
+                        .section { margin-bottom: 40px; }
+                        .section-title { font-size: 12px; font-weight: 900; color: #86868b; text-transform: uppercase; letter-spacing: 3px; border-bottom: 1px solid #e5e5ea; padding-bottom: 10px; margin-bottom: 20px; }
+                        .card { padding: 25px; background: #f5f5f7; border-radius: 20px; margin-bottom: 20px; }
+                        .card-title { font-size: 20px; font-weight: 900; font-style: italic; margin-bottom: 10px; }
+                        .grid { display: grid; grid-template-cols: repeat(2, 1fr); gap: 20px; }
+                        .stat { padding: 15px; background: white; border-radius: 15px; }
+                        .stat-label { font-size: 9px; font-weight: 900; color: #86868b; text-transform: uppercase; }
+                        .stat-val { font-size: 18px; font-weight: 900; font-style: italic; }
+                        @media print { .no-print { display: none; } }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="no-print" style="position: fixed; top: 20px; right: 20px;">
+                        <button onclick="window.print()" style="padding: 10px 20px; background: #0071e3; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">Download PDF</button>
+                      </div>
+                      <div class="header">
+                        <h1>STRATEGIC INITIATIVE REPORT</h1>
+                        <div class="meta">Target: ${selectedComp} | Confidence: ${idea.confidence}% | Generated: ${new Date().toLocaleString()}</div>
+                      </div>
+                      <div class="section">
+                        <div class="section-title">Initiative Overview</div>
+                        <div class="card">
+                          <div class="card-title">${idea.title}</div>
+                          <div>${idea.summary}</div>
+                        </div>
+                        <div class="grid">
+                          <div class="stat"><div class="stat-label">Impact</div><div class="stat-val">${idea.impact}</div></div>
+                          <div class="stat"><div class="stat-label">Time to Market</div><div class="stat-val">${idea.timeToMarket}</div></div>
+                          <div class="stat"><div class="stat-label">Est. ROI</div><div class="stat-val">${idea.estimatedROI}</div></div>
+                          <div class="stat"><div class="stat-label">Focus</div><div class="stat-val">${focusArea}</div></div>
+                        </div>
+                      </div>
+                      <div class="section">
+                        <div class="section-title">Market Context</div>
+                        <p><strong>Trigger:</strong> ${idea.marketTrigger}</p>
+                        <p><strong>Opportunity Gap:</strong> ${idea.marketGap}</p>
+                        <p><strong>Target Audience:</strong> ${idea.targetAudience}</p>
+                      </div>
+                      <div class="section">
+                        <div class="section-title">Implementation Roadmap</div>
+                        ${idea.implementation.map(step => `<p><strong>${step.step}:</strong> ${step.detail}</p>`).join('')}
+                      </div>
+                      <script>window.onload = () => setTimeout(() => { window.print(); }, 500);</script>
+                    </body>
+                  </html>
+                `;
+                reportWindow.document.write(html);
+                reportWindow.document.close();
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-10 h-16 text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20 gap-3 group transition-all hover:scale-105 active:scale-95"
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              Download Strategy Report
+            </Button>
+          )}
+        </div>
       </div>
 
       {!idea && !loading && (
@@ -202,22 +311,34 @@ const AiSuggestionPage = () => {
           >
             {/* Main Content Area */}
             <div className="lg:col-span-2 space-y-10">
-              <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large transition-all duration-500">
+              <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large transition-all duration-500 group/hero">
                 <div className="flex items-start gap-8">
-                  <div className="w-20 h-20 rounded-[24px] bg-[#0071E3] flex items-center justify-center shadow-xl shadow-blue-500/30 flex-shrink-0 transition-transform hover:rotate-6">
+                  <div 
+                    className="w-20 h-20 rounded-[24px] bg-[#0071E3] flex items-center justify-center shadow-xl shadow-blue-500/30 flex-shrink-0 transition-transform hover:rotate-6 cursor-pointer"
+                    onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.title)}+technical+feasibility+analysis`, '_blank')}
+                  >
                     <TrendingUp className="w-10 h-10 text-white" />
                   </div>
                   <div className="space-y-6 w-full">
-                    <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
-                        <h2 className="text-4xl font-black text-[#1D1D1F] dark:text-white leading-tight flex-1 pr-4 uppercase italic tracking-tighter">{idea.title}</h2>
-                        <span className="px-5 py-2 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] border border-blue-500/20 shadow-apple-sm shrink-0 whitespace-nowrap italic">
+                    <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start gap-6">
+                        <h2 
+                          className="text-2xl md:text-3xl lg:text-4xl font-black text-[#1D1D1F] dark:text-white leading-tight flex-1 pr-4 uppercase italic tracking-tighter cursor-pointer hover:text-[#0071E3] transition-colors"
+                          onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.title)}+strategic+alignment+market+trends`, '_blank')}
+                        >
+                          {idea.title}
+                        </h2>
+                        <span className="px-5 py-2 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] border border-blue-500/20 shadow-apple-sm shrink-0 whitespace-nowrap italic self-start">
                             {riskLevel} Risk Strategy
                         </span>
                     </div>
                     <p className="text-xl text-[#6E6E73] dark:text-[#86868B] leading-relaxed max-w-2xl font-medium italic">{idea.summary}</p>
                     <div className="flex flex-wrap gap-3">
                       {idea.tags.map(tag => (
-                        <span key={tag} className="px-5 py-2 rounded-full bg-[#F5F5F7] dark:bg-white/5 text-[#86868B] dark:text-[#A1A1A6] text-[10px] font-black uppercase tracking-widest border border-[#E5E5EA] dark:border-white/10 italic">
+                        <span 
+                          key={tag} 
+                          className="px-5 py-2 rounded-full bg-[#F5F5F7] dark:bg-white/5 text-[#86868B] dark:text-[#A1A1A6] text-[10px] font-black uppercase tracking-widest border border-[#E5E5EA] dark:border-white/10 italic hover:border-blue-500/30 cursor-pointer transition-all"
+                          onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(tag)}+market+trends+2024`, '_blank')}
+                        >
                           {tag}
                         </span>
                       ))}
@@ -225,16 +346,24 @@ const AiSuggestionPage = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-12 border-t border-[#F5F5F7] dark:border-white/5">
-                  <MetricCard icon={Target} label="Impact" value={idea.impact} sub="Core Business Value" />
-                  <MetricCard icon={TrendingUp} label="Confidence" value={`${idea.confidence}%`} sub="Data Availability" />
-                  <MetricCard icon={Clock} label="Time to Market" value={idea.timeToMarket} sub="Agile Delivery" />
-                  <MetricCard icon={BrainCircuit} label="Est. ROI" value={idea.estimatedROI} sub="12 Month Proj." />
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6 mt-16 pt-12 border-t border-[#F5F5F7] dark:border-white/5">
+                  <div className="cursor-pointer" onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.title)}+market+impact+analysis`, '_blank')}>
+                    <MetricCard icon={Target} label="Impact" value={idea.impact} sub="Core Business Value" />
+                  </div>
+                  <div className="cursor-pointer" onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.title)}+technical+data+availability+signals`, '_blank')}>
+                    <MetricCard icon={TrendingUp} label="Confidence" value={`${idea.confidence}%`} sub="Data Availability" />
+                  </div>
+                  <div className="cursor-pointer" onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.title)}+development+timeline+benchmarks`, '_blank')}>
+                    <MetricCard icon={Clock} label="Time to Market" value={idea.timeToMarket} sub="Agile Delivery" />
+                  </div>
+                  <div className="cursor-pointer" onClick={() => document.getElementById('intensity-waves')?.scrollIntoView({ behavior: 'smooth' })}>
+                    <MetricCard icon={BrainCircuit} label="Est. ROI" value={idea.estimatedROI} sub="12 Month Proj." />
+                  </div>
                 </div>
               </div>
 
               {/* Financial Projection Area */}
-              <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large group hover:border-[#0071E3]/30 transition-all duration-500">
+               <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large group/matrix hover:border-[#0071E3]/30 transition-all duration-500">
                 <div className="flex items-center justify-between mb-12">
                   <div className="flex items-center gap-6">
                     <div className="w-14 h-14 rounded-2xl bg-[#0071E3]/10 flex items-center justify-center border border-[#0071E3]/20 shadow-sm">
@@ -245,8 +374,17 @@ const AiSuggestionPage = () => {
                       <p className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-mono mt-1 uppercase tracking-[0.2em] italic font-bold">12-month predictive revenue vs capture cost</p>
                     </div>
                   </div>
-                  <div className="px-5 py-2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] border border-emerald-500/20 shadow-apple-sm italic">
-                     ROI GAP: {idea.estimatedROI}
+                  <div className="flex items-center gap-4">
+                    <Button 
+                      onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.title)}+market+ROI+financial+model+analysis`, '_blank')}
+                      variant="outline"
+                      className="h-10 px-5 rounded-2xl border-emerald-500/20 bg-emerald-500/5 text-emerald-600 text-[9px] font-black uppercase tracking-widest italic opacity-0 group-hover/matrix:opacity-100 transition-opacity hover:bg-emerald-500 hover:text-white"
+                    >
+                       Verify Model <ExternalLink size={12} className="ml-2" />
+                    </Button>
+                    <div className="px-5 py-2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] border border-emerald-500/20 shadow-apple-sm italic whitespace-nowrap">
+                       ROI GAP: {idea.estimatedROI}
+                    </div>
                   </div>
                 </div>
                 <div className="h-[380px] w-full mt-6">
@@ -293,16 +431,28 @@ const AiSuggestionPage = () => {
                 </div>
               </div>
 
-              {/* Step by Step Implementation */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large transition-all duration-500">
-                  <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter mb-8 flex items-center gap-3">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-                    Execution Roadmap
-                  </h3>
+                <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large transition-all duration-500 group/roadmap">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter flex items-center gap-3">
+                      <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                      Execution Roadmap
+                    </h3>
+                    <Button 
+                      onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.title)}+implementation+roadmap+phases`, '_blank')}
+                      variant="outline"
+                      className="h-8 px-3 rounded-lg border-emerald-500/20 bg-emerald-500/5 text-emerald-600 text-[8px] font-black uppercase tracking-widest italic opacity-0 group-hover/roadmap:opacity-100 transition-opacity hover:bg-emerald-500 hover:text-white"
+                    >
+                       Verify Phases <ExternalLink size={10} className="ml-1.5" />
+                    </Button>
+                  </div>
                   <div className="space-y-8">
                     {idea.implementation.map((step, i) => (
-                      <div key={i} className="flex gap-6 group">
+                      <div 
+                        key={i} 
+                        className="flex gap-6 group cursor-pointer"
+                        onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(step.step)}+technical+execution+details`, '_blank')}
+                      >
                         <div className="flex flex-col items-center">
                           <div className="w-8 h-8 rounded-full bg-[#0071E3] flex items-center justify-center text-[11px] font-black text-white shrink-0 shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
                             {i + 1}
@@ -320,20 +470,36 @@ const AiSuggestionPage = () => {
                   </div>
                 </div>
 
-                <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large transition-all duration-500">
-                  <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter mb-8 flex items-center gap-3">
-                    <ShieldAlert className="w-6 h-6 text-amber-500" />
-                    Strategic Risk Matrix
-                  </h3>
+                <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large transition-all duration-500 group/risks">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter flex items-center gap-3">
+                      <ShieldAlert className="w-6 h-6 text-amber-500" />
+                      Strategic Risk Matrix
+                    </h3>
+                    <Button 
+                      onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.title)}+competitive+risks+threats`, '_blank')}
+                      variant="outline"
+                      className="h-8 px-3 rounded-lg border-amber-500/20 bg-amber-500/5 text-amber-600 text-[8px] font-black uppercase tracking-widest italic opacity-0 group-hover/risks:opacity-100 transition-opacity hover:bg-amber-500 hover:text-white"
+                    >
+                       Verify Threats <ExternalLink size={10} className="ml-1.5" />
+                    </Button>
+                  </div>
                   <div className="space-y-5">
                     {idea.risks.map((risk, i) => (
-                      <div key={i} className="p-5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 flex gap-4 italic text-sm font-medium text-[#6E6E73] dark:text-[#86868B] hover:border-amber-500/30 transition-all group">
+                      <div 
+                        key={i} 
+                        className="p-5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 flex gap-4 italic text-sm font-medium text-[#6E6E73] dark:text-[#86868B] hover:border-amber-500/30 transition-all group cursor-pointer"
+                        onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(risk)}+market+impact`, '_blank')}
+                      >
                         <span className="text-amber-500 font-black">•</span>
                         {risk}
                       </div>
                     ))}
                   </div>
-                  <div className="mt-10 p-8 rounded-[32px] bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 relative overflow-hidden">
+                  <div 
+                    className="mt-10 p-8 rounded-[32px] bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-all"
+                    onClick={() => window.open(`https://www.google.com/search?q=strategic+risk+mitigation+for+${encodeURIComponent(idea.title)}`, '_blank')}
+                  >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-2xl rounded-full" />
                     <div className="text-xs font-black text-amber-900 dark:text-amber-400 uppercase tracking-[0.2em] mb-3 italic">Mitigation Strategy</div>
                     <p className="text-xs text-amber-800 dark:text-amber-300/80 leading-relaxed font-medium italic">
@@ -346,32 +512,90 @@ const AiSuggestionPage = () => {
 
             {/* Sidebar Details Area */}
             <div className="space-y-10">
-              <div className="p-10 rounded-[48px] bg-[#1D1D1F] dark:bg-[#1C1C1E] text-white shadow-apple-large relative overflow-hidden transition-all duration-500">
+              <div className="p-10 rounded-[48px] bg-[#1D1D1F] dark:bg-[#1C1C1E] text-white shadow-apple-large relative overflow-hidden transition-all duration-500 group/signal">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-[#0071E3]/20 blur-[80px] rounded-full -mr-20 -mt-20 animate-pulse-slow" />
-                <h3 className="text-xl font-black uppercase italic tracking-tighter mb-8">Market Signal Analysis</h3>
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter">Market Signal Analysis</h3>
+                  <Button 
+                    onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.marketTrigger)}+${encodeURIComponent(idea.marketGap)}`, '_blank')}
+                    variant="outline"
+                    className="h-8 px-3 rounded-lg border-blue-500/30 text-blue-400 text-[8px] font-black uppercase tracking-widest italic opacity-0 group-hover/signal:opacity-100 transition-opacity hover:bg-blue-600 hover:text-white"
+                  >
+                    Verify Signals <ExternalLink size={10} className="ml-1.5" />
+                  </Button>
+                </div>
                 <div className="space-y-8">
                   <div className="group">
                     <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 italic">Market Trigger</div>
-                    <p className="text-sm leading-relaxed text-slate-300 font-medium italic group-hover:text-white transition-colors">{idea.marketTrigger}</p>
+                    <p className="text-sm leading-relaxed text-slate-300 font-medium italic group-hover:text-white transition-colors">
+                      <a 
+                        href={idea.source_urls?.[0] || `https://www.google.com/search?q=${encodeURIComponent(idea.marketTrigger)}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[#0071E3] hover:text-blue-400 underline decoration-[#0071E3]/30 underline-offset-4 transition-all inline-flex items-center gap-2 group/link"
+                      >
+                        {idea.marketTrigger}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </p>
                   </div>
                   <div className="group">
                     <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 italic">White Space Opportunity</div>
-                    <p className="text-sm leading-relaxed text-slate-300 font-medium italic group-hover:text-white transition-colors">{idea.marketGap}</p>
+                    <p className="text-sm leading-relaxed text-slate-300 font-medium italic group-hover:text-white transition-colors">
+                      <a 
+                        href={idea.source_urls?.[1] || `https://www.google.com/search?q=${encodeURIComponent(idea.marketGap)}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[#0071E3] hover:text-blue-400 underline decoration-[#0071E3]/30 underline-offset-4 transition-all inline-flex items-center gap-2 group/link"
+                      >
+                        {idea.marketGap}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </p>
                   </div>
                   <div className="group">
                     <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 italic">Primary User Persona</div>
-                    <p className="text-sm leading-relaxed text-slate-300 font-medium italic group-hover:text-white transition-colors">{idea.targetAudience}</p>
+                    <p className="text-sm leading-relaxed text-slate-300 font-medium italic group-hover:text-white transition-colors">
+                      <a 
+                        href={idea.source_urls?.[2] || `https://www.google.com/search?q=${encodeURIComponent(idea.targetAudience)}+market+needs`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[#0071E3] hover:text-blue-400 underline decoration-[#0071E3]/30 underline-offset-4 transition-all inline-flex items-center gap-2 group/link"
+                      >
+                        {idea.targetAudience}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </p>
                   </div>
                 </div>
               </div>
 
-                <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large transition-all duration-500">
-                <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter mb-8">Core Functions</h3>
+              <div className="p-10 rounded-[48px] bg-white/70 dark:bg-[#1D1D1F]/70 backdrop-blur-3xl border border-[#E5E5EA] dark:border-white/10 shadow-apple-large transition-all duration-500 group/caps">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Core Functions</h3>
+                  <Button 
+                    onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(idea.coreCapabilities.join(' + '))}+technical+implementation`, '_blank')}
+                    variant="outline"
+                    className="h-8 px-3 rounded-lg border-blue-500/20 text-blue-600 text-[8px] font-black uppercase tracking-widest italic opacity-0 group-hover/caps:opacity-100 transition-opacity hover:bg-blue-600 hover:text-white"
+                  >
+                    Audit Specs <ExternalLink size={10} className="ml-1.5" />
+                  </Button>
+                </div>
                 <div className="space-y-4">
                   {idea.coreCapabilities.map((cap, i) => (
                     <div key={i} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-[#F5F5F7] dark:hover:bg-white/5 transition-all group cursor-default border border-transparent hover:border-[#0071E3]/20">
                       <div className="w-2.5 h-2.5 rounded-full bg-[#0071E3] shadow-[0_0_8px_rgba(0,113,227,0.4)] group-hover:scale-125 transition-transform" />
-                      <span className="text-[#6E6E73] dark:text-[#86868B] group-hover:text-[#1D1D1F] dark:group-hover:text-white font-bold italic text-sm">{cap}</span>
+                      <span className="text-[#6E6E73] dark:text-[#86868B] group-hover:text-[#1D1D1F] dark:group-hover:text-white font-bold italic text-sm">
+                        <a 
+                          href={idea.source_urls?.[i + 3] || `https://www.google.com/search?q=${encodeURIComponent(cap)}+technical+architecture`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-[#0071E3] hover:text-blue-600 dark:hover:text-blue-400 underline decoration-[#0071E3]/20 underline-offset-4 transition-all inline-flex items-center gap-2 group/link"
+                        >
+                          {cap}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -382,7 +606,7 @@ const AiSuggestionPage = () => {
                   onClick={handleGenerate}
                   className="w-full h-16 bg-[#F5F5F7] dark:bg-white/5 hover:bg-[#E5E5EA] dark:hover:bg-white/10 text-[#1D1D1F] dark:text-white rounded-[24px] gap-3 border border-[#E5E5EA] dark:border-white/10 font-black uppercase tracking-widest text-[10px] italic shadow-apple-sm transition-all hover:scale-[1.02]"
                 >
-                  <RefreshCw className="w-4 h-4" />
+                  <RotateCw className="w-4 h-4" />
                   Regenerate Strategy
                 </Button>
               </div>

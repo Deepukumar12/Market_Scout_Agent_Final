@@ -16,7 +16,8 @@ import {
   ChevronRight,
   AlertCircle,
   Network,
-  Cloud
+  Cloud,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -61,7 +62,10 @@ const SystemStatusBar = ({ stats, latency, lastSync }: { stats: any, latency: nu
     </div>
     <div className="ml-auto flex items-center gap-4">
       <span>Last Sync: <span className="text-[#1D1D1F] dark:text-white">{lastSync}</span></span>
-      <div className="flex items-center gap-1 text-blue-600 cursor-pointer hover:opacity-70 transition-opacity">
+      <div 
+        className="flex items-center gap-1 text-blue-600 cursor-pointer hover:opacity-70 transition-opacity"
+        onClick={() => document.getElementById('live-surveillance')?.scrollIntoView({ behavior: 'smooth' })}
+      >
         Live Feed <Activity size={10} className="animate-pulse" />
       </div>
     </div>
@@ -117,6 +121,96 @@ const DashboardPage = () => {
     fetchLatestReport();
     setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
   }, [fetchCompetitors, fetchHistory, fetchSignals, fetchActivityTimeline, fetchInnovationTrends, fetchGlobalMetrics, fetchMarketComparison, fetchLastSevenDays, fetchMissionBriefing, fetchLatestReport, searchQuery]);
+
+  const handleExportIntel = () => {
+    // Generate a comprehensive strategic briefing PDF report
+    const reportWindow = window.open('', '_blank');
+    if (!reportWindow) return;
+
+    const html = `
+      <html>
+        <head>
+          <title>Global Market Intelligence Briefing - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #1d1d1f; line-height: 1.6; }
+            .header { border-bottom: 2px solid #0071e3; padding-bottom: 20px; margin-bottom: 40px; }
+            h1 { margin: 0; font-size: 42px; font-weight: 900; letter-spacing: -2px; text-transform: uppercase; font-style: italic; }
+            .meta { color: #86868b; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; }
+            .section { margin-bottom: 50px; page-break-inside: avoid; }
+            .section-title { font-size: 10px; font-weight: 900; color: #86868b; text-transform: uppercase; letter-spacing: 3px; border-bottom: 1px solid #e5e5ea; padding-bottom: 10px; margin-bottom: 25px; }
+            .grid { display: grid; grid-template-cols: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+            .card { padding: 25px; background: #f5f5f7; border-radius: 24px; border: 1px solid #e5e5ea; }
+            .card-val { font-size: 28px; font-weight: 900; font-style: italic; color: #0071e3; }
+            .card-label { font-size: 9px; font-weight: 900; color: #86868b; text-transform: uppercase; letter-spacing: 1px; }
+            .list-item { padding: 15px 0; border-bottom: 1px solid #f5f5f7; }
+            .item-title { font-size: 14px; font-weight: 900; text-transform: uppercase; font-style: italic; }
+            .item-meta { font-size: 10px; font-weight: 700; color: #0071e3; }
+            .item-summary { font-size: 13px; color: #424245; margin-top: 5px; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="no-print" style="position: fixed; top: 20px; right: 20px;">
+            <button onclick="window.print()" style="padding: 12px 24px; background: #0071e3; color: white; border: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; letter-spacing: 1px;">Download Briefing</button>
+          </div>
+          <div class="header">
+            <div class="meta">Strategic Command | Operational Briefing</div>
+            <h1>Global Market <span style="color: #0071e3;">Intelligence</span></h1>
+            <div class="meta">Generated: ${new Date().toLocaleString()} | Source: ScoutForge AI Node</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Global Performance Telemetry</div>
+            <div class="grid">
+              <div class="card"><div class="card-label">Entities Monitored</div><div class="card-val">${globalMetrics?.total_competitors || 0}</div></div>
+              <div class="card"><div class="card-label">Signals Processed</div><div class="card-val">${globalMetrics?.features_found || 0}</div></div>
+              <div class="card"><div class="card-label">Intelligence Volume</div><div class="card-val">${globalMetrics?.articles_processed || 0}</div></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Mission Briefing Summary</div>
+            <div style="background: #f5f5f7; padding: 30px; border-radius: 24px;">
+              <p style="font-size: 16px; font-weight: 500; font-style: italic; line-height: 1.8;">${missionBriefing?.executive_summary || 'No briefing summary available.'}</p>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Latest Intelligence Signals</div>
+            ${signals.slice(0, 10).map(s => `
+              <div class="list-item">
+                <div class="item-meta">${new Date(s.timestamp).toLocaleDateString()} | ${s.source || 'Open Web'} | ${s.sentiment || 'Neutral'}</div>
+                <div class="item-title">${s.summary.split(':')[0]}</div>
+                <div class="item-summary">${s.summary}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="section">
+            <div class="section-title">Top Sector Innovators</div>
+            <div class="grid">
+              ${innovationTrends?.top_innovators.slice(0, 3).map(i => `
+                <div class="card">
+                  <div class="card-label">Innovator</div>
+                  <div class="card-val" style="font-size: 20px;">${i.name}</div>
+                  <div class="card-label" style="margin-top: 10px;">Score: ${i.score}%</div>
+                  <div class="item-summary" style="font-size: 10px; font-weight: 700;">${i.top_feature}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <script>window.onload = () => setTimeout(() => { window.print(); }, 800);</script>
+        </body>
+      </html>
+    `;
+    reportWindow.document.write(html);
+    reportWindow.document.close();
+  };
+
+  const handleNewOperation = () => {
+    navigate('/dashboard/add-competitor');
+  };
 
   useEffect(() => {
     refreshAllData();
@@ -178,10 +272,25 @@ const DashboardPage = () => {
           </div>
           
           <div className="flex items-center gap-4 shrink-0">
-             <Button variant="outline" className="h-14 lg:h-16 px-8 lg:px-10 rounded-2xl border-[#F0F0F3] dark:border-white/10 bg-white dark:bg-white/5 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs hover:bg-[#F5F5F7] dark:hover:bg-white/10 transition-all italic">
+             <Button 
+               variant="outline" 
+               onClick={refreshAllData}
+               className="h-14 lg:h-16 px-8 lg:px-10 rounded-2xl border-[#F0F0F3] dark:border-white/10 bg-white dark:bg-white/5 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs hover:bg-[#F5F5F7] dark:hover:bg-white/10 transition-all italic flex items-center gap-2 group"
+             >
+                <Activity size={14} className="text-emerald-500 group-hover:rotate-180 transition-transform duration-500" />
+                Recalibrate
+             </Button>
+             <Button 
+               variant="outline" 
+               onClick={handleExportIntel}
+               className="h-14 lg:h-16 px-8 lg:px-10 rounded-2xl border-[#F0F0F3] dark:border-white/10 bg-white dark:bg-white/5 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs hover:bg-[#F5F5F7] dark:hover:bg-white/10 transition-all italic"
+             >
                 Export Intel
              </Button>
-             <Button className="h-14 lg:h-16 px-8 lg:px-10 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs shadow-2xl shadow-blue-600/30 active:scale-95 transition-all italic">
+             <Button 
+               onClick={handleNewOperation}
+               className="h-14 lg:h-16 px-8 lg:px-10 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs shadow-2xl shadow-blue-600/30 active:scale-95 transition-all italic"
+             >
                 New Operation
              </Button>
           </div>
@@ -202,31 +311,28 @@ const DashboardPage = () => {
            </div>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard 
-                title="Global Coverage" 
-                value={globalMetrics?.total_competitors || 0} 
+                title="Entities Monitored" 
+                value={globalMetrics?.total_competitors || 0}
+                icon={Users}
                 trendValue={globalMetrics?.competitors_trend || 0}
-                icon={Globe} 
-                loading={!globalMetrics}
-                sourceUrl="https://exa.ai/search?q=top+market+competitors"
-                showGauge={true}
+                internalLink="/dashboard/competitors"
+                className="border-blue-500/10"
               />
               <StatCard 
-                title="Technical Signals" 
-                value={globalMetrics?.features_found || 0} 
+                title="Signals Processed" 
+                value={globalMetrics?.features_found || 0}
+                icon={Zap}
                 trendValue={globalMetrics?.features_trend || 0}
-                icon={Sparkles} 
-                loading={!globalMetrics}
-                sourceUrl="https://github.com/trending"
-                showGauge={true}
+                internalLink="#live-surveillance"
+                className="border-emerald-500/10"
               />
               <StatCard 
                 title="Intelligence Volume" 
-                value={globalMetrics?.articles_processed || 0} 
+                value={globalMetrics?.articles_processed || 0}
+                icon={Newspaper}
                 trendValue={globalMetrics?.articles_trend || 0}
-                icon={Database} 
-                loading={!globalMetrics}
-                sourceUrl="https://news.google.com"
-                showGauge={true}
+                internalLink="#source-assets"
+                className="border-indigo-500/10"
               />
            </div>
         </section>
@@ -284,7 +390,19 @@ const DashboardPage = () => {
                     {innovationTrends?.sector_shift.slice(0, 5).map((shift: any, i: number) => (
                        <div key={shift.sector || i} className="group relative">
                           <div className="flex items-center justify-between mb-4">
-                             <div className="text-sm font-black uppercase tracking-tighter group-hover:text-blue-600 transition-colors italic">{shift.sector}</div>
+                             {shift.url ? (
+                                <a 
+                                   href={shift.url} 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   className="text-sm font-black uppercase tracking-tighter hover:text-blue-600 transition-colors italic flex items-center gap-2 group/link"
+                                >
+                                   {shift.sector}
+                                   <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                                </a>
+                             ) : (
+                                <div className="text-sm font-black uppercase tracking-tighter group-hover:text-blue-600 transition-colors italic">{shift.sector}</div>
+                             )}
                              <div className="flex items-center gap-2">
                                 <span className={cn(
                                    "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border",
@@ -309,20 +427,38 @@ const DashboardPage = () => {
                  </div>
 
                  <div className="mt-12 pt-10 border-t border-[#F0F0F3] dark:border-white/5">
-                    <div className="flex items-center justify-between p-8 rounded-[32px] bg-blue-600 text-white shadow-2xl shadow-blue-600/30">
-                       <div className="space-y-1">
-                          <div className="text-[9px] font-black uppercase tracking-[0.25em] opacity-70 italic">Lead Disruptor</div>
-                          <div className="text-2xl font-black uppercase italic tracking-tighter">{innovationTrends?.top_innovators[0]?.name || "NVIDIA"}</div>
+                    {innovationTrends?.top_innovators[0]?.url ? (
+                       <a 
+                          href={innovationTrends.top_innovators[0].url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-8 rounded-[32px] bg-blue-600 text-white shadow-2xl shadow-blue-600/30 group hover:scale-[1.02] transition-all"
+                       >
+                          <div className="space-y-1">
+                             <div className="text-[9px] font-black uppercase tracking-[0.25em] opacity-70 italic">Lead Disruptor</div>
+                             <div className="text-2xl font-black uppercase italic tracking-tighter flex items-center gap-2">
+                                {innovationTrends.top_innovators[0].name}
+                                <ExternalLink className="w-4 h-4 opacity-50" />
+                             </div>
+                          </div>
+                          <TrendingUp size={32} />
+                       </a>
+                    ) : (
+                       <div className="flex items-center justify-between p-8 rounded-[32px] bg-blue-600 text-white shadow-2xl shadow-blue-600/30">
+                          <div className="space-y-1">
+                             <div className="text-[9px] font-black uppercase tracking-[0.25em] opacity-70 italic">Lead Disruptor</div>
+                             <div className="text-2xl font-black uppercase italic tracking-tighter">{innovationTrends?.top_innovators[0]?.name || "ANALYZING..."}</div>
+                          </div>
+                          <TrendingUp size={32} />
                        </div>
-                       <TrendingUp size={32} />
-                    </div>
+                    )}
                  </div>
               </div>
            </div>
         </div>
 
         {/* Live Surveillance Feed - Unified Operations Section */}
-        <section className="space-y-10">
+        <section id="live-surveillance" className="space-y-10">
            <div className="flex items-center justify-between">
               <div>
                  <h2 className="text-4xl font-black tracking-tighter uppercase italic dark:text-white">Live <span className="text-emerald-500">Surveillance.</span></h2>
@@ -384,7 +520,17 @@ const DashboardPage = () => {
                              </span>
                            </div>
                            <p className="text-[12px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">
-                             {signal.summary}
+                             {signal.url ? (
+                               <a 
+                                 href={signal.url} 
+                                 target="_blank" 
+                                 rel="noopener noreferrer"
+                                 className="hover:underline decoration-blue-500/30 underline-offset-4 transition-all"
+                                 onClick={(e) => e.stopPropagation()}
+                               >
+                                 {signal.summary}
+                               </a>
+                             ) : signal.summary}
                            </p>
                            {signal.url && (
                              <a
@@ -427,7 +573,7 @@ const DashboardPage = () => {
 
 
         {/* Global Asset Mapping - Source Explorer */}
-        <section className="space-y-10">
+        <section id="source-assets" className="space-y-10">
            <div className="flex items-center justify-between">
               <div>
                  <h2 className="text-4xl font-black tracking-tighter uppercase italic dark:text-white">Source <span className="text-indigo-600">Assets.</span></h2>

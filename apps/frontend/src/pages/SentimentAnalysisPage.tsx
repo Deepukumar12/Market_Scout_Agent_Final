@@ -11,6 +11,7 @@ import {
   Filter,
   ArrowUpRight
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -27,15 +28,17 @@ interface SentimentData {
     neutral: number;
     negative: number;
   };
-  key_drivers: string[];
+  key_drivers: Array<{ name: string; url?: string }>;
   trending_mentions: Array<{
     text: string;
     sentiment: number;
     source: string;
+    url?: string;
   }>;
 }
 
 const SentimentAnalysisPage = () => {
+  const navigate = useNavigate();
   const { competitors, selectedCompetitorId, setSelectedCompetitorId, fetchCompetitors } = useCompetitorStore();
   const { token } = useAuthStore();
   const [data, setData] = useState<SentimentData | null>(null);
@@ -44,6 +47,12 @@ const SentimentAnalysisPage = () => {
   useEffect(() => {
     fetchCompetitors();
   }, [fetchCompetitors]);
+
+  useEffect(() => {
+    if (competitors.length > 0 && !selectedCompetitorId) {
+      setSelectedCompetitorId(competitors[0].id);
+    }
+  }, [competitors, selectedCompetitorId, setSelectedCompetitorId]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,9 +67,17 @@ const SentimentAnalysisPage = () => {
         setLoading(false);
       }
     };
+
     fetchData();
+    
+    // Listen for manual refreshes from the modal completion or websocket
+    window.addEventListener('intelligence-refresh', fetchData);
+    
     const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('intelligence-refresh', fetchData);
+      clearInterval(interval);
+    };
   }, [selectedCompetitorId]);
 
   const pieData = data ? [
@@ -154,10 +171,31 @@ const SentimentAnalysisPage = () => {
                 </h3>
                 <div className="flex flex-wrap gap-4">
                   {data.key_drivers.map((driver, i) => (
-                    <div key={i} className="px-8 py-4 rounded-2xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[11px] font-black uppercase tracking-widest text-[#1D1D1F] dark:text-white flex items-center gap-4 hover:border-[#0071E3]/40 transition-all cursor-default shadow-sm italic">
-                       <Zap size={16} className="text-[#0071E3] fill-current" />
-                       {driver}
-                    </div>
+                    driver.url ? (
+                      <a 
+                        key={i} 
+                        href={driver.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="px-8 py-4 rounded-2xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[11px] font-black uppercase tracking-widest text-[#1D1D1F] dark:text-white flex items-center gap-4 hover:border-[#0071E3]/40 transition-all shadow-sm italic hover:bg-white/10 group"
+                      >
+                         <Zap size={16} className="text-[#0071E3] fill-current" />
+                         {driver.name}
+                         <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </a>
+                    ) : (
+                      <a 
+                        key={i} 
+                        href={`https://www.google.com/search?q=${encodeURIComponent(driver.name)}+${encodeURIComponent(competitors.find(c => c.id === selectedCompetitorId)?.name || '')}+market+signal`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-8 py-4 rounded-2xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[11px] font-black uppercase tracking-widest text-[#1D1D1F] dark:text-white flex items-center gap-4 hover:border-[#0071E3]/40 transition-all shadow-sm italic hover:bg-white/10 group"
+                      >
+                         <Zap size={16} className="text-[#0071E3] fill-current" />
+                         {driver.name}
+                         <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </a>
+                    )
                   ))}
                 </div>
               </div>
@@ -174,7 +212,15 @@ const SentimentAnalysisPage = () => {
                          <span className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] italic">{mention.source}</span>
                          {mention.sentiment > 0.5 ? <TrendingUp size={20} className="text-emerald-500" /> : <TrendingDown size={20} className="text-rose-500" />}
                       </div>
-                      <p className="text-lg text-[#1D1D1F] dark:text-white font-medium leading-relaxed italic pr-12 group-hover:text-[#0071E3] transition-colors">"{mention.text}"</p>
+                      <a 
+                        href={mention.url || `https://www.google.com/search?q=${encodeURIComponent(mention.text)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-lg text-[#1D1D1F] dark:text-white font-medium leading-relaxed italic pr-12 group-hover:text-[#0071E3] transition-colors flex items-start gap-2"
+                      >
+                        "{mention.text}"
+                        <ArrowUpRight className="w-4 h-4 shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </a>
                     </div>
                   ))}
                 </div>
@@ -189,7 +235,15 @@ const SentimentAnalysisPage = () => {
                 <h3 className="text-3xl font-black mb-3 uppercase italic tracking-tighter">Elevate your brand perception</h3>
                 <p className="text-[#86868B] font-medium text-lg italic">Use AI-driven insights to pivot your product strategy and outpace competitors.</p>
              </div>
-             <Button className="h-16 px-10 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/30 group relative z-10 transition-all hover:scale-105 active:scale-95 italic">
+             <Button 
+                onClick={() => {
+                  const comp = competitors.find(c => c.id === selectedCompetitorId);
+                  if (comp) {
+                    navigate('/dashboard/ai-suggestions', { state: { competitor: comp.name } });
+                  }
+                }}
+                className="h-16 px-10 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/30 group relative z-10 transition-all hover:scale-105 active:scale-95 italic"
+              >
                 Generate Strategy Report
                 <ArrowUpRight className="ml-3 w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
              </Button>

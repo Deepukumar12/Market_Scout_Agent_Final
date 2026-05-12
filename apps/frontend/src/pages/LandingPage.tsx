@@ -97,10 +97,10 @@ const BentoCard = ({
         )}>
           <Icon size={28} />
         </div>
-        <h3 className="text-3xl font-bold mb-4 tracking-tight leading-tight">{title}</h3>
-        <p className={cn(
-          "text-base font-medium leading-relaxed opacity-60 max-w-[300px]"
-        )}>{description}</p>
+        <h3 className="text-2xl md:text-3xl font-bold mb-4 tracking-tight leading-tight break-words">{title}</h3>
+        <p className="text-[#6E6E73] dark:text-[#86868B] font-medium leading-relaxed italic text-sm md:text-base break-words">
+          {description}
+        </p>
       </div>
       <div className="relative z-10 mt-12 w-full">
         {children}

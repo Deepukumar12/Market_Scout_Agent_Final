@@ -7,7 +7,7 @@ import {
   BarChart, Bar, CartesianGrid
 } from 'recharts';
 import { 
-  Activity, Zap, BrainCircuit, Target, ArrowUpRight, Loader2, Trophy, BarChart3, TrendingUp
+  Activity, Zap, BrainCircuit, Target, ArrowUpRight, Loader2, Trophy, BarChart3, TrendingUp, RotateCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCompetitorStore } from '@/store/competitorStore';
@@ -23,6 +23,7 @@ interface PerformerMetric {
     market_sentiment: string;
     predicted_trend: string;
     trend_probability: number;
+    url?: string;
 }
 
 interface PredictiveAnalysisResult {
@@ -43,6 +44,19 @@ const PredictiveAnalyticsPage = () => {
     fetchCompetitors();
   }, [fetchCompetitors]);
 
+  useEffect(() => {
+    handleInitializePipeline();
+    
+    // Listen for manual refreshes from the modal completion or websocket
+    window.addEventListener('intelligence-refresh', handleInitializePipeline);
+    
+    const interval = setInterval(handleInitializePipeline, 60000); // Predictive is heavy, 60s
+    return () => {
+      window.removeEventListener('intelligence-refresh', handleInitializePipeline);
+      clearInterval(interval);
+    };
+  }, []);
+
   const handleInitializePipeline = async () => {
       setLoading(true);
       setAnalysisResult(null);
@@ -55,10 +69,8 @@ const PredictiveAnalyticsPage = () => {
               return;
           }
           
-          setTimeout(() => {
-              setAnalysisResult(data);
-              setLoading(false);
-          }, 1500);
+          setAnalysisResult(data);
+          setLoading(false);
       } catch (e) {
           console.error(e);
           setLoading(false);
@@ -207,7 +219,13 @@ const PredictiveAnalyticsPage = () => {
                                 {analysisResult.top_performers.map((company, idx) => (
                                     <div key={idx} className="space-y-2">
                                         <div className="flex justify-between items-center text-xs font-bold text-[#1D1D1F] dark:text-white">
-                                            <span>{company.name}</span>
+                                            {company.url ? (
+                                                <a href={company.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 hover:underline transition-all uppercase italic flex items-center gap-1">
+                                                    {company.name} <ArrowUpRight className="w-3 h-3" />
+                                                </a>
+                                            ) : (
+                                                <span>{company.name}</span>
+                                            )}
                                             <span className="text-emerald-600 font-black">{company.change_velocity_score}%</span>
                                         </div>
                                         <div className="h-1.5 w-full bg-[#F5F5F7] dark:bg-white/5 rounded-full overflow-hidden">
@@ -244,7 +262,13 @@ const PredictiveAnalyticsPage = () => {
                                 {analysisResult.stable_performers.map((company, idx) => (
                                     <div key={idx} className="space-y-2">
                                         <div className="flex justify-between items-center text-xs font-bold text-[#1D1D1F] dark:text-white">
-                                            <span>{company.name}</span>
+                                            {company.url ? (
+                                                <a href={company.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 hover:underline transition-all uppercase italic flex items-center gap-1">
+                                                    {company.name} <ArrowUpRight className="w-3 h-3" />
+                                                </a>
+                                            ) : (
+                                                <span>{company.name}</span>
+                                            )}
                                             <span className="text-[#0071E3] font-black">{company.change_velocity_score}%</span>
                                         </div>
                                         <div className="h-1.5 w-full bg-[#F5F5F7] dark:bg-white/5 rounded-full overflow-hidden">
@@ -318,15 +342,28 @@ const PredictiveAnalyticsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group hover:border-[#AF52DE]/30 transition-all shadow-apple shadow-sm"
+            className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group/card hover:border-[#AF52DE]/30 transition-all shadow-apple shadow-sm cursor-pointer"
+            onClick={() => {
+                const query = competitors.length > 0 ? competitors.map(c => c.name).join(' + ') : 'market trend vectors';
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}+traction+forecast+analysis+2024`, '_blank')
+            }}
         >
             <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-[#1D1D1F] dark:text-white flex items-center gap-3 uppercase italic tracking-tighter">
+                <h3 className="font-black text-[#1D1D1F] dark:text-white flex items-center gap-3 uppercase italic tracking-tighter group-hover/card:text-[#AF52DE] transition-colors">
                     <TrendingUp className="w-5 h-5 text-[#AF52DE]" /> Traction Forecast
                 </h3>
-                <span className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-black tracking-widest">
-                    +{analysisResult ? (analysisResult.trending_predictions.reduce((acc, p) => acc + p.trend_probability, 0) / (analysisResult.trending_predictions.length || 1) * 100).toFixed(0) : '0'}% ACC
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    className="h-6 w-6 p-0 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                    onClick={(e) => { e.stopPropagation(); handleInitializePipeline(); }}
+                  >
+                    <RotateCw size={12} className={cn("text-[#AF52DE]", loading && "animate-spin")} />
+                  </Button>
+                  <span className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-black tracking-widest">
+                      +{analysisResult ? (analysisResult.trending_predictions.reduce((acc, p) => acc + p.trend_probability, 0) / (analysisResult.trending_predictions.length || 1) * 100).toFixed(0) : '0'}% ACC
+                  </span>
+                </div>
             </div>
             <div className="h-48 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -353,7 +390,7 @@ const PredictiveAnalyticsPage = () => {
                 </ResponsiveContainer>
             </div>
             <p className="text-[10px] text-[#86868B] font-mono mt-6 uppercase tracking-widest leading-relaxed">
-                Aggregated projection across {competitors.length} active units
+                Aggregated projection across {competitors.length} active units • <span className="text-blue-600 font-black italic">Click to verify vectors</span>
             </p>
         </motion.div>
 
@@ -362,20 +399,33 @@ const PredictiveAnalyticsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group hover:border-[#FF9500]/30 transition-all shadow-apple shadow-sm"
+            className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group/card hover:border-[#FF9500]/30 transition-all shadow-apple shadow-sm cursor-pointer"
+            onClick={() => {
+                const topComp = analysisResult?.top_performers[0]?.name || 'top competitor';
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(topComp)}+pivot+risk+vector+analysis+technical+debt`, '_blank')
+            }}
         >
             <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-[#1D1D1F] dark:text-white flex items-center gap-3 uppercase italic tracking-tighter">
+                <h3 className="font-black text-[#1D1D1F] dark:text-white flex items-center gap-3 uppercase italic tracking-tighter group-hover/card:text-[#FF9500] transition-colors">
                     <Target className="w-5 h-5 text-[#FF9500]" /> Vector Analysis
                 </h3>
-                <span className={cn(
-                    "text-[10px] px-2.5 py-1 rounded-lg border font-black tracking-widest uppercase",
-                    (analysisResult?.top_performers[0]?.change_velocity_score || 0) > 75 
-                        ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
-                        : "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20"
-                )}>
-                    {(analysisResult?.top_performers[0]?.change_velocity_score || 0) > 75 ? "CRITICAL RISK" : "MID RISK"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    className="h-6 w-6 p-0 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                    onClick={(e) => { e.stopPropagation(); handleInitializePipeline(); }}
+                  >
+                    <RotateCw size={12} className={cn("text-[#FF9500]", loading && "animate-spin")} />
+                  </Button>
+                  <span className={cn(
+                      "text-[10px] px-2.5 py-1 rounded-lg border font-black tracking-widest uppercase",
+                      (analysisResult?.top_performers[0]?.change_velocity_score || 0) > 75 
+                          ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
+                          : "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20"
+                  )}>
+                      {(analysisResult?.top_performers[0]?.change_velocity_score || 0) > 75 ? "CRITICAL RISK" : "MID RISK"}
+                  </span>
+                </div>
             </div>
             <div className="h-48 w-full flex items-center justify-center">
                  <ResponsiveContainer width="100%" height="100%">
@@ -399,7 +449,7 @@ const PredictiveAnalyticsPage = () => {
                 </ResponsiveContainer>
             </div>
              <p className="text-[10px] text-[#86868B] font-mono mt-6 uppercase tracking-widest leading-relaxed">
-                Neural vector mapping of technical debt shifts
+                Neural vector mapping of technical debt shifts • <span className="text-blue-600 font-black italic">Verify Pivot Signals</span>
             </p>
         </motion.div>
 
@@ -408,15 +458,33 @@ const PredictiveAnalyticsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group hover:border-[#5AC8FA]/30 transition-all shadow-apple shadow-sm"
+            className="p-10 rounded-[40px] bg-white/70 border border-[#E5E5EA] backdrop-blur-xl group/card hover:border-[#5AC8FA]/30 transition-all shadow-apple shadow-sm cursor-pointer"
+            onClick={() => {
+                const query = competitors.length > 0 ? competitors[0].name : 'market';
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}+economic+opportunity+gap+forecast`, '_blank')
+            }}
         >
             <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-[#1D1D1F] dark:text-white flex items-center gap-3 uppercase italic tracking-tighter">
+                <h3 className="font-black text-[#1D1D1F] dark:text-white flex items-center gap-3 uppercase italic tracking-tighter group-hover/card:text-[#5AC8FA] transition-colors">
                     <Activity className="w-5 h-5 text-[#5AC8FA]" /> Signal Gaps
                 </h3>
-                <span className="text-[10px] px-2.5 py-1 rounded-lg bg-[#5AC8FA]/10 text-[#5AC8FA] border border-[#5AC8FA]/20 font-black tracking-widest">
-                    {analysisResult && analysisResult.trending_predictions.length > 0 ? `EST. $${(analysisResult.trending_predictions.length * 1.4).toFixed(1)}M` : 'NO DATA'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    className="h-6 w-6 p-0 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                    onClick={(e) => { e.stopPropagation(); handleInitializePipeline(); }}
+                  >
+                    <RotateCw size={12} className={cn("text-[#5AC8FA]", loading && "animate-spin")} />
+                  </Button>
+                  <span className={cn(
+                      "text-[10px] px-2.5 py-1 rounded-lg font-black tracking-widest",
+                      analysisResult && analysisResult.trending_predictions.length > 0 
+                        ? "bg-[#5AC8FA]/10 text-[#5AC8FA] border border-[#5AC8FA]/20"
+                        : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                  )}>
+                      {analysisResult && analysisResult.trending_predictions.length > 0 ? `EST. $${(analysisResult.trending_predictions.length * 1.4).toFixed(1)}M` : 'SCAN REQUIRED'}
+                  </span>
+                </div>
             </div>
             <div className="h-48 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -432,7 +500,7 @@ const PredictiveAnalyticsPage = () => {
                 </ResponsiveContainer>
             </div>
              <p className="text-[10px] text-[#86868B] font-mono mt-6 uppercase tracking-widest leading-relaxed">
-                Economic opportunity delta in Q4 timeline
+                Economic opportunity delta in Q4 timeline • <span className="text-blue-600 font-black italic">Audit Opportunity Gap</span>
             </p>
         </motion.div>
 
