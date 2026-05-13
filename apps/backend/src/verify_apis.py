@@ -56,7 +56,7 @@ def test_firecrawl():
     headers = {"Authorization": f"Bearer {api_key}"}
     payload = {"url": "https://example.com"}
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
         if response.status_code == 200 or response.status_code == 202:
             return "✅ Firecrawl: Working"
         else:

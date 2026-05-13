@@ -4,6 +4,7 @@ Uses GITHUB_TOKEN when set for higher rate limits and relevant data.
 """
 import logging
 import asyncio
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import httpx
@@ -204,7 +205,6 @@ async def fetch_company_github_data(company_name: str, max_repos: int = 15) -> d
                             "topics": r.get("topics", [])[:5],
                         })
         # 🔒 Project-Wide Enforcement: strictly cap GitHub data to the last 7 days
-        from datetime import timedelta, timezone
         cutoff = datetime.now(timezone.utc) - timedelta(days=7)
         
         # Dedupe, Filter by 7-day window, and sort by stars
@@ -220,7 +220,6 @@ async def fetch_company_github_data(company_name: str, max_repos: int = 15) -> d
             if up_str:
                 # Use a simple split/replace to handle basic ISO dates from GitHub
                 try:
-                    from datetime import datetime
                     # GitHub format: 2011-01-26T19:01:12Z
                     up_dt = datetime.fromisoformat(up_str.replace("Z", "+00:00"))
                     if up_dt < cutoff:

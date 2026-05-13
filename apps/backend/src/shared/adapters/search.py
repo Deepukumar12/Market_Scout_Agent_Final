@@ -36,11 +36,14 @@ class ExaAdapter(BaseAdapter):
             return response.json()
         return None
 
-    def normalize(self, raw: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def normalize(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         results = raw.get("results", [])
-        return [{
-            "title": r.get("title"),
-            "url": r.get("url"),
-            "score": r.get("score"),
-            "published_at": r.get("publishedDate")
-        } for r in results]
+        return {
+            "total_results": str(len(results)),
+            "exa_discovery": [{
+                "title": r.get("title"),
+                "url": r.get("url"),
+                "score": r.get("score"),
+                "published_at": r.get("publishedDate")
+            } for r in results]
+        }

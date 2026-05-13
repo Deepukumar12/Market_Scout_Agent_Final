@@ -85,8 +85,43 @@ async def async_run_auto_scan():
                                     "created_at": now,
                                     "user_id": user_id
                                 })
+                            
+                            # Process Search Visibility (Exa discovery, etc.)
+                            search_data = scan_result.search_visibility or {}
+                            for s in (search_data.get("exa_discovery") or []):
+                                 all_signals.append({
+                                    "query_tag": company,
+                                    "url": s.get("url"),
+                                    "article_summary": s.get("snippet") or "Strategic endpoint identified.",
+                                    "sentiment": "Neutral",
+                                    "scraped_at": now,
+                                    "created_at": now,
+                                    "user_id": user_id
+                                })
+
+                            # Process GitHub Activity (New Signal Type)
+                            github_data = scan_result.github or {}
+                            for repo in (github_data.get("repos") or []):
+                                all_signals.append({
+                                    "query_tag": company,
+                                    "url": repo.get("html_url"),
+                                    "article_summary": f"Active Repo: {repo.get('full_name')} - {repo.get('description') or 'No description'}",
+                                    "sentiment": "Positive" if repo.get("stargazers_count", 0) > 100 else "Neutral",
+                                    "scraped_at": now,
+                                    "created_at": now,
+                                    "user_id": user_id
+                                })
+
                             if all_signals:
-                                await db.db["article_summaries"].insert_many(all_signals)
+                                # Deduplicate by URL to prevent issues
+                                unique_signals = []
+                                seen_urls = set()
+                                for s in all_signals:
+                                    if s.get("url") and s["url"] not in seen_urls:
+                                        unique_signals.append(s)
+                                        seen_urls.add(s["url"])
+                                if unique_signals:
+                                    await db.db["article_summaries"].insert_many(unique_signals)
 
                             # ✅ C. Store Strategic Report
                             report_doc = scan_result.model_dump()

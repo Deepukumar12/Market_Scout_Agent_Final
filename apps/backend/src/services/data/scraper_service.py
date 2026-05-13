@@ -195,7 +195,8 @@ async def firecrawl_scrape(url: str) -> Optional[Dict[str, Any]]:
     Fetch URL via Firecrawl API and extract publish_date and content.
     Returns None if request fails or page is empty. Uses FIRECRAWL_API_KEY when set.
     """
-    if not settings.FIRECRAWL_API_KEY:
+    api_key = getattr(settings, "FIRECRAWL_API_KEY", "")
+    if not api_key:
         # Fallback: direct fetch when Firecrawl not configured (e.g. tests)
         try:
             # Added a proper User-Agent to mimic a real browser and avoid some basic bot detection
@@ -235,7 +236,7 @@ async def firecrawl_scrape(url: str) -> Optional[Dict[str, Any]]:
                     resp = await client.post(
                         "https://api.firecrawl.dev/v1/scrape",
                         headers={
-                            "Authorization": f"Bearer {settings.FIRECRAWL_API_KEY}",
+                            "Authorization": f"Bearer {getattr(settings, 'FIRECRAWL_API_KEY', '')}",
                             "Content-Type": "application/json"
                         },
                         json={
@@ -334,7 +335,8 @@ async def scrape_url(url: str) -> Optional[Dict[str, Any]]:
     """
     # 1. Primary: Firecrawl
     try:
-        if settings.FIRECRAWL_API_KEY:
+        firecrawl_key = getattr(settings, "FIRECRAWL_API_KEY", "")
+        if firecrawl_key:
             result = await firecrawl_scrape(url)
             if result and result.get("content") and len(result["content"].strip()) > 300:
                 logger.info(f"Firecrawl success for {url}")

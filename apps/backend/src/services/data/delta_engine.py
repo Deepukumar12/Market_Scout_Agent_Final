@@ -74,7 +74,19 @@ async def store_new_features(company: str, features: list[ScanFeature]) -> int:
     if not new_only:
         return 0
     coll = db.db[COLLECTION]
-    docs = [_feature_to_doc(company, f) for f in new_only]
+    
+    # Deduplicate in-memory to prevent BulkWriteError from unique index
+    seen_hashes = set()
+    docs = []
+    for f in new_only:
+        doc = _feature_to_doc(company, f)
+        if doc["hash_id"] not in seen_hashes:
+            docs.append(doc)
+            seen_hashes.add(doc["hash_id"])
+            
+    if not docs:
+        return 0
+        
     result = await coll.insert_many(docs)
     logger.info("delta_engine stored %d new features for %s", len(result.inserted_ids), company)
     return len(result.inserted_ids)

@@ -71,7 +71,7 @@ async def search_web_multi(
             logger.error(f"Tavily API error: {e}")
 
     # 2. DuckDuckGo Fallback (using httpx if Tavily failed or returned no results)
-    if len(results) < num_results and not settings.MOCK_MODE:
+    if len(results) < num_results:
         logger.info(f"Running DuckDuckGo fallback search for: {query}")
         # Note: This is a simple HTML-based scraper for DDG as a last-resort fallback.
         # In a production environment, one might use 'duckduckgo-search' library.

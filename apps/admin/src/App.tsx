@@ -515,7 +515,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
                 <StatCard 
                   title="AI Credits" 
                   value={stats?.credits_used || '0k'} 
-                  change="+18%" 
+                  change="Real-time" 
                   icon={TrendingUp} 
                   trend="up" 
                   color="amber"
@@ -721,9 +721,14 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
                           <td className="px-8 py-6">
                              <div className="flex items-center gap-4">
                                 <div className="flex-1 h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
-                                   <div className="h-full bg-[#0071E3] rounded-full animate-pulse" style={{ width: '99%' }} />
+                                   <div className={cn(
+                                     "h-full rounded-full transition-all duration-1000",
+                                     row.status === 'active' ? "bg-emerald-500" : "bg-[#0071E3]"
+                                   )} style={{ width: row.status === 'active' ? '100%' : '50%' }} />
                                 </div>
-                                <span className="font-mono text-[10px] text-[var(--text-secondary)] font-black italic">99.9%</span>
+                                <span className="font-mono text-[10px] text-[var(--text-secondary)] font-black italic">
+                                  {row.status === 'active' ? '100%' : 'SYNCHRONIZING'}
+                                </span>
                              </div>
                           </td>
                           <td className="px-8 py-6 text-[var(--text-secondary)] font-black uppercase text-[10px] italic tracking-widest">{row.last_scanned || 'Verified'}</td>

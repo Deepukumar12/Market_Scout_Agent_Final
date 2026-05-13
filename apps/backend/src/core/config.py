@@ -97,14 +97,17 @@ class Settings(BaseSettings):
     # SEARCH & DISCOVERY APIs
     # ---------------------------------------------------
     TAVILY_API_KEY: str = ""
+    SERPAPI_API_KEY: str = ""
     EXA_API_KEY: str = ""
     CLEARBIT_API_KEY: str = ""
+    FIRECRAWL_API_KEY: str = ""
 
 
     # ---------------------------------------------------
     # FINANCIAL INTELLIGENCE
     # ---------------------------------------------------
     ALPHA_VANTAGE_API_KEY: str = ""
+    FINNHUB_API_KEY: str = ""
 
 
     # ---------------------------------------------------

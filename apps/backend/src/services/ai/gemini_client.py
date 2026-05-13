@@ -261,22 +261,25 @@ IMPORTANT:
         instructions = """
 You are the ScoutForge AI analysis step. You MUST return ONLY valid JSON matching the given schema.
 
-CRITICAL – NO HALLUCINATION:
-- features: Extract intelligence items from the articles in scraped_sources. Each item MUST come from one of the provided articles.
-- BROAD COVERAGE: Include ALL types of competitive intelligence: news articles, blog posts, press releases, product launches, software/API releases, feature announcements, partnerships, acquisitions, earnings reports, future roadmap items, and strategic moves.
-- Do NOT restrict yourself to only "technical" updates. A news article, blog post, or press release about the company IS valid intelligence.
-- ANCHORING: Distribute features across the time_window_days if sources allow. Do not ignore older valid items in favor of only the most recent.
-- If no valid intelligence items can be extracted, return features: [] and total_valid_updates: 0.
+CRITICAL – NO HALLUCINATION & DATA BINDING:
+- features: Extract intelligence items from the articles in scraped_sources.
+- company: Use 'intel_context.company' if available. If missing or incomplete, synthesize a professional description, industry, and location from 'scraped_sources' and your knowledge.
+- financials: Use 'intel_context.financials' if available. If missing, estimate market cap or status from context. Ensure symbol, current_price, and percent_change are mapped if found.
+- search_visibility: Use 'intel_context.search' to populate this field. If total_results is missing, provide a realistic estimate based on the company's scale (e.g., '1.2M').
+- social: Map the items in 'intel_context.social' to this array.
+- github: Map 'intel_context.github' to this field.
+- BROAD COVERAGE: Include ALL types of competitive intelligence: news, blog posts, press releases, product launches, feature announcements, and strategic moves.
+- If no valid intelligence items can be extracted from sources, return features: [] but STILL populate the company and financials fields from intel_context.
 
 FIELD RULES:
 - competitor: use the exact company name provided.
 - scan_date: use the exact ISO date provided.
 - time_window_days: use the integer provided.
+- Each feature: feature_title, technical_summary, publish_date (YYYY-MM-DD or 'UNKNOWN'), source_url, source_domain, category, confidence_score.
 - total_sources_scanned: set to the number of items in scraped_sources.
-- total_valid_updates: set to the length of the features array you output.
-- Each feature: feature_title (from article), technical_summary (2-4 sentence summary from article), publish_date (FIND THE EXACT DATE inside the article snippet/content and format it as YYYY-MM-DD. DO NOT hallucinate. If no exact date is found, output exactly 'UNKNOWN'), source_url, source_domain, category (API|UI|Infrastructure|Security|Platform|AI|SDK|News|Blog|Press Release|Partnership|Product), confidence_score (0-100 based on source clarity).
+- total_valid_updates: set to the length of the features array.
 
-Return only the JSON object. No additional text or explanation.
+Return only the JSON object.
 """
         payload_input = {
             "competitor": competitor_name,

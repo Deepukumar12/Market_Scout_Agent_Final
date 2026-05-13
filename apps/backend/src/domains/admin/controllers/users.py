@@ -19,8 +19,20 @@ class AdminUserCreate(BaseModel):
     company: Optional[str] = None
 
 async def verify_admin(current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin" and current_user.email != "deeputhakur0986@gmail.com":
+    user_email = (current_user.email or "").strip().lower()
+    user_role = (current_user.role or "").strip().lower()
+    
+    # Case-insensitive check for primary admin or explicit role
+    is_primary_admin = user_email == "deeputhakur0986@gmail.com"
+    is_admin_role = user_role == "admin"
+
+    if not (is_admin_role or is_primary_admin):
+        from src.core.logger import agent_logger
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"⛔ ACCESS DENIED: Identity {user_email} (Role: {user_role}) blocked from administrative console.")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrative privileges required")
+    
     return current_user
 
 @router.get("/users", response_model=List[User])

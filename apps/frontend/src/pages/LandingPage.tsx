@@ -305,13 +305,13 @@ export default function LandingPage() {
       {/* Trusted By Section - Corporate Integrity */}
       <section id="enterprise" className="py-24 border-y border-[#F0F0F3] dark:border-white/5 bg-white/50 dark:bg-transparent overflow-hidden">
         <div className="max-w-7xl mx-auto px-8">
-          <p className="text-center text-[10px] font-black uppercase tracking-[0.4em] text-[#86868B] mb-12">Authorized by Enterprise Category Leaders</p>
+          <p className="text-center text-[10px] font-black uppercase tracking-[0.4em] text-[#86868B] mb-12">Surveillance Infrastructure Backbone</p>
           <div className="flex flex-wrap justify-center items-center gap-16 md:gap-24 opacity-30 dark:opacity-20 grayscale hover:grayscale-0 transition-all duration-700">
-             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Server size={28} /> AZURE</div>
-             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Cloud size={28} /> AWS</div>
-             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Globe size={28} /> GOOGLE</div>
-             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Shield size={28} /> PALANTIR</div>
-             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Activity size={28} /> NVIDIA</div>
+             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Server size={28} /> CLOUD</div>
+             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Network size={28} /> EDGE</div>
+             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Globe size={28} /> GLOBAL</div>
+             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Shield size={28} /> SECURE</div>
+             <div className="flex items-center gap-2 text-2xl font-black tracking-tighter"><Activity size={28} /> ACTIVE</div>
           </div>
         </div>
       </section>
@@ -333,7 +333,7 @@ export default function LandingPage() {
             <BentoCard 
               icon={Network}
               title="Intelligence Mesh"
-              description="A global network of autonomous nodes continuously mapping technical landscapes across 50,000+ endpoints."
+              description="A global network of autonomous nodes continuously mapping technical landscapes across verified endpoints."
               color="blue"
               className="md:col-span-2"
             >
@@ -375,7 +375,7 @@ export default function LandingPage() {
                     className="h-full bg-purple-600 shadow-lg shadow-purple-600/30"
                   />
                 </div>
-                <div className="text-[10px] font-bold text-center text-[#86868B]">99.9% Uptime Verified</div>
+                <div className="text-[10px] font-bold text-center text-[#86868B]">Architecture Integrity Verified</div>
               </div>
             </BentoCard>
 
