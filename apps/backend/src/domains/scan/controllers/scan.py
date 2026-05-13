@@ -93,13 +93,30 @@ async def post_scan(
                 "industry": result.company.get("industry"),
                 "location": result.company.get("location"),
                 "employees": result.company.get("metrics", {}).get("employees"),
-                "market_cap": (result.financials.market_cap if result.financials else None)
+                "description": result.company.get("description"),
             }
+        
+        # Consolidate ALL metrics for 100% rendering
+        financial_summary = result.financials.model_dump() if result.financials else {}
+        github_summary = {
+            "repo_count": len(result.github.get("repos", [])) if result.github else 0,
+            "total_stars": sum(r.get("stargazers_count", 0) for r in result.github.get("repos", [])) if result.github else 0,
+            "primary_language": result.github.get("repos", [{}])[0].get("language") if result.github and result.github.get("repos") else "N/A"
+        }
         
         update_data = {
             "last_scan": now,
             "status": "Active",
-            "firmographics": firmographics
+            "firmographics": firmographics,
+            "financials": financial_summary,
+            "github_metrics": github_summary,
+            "search_metrics": {
+                "discovery_count": len(result.search_visibility.get("exa_discovery", [])) if result.search_visibility else 0,
+                "sources_scanned": result.total_sources_scanned
+            },
+            "innovation_score": min(100, (result.total_valid_updates * 15) + (github_summary["repo_count"] * 2) + 20),
+            "risk_level": "High" if result.total_valid_updates > 8 or (result.financials and result.financials.percent_change and result.financials.percent_change < -5) else "Medium",
+            "velocity": "Accelerating" if result.total_valid_updates > 4 else "Steady"
         }
         
         upsert_data = {
@@ -147,9 +164,30 @@ async def post_scan(
                 "user_id": uid_str
             })
 
+        # Process GitHub Activity (New Signal Type)
+        github_data = result.github or {}
+        for repo in (github_data.get("repos") or []):
+            all_signals.append({
+                "query_tag": body.company_name,
+                "url": repo.get("html_url"),
+                "article_summary": f"Active Repo: {repo.get('full_name')} - {repo.get('description') or 'No description'}",
+                "sentiment": "Positive" if repo.get("stargazers_count", 0) > 100 else "Neutral",
+                "scraped_at": now,
+                "created_at": now,
+                "user_id": uid_str
+            })
+
         if all_signals:
-            await db.db["article_summaries"].insert_many(all_signals)
-            logger.info(f"Stored {len(all_signals)} market signals for {body.company_name}")
+            # Deduplicate by URL to prevent BulkWriteError
+            unique_signals = []
+            seen_urls = set()
+            for s in all_signals:
+                if s["url"] not in seen_urls:
+                    unique_signals.append(s)
+                    seen_urls.add(s["url"])
+            if unique_signals:
+                await db.db["article_summaries"].insert_many(unique_signals)
+            logger.info(f"Stored {len(unique_signals)} market signals for {body.company_name}")
 
         # 4. Store the Strategic Report for the dashboard
         report_doc = result.model_dump()

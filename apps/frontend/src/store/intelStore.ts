@@ -70,6 +70,7 @@ export interface SevenDaySignal {
   feature_name: string;
   category: string;
   release_date: string;
+  created_at: string;
   source_url?: string;
   hash_id: string;
   summary?: string;

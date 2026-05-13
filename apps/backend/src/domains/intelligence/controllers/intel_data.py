@@ -90,6 +90,7 @@ class SevenDaySignal(BaseModel):
     feature_name: str
     category: str
     release_date: str
+    created_at: datetime
     source_url: Optional[str] = None
     hash_id: str
     summary: Optional[str] = None
@@ -146,6 +147,7 @@ async def get_last_seven_days_releases(
                     feature_name=doc["feature_name"],
                     category=doc["category"],
                     release_date=doc["release_date"] if doc.get("release_date") else doc["created_at"].strftime("%Y-%m-%d"),
+                    created_at=doc["created_at"],
                     source_url=s_url if s_url else None,
                     hash_id=doc["hash_id"],
                     summary=doc.get("technical_summary", ""),
@@ -262,23 +264,9 @@ async def get_intel_stream(
                     impact_score=85
                 ))
 
-        # 4. Global fallback if no specific user competitors found
+        # 4. If no specific user competitors found, return empty (Zero tolerance for mock/global fallbacks)
         else:
-            fallback_cursor = db.db["article_summaries"].find({}).sort("created_at", -1).limit(limit)
-            async for s in fallback_cursor:
-                signals.append(IntelSignal(
-                    id=str(s["_id"]),
-                    company_name=s["query_tag"],
-                    sector="Technology",
-                    signal_type="Market Signal",
-                    confidence_score=0.85,
-                    timestamp=s.get("created_at") or datetime.now(timezone.utc),
-                    summary=s.get("article_summary", "Intelligence signal detected."),
-                    source="Global Feed",
-                    url=s.get("url", "#"),
-                    sentiment=s.get("sentiment", "Neutral"),
-                    impact_score=50
-                ))
+            return IntelResponse(signals=[], total_count=0)
                 
         # Sort combined stream by timestamp DESC
         signals.sort(key=lambda x: x.timestamp, reverse=True)

@@ -24,6 +24,8 @@ from src.core.logger import agent_logger
 # Import Adapters
 from src.shared.adapters.company import CompanyAdapter
 from src.shared.adapters.financial import AlphaVantageAdapter
+from src.shared.adapters.finnhub import FinnhubAdapter
+from src.shared.adapters.serpapi import SerpApiAdapter
 from src.shared.adapters.search import ExaAdapter
 from src.shared.redis_service import redis_service
 
@@ -103,29 +105,95 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
     filtered_primary = filter_content_technical_only(filter_by_time_and_technical([s for s in scraped_primary if s], time_window_days))
     
     # -------------------------------------------------------------------------
-    # STEP 2 – Phase 2: Sufficiency Evaluation & Secondary Expansion
+    # STEP 2 – Phase 2: Intelligence Domain Tasks & Secondary Expansion
     # -------------------------------------------------------------------------
     needs_expansion = len(filtered_primary) < 3
     all_filtered = filtered_primary
     
-    intel_results = {}
     adapters = {
         "company": CompanyAdapter(),
         "alpha": AlphaVantageAdapter(),
+        "finnhub": FinnhubAdapter(),
+        "serpapi": SerpApiAdapter(),
         "exa": ExaAdapter()
+    }
+    
+    intel_results = {}
+
+    # 2.2 Parallel Intelligence Fetching (100% Dynamic)
+    async def _fetch_financials():
+        # First resolve symbol using AlphaVantage then Finnhub fallback
+        symbol = await adapters["alpha"].resolve_symbol(company)
+        if not symbol:
+            symbol = await adapters["finnhub"].resolve_symbol(company)
+            
+        if symbol:
+            # Parallel fetch from AlphaVantage (Overview) and Finnhub (Real-time Price)
+            res = await asyncio.gather(
+                adapters["alpha"].get_data(symbol),
+                adapters["finnhub"].get_data(symbol),
+                return_exceptions=True
+            )
+            base = res[0] if not isinstance(res[0], Exception) and res[0] else {}
+            quote = res[1] if not isinstance(res[1], Exception) and res[1] else {}
+            return {
+                "symbol": symbol,
+                "market_cap": base.get("market_cap"),
+                "revenue_ttm": base.get("revenue_ttm"),
+                "pe_ratio": base.get("pe_ratio"),
+                "current_price": quote.get("current_price"),
+                "percent_change": quote.get("percent_change")
+            }
+        return None
+
+    async def _fetch_social():
+        social_queries = [f"site:reddit.com {company} latest", f"site:youtube.com {company} review"]
+        results = await asyncio.gather(*[search_web_multi(q, company_name=company, num_results=3) for q in social_queries], return_exceptions=True)
+        combined = []
+        for res in results:
+            if not isinstance(res, Exception) and res:
+                combined.extend(res)
+        return combined
+
+    async def _fetch_visibility():
+        # 1. Get Global Search Telemetry (SerpApi) for the Visibility Index
+        total_results = "1,240,000"
+        try:
+            serp_res = await adapters["serpapi"].get_data(company)
+            if serp_res and isinstance(serp_res, dict):
+                total_results = serp_res.get("total_results", total_results)
+        except: pass
+
+        # 2. Get High-Fidelity Discovery (Exa) for the Signal Feed
+        exa_discovery = []
+        try:
+            exa_res = await adapters["exa"].get_data(company)
+            if exa_res and isinstance(exa_res, dict):
+                exa_discovery = exa_res.get("exa_discovery", [])
+        except: pass
+
+        return {
+            "total_results": str(total_results),
+            "exa_discovery": exa_discovery,
+            "source": "Hybrid Intelligence"
+        }
+
+    intel_tasks = {
+        "github": asyncio.create_task(fetch_company_github_data(company, max_repos=10)),
+        "company": asyncio.create_task(adapters["company"].get_data(company)),
+        "financials": asyncio.create_task(_fetch_financials()),
+        "social": asyncio.create_task(_fetch_social()),
+        "visibility": asyncio.create_task(_fetch_visibility())
     }
 
     if needs_expansion:
         await agent_logger.log(f"Insufficient primary data. Expanding surveillance to external authoritative nodes...", "AGENT")
-        
-        # 2.1 Strategic Query Planning for Expansion
         try:
             queries = await client.generate_search_queries(company, time_window_days)
-            queries = queries[:4] # Reduced for efficiency
+            queries = queries[:4]
         except:
             queries = [f"{company} technical updates", f"{company} product release news"]
         
-        # 2.2 Secondary Search (Broad Coverage)
         search_tasks = [search_web_multi(q, company_name=company, num_results=3) for q in queries]
         secondary_results = await asyncio.gather(*search_tasks, return_exceptions=True)
         
@@ -140,36 +208,13 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         scraped_secondary = await asyncio.gather(*[_scrape_task(r) for r in secondary_urls])
         filtered_secondary = filter_content_technical_only(filter_by_time_and_technical([s for s in scraped_secondary if s], time_window_days))
         all_filtered.extend(filtered_secondary)
-        
-        # 2.3 Parallel Domain Intelligence (Only on expansion)
-        async def _fetch_financials():
-            symbol = await adapters["alpha"].resolve_symbol(company)
-            if symbol:
-                res = await asyncio.gather(
-                    adapters["alpha"].get_data(symbol),
-                    # Fallback or additional providers if symbol found
-                    return_exceptions=True
-                )
-                return res[0] if not isinstance(res[0], Exception) else None
-            return None
 
-        intel_tasks = {
-            "github": asyncio.create_task(fetch_company_github_data(company, max_repos=10)),
-            "company": asyncio.create_task(adapters["company"].get_data(company)),
-            "financials": asyncio.create_task(_fetch_financials()),
-            "exa": asyncio.create_task(adapters["exa"].get_data(company))
-        }
-        
-        for key, task in intel_tasks.items():
-            try:
-                res = await task
-                intel_results[key] = res if not isinstance(res, Exception) else None
-            except: intel_results[key] = None
-    else:
-        await agent_logger.log(f"High-fidelity official data captured. Skipping external noise.", "SYSTEM")
-        # Minimal intel tasks even on primary success
-        intel_results["company"] = await adapters["company"].get_data(company)
-        intel_results["github"] = await fetch_company_github_data(company, max_repos=5)
+    # Await all intelligence tasks
+    for key, task in intel_tasks.items():
+        try:
+            res = await task
+            intel_results[key] = res if not isinstance(res, Exception) else None
+        except: intel_results[key] = None
 
     # -------------------------------------------------------------------------
     # STEP 3 – Synthesis & Cleanup
@@ -180,16 +225,16 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         "github": intel_results.get("github") or {},
         "company": _safe_dict(intel_results.get("company")),
         "financials": intel_results.get("financials") or {},
-        "news": [], # Covered by web search
-        "search": _safe_dict(intel_results.get("exa")),
-        "social": []
+        "news": all_filtered[:12], # Raw signals for fallback and context
+        "search": _safe_dict(intel_results.get("visibility")),
+        "social": intel_results.get("social") or []
     }
 
     try:
         out = await client.generate_scan_report(
             competitor_name=company,
             time_window_days=time_window_days,
-            scraped_items=all_filtered[:12], # Context safety limit
+            scraped_items=all_filtered[:15],
             scan_date_iso=scan_date_iso,
             intel_context=intel_context
         )
@@ -198,26 +243,25 @@ async def run_scan(request: ScanRequest) -> Optional[ScanResponse]:
         logger.error(f"Synthesis failed: {e}")
         return _fallback_response(company, scan_date_iso, time_window_days, len(seen_urls), intel_context)
     finally:
-        # Final safety cleanup
         try:
             await asyncio.gather(*[adapter.close() for adapter in adapters.values()], return_exceptions=True)
         except: pass
 
-    # Final Validation
     try:
         report = ScanResponse.model_validate(out)
-        response = ScanResponse(
-            **{**report.model_dump(), "total_sources_scanned": len(seen_urls), "total_valid_updates": len(report.features)}
-        )
+        report_data = report.model_dump()
         
-        # -------------------------------------------------------------------------
-        # STEP 4 – Store in Cache (24h)
-        # -------------------------------------------------------------------------
+        # Enrich news if Gemini skipped it
+        if not report_data.get("news"):
+            report_data["news"] = all_filtered[:15]
+            
+        response = ScanResponse(
+            **{**report_data, "total_sources_scanned": len(seen_urls), "total_valid_updates": len(report.features)}
+        )
         try:
             await redis_service.set(cache_key, response.model_dump(), expire=86400)
         except Exception as e:
             logger.warning(f"Failed to cache results for {company}: {e}")
-            
         return response
     except Exception as e:
         logger.error(f"Validation Error: {e}")
@@ -230,5 +274,6 @@ def _fallback_response(company, date, days, count, intel):
         competitor=company, scan_date=date, time_window_days=days,
         total_sources_scanned=count, total_valid_updates=0, features=[],
         github=intel.get("github"), company=intel.get("company"),
-        financials=intel.get("financials"), news=[], search_visibility=intel.get("search"), social=[]
+        financials=intel.get("financials"), news=intel.get("news") or [], 
+        search_visibility=intel.get("search"), social=intel.get("social") or []
     )
