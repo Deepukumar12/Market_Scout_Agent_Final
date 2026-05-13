@@ -13,13 +13,15 @@ async def init_scheduler():
     # Fetch configuration from the database
     settings = await db.db.system_settings.find_one({"_id": "scheduler"}) if db.db is not None else None
     if settings:
-        interval_unit = settings.get("interval_unit", "days")
-        interval_value = settings.get("interval_value", 7)
+        interval_unit = settings.get("interval_unit", "hours")
+        interval_value = settings.get("interval_value", 24)
     else:
-        interval_unit = "days"
-        interval_value = 7
+        # Default to 24-hour daily surveillance cycle
+        interval_unit = "hours"
+        interval_value = 24
         
     kwargs = {interval_unit: interval_value}
+    print(f"🕒 RE-CALIBRATING HEARTBEAT: Auto-scan scheduled every {interval_value} {interval_unit}.")
     
     scheduler.add_job(
         run_auto_scan, 

@@ -20,12 +20,12 @@ async def get_scheduler_config():
     settings = await db.db.system_settings.find_one({"_id": "scheduler"}) if db.db is not None else None
     if settings:
         return SchedulerConfig(
-            interval_unit=settings.get("interval_unit", "days"),
-            interval_value=settings.get("interval_value", 7),
+            interval_unit=settings.get("interval_unit", "hours"),
+            interval_value=settings.get("interval_value", 24),
             email_enabled=settings.get("email_enabled", False)
         )
-    # Default is every 7 days if not configured
-    return SchedulerConfig(interval_unit="days", interval_value=7, email_enabled=False)
+    # Default is every 24 hours (Daily Pulse) if not configured
+    return SchedulerConfig(interval_unit="hours", interval_value=24, email_enabled=False)
 
 @router.post("/scheduler")
 async def update_scheduler_config(config: SchedulerConfig):
