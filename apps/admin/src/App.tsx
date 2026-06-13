@@ -35,7 +35,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { platformClient } from '@market-scout/platform';
+import { platformClient } from './services/platform';
 import { useTheme } from './context/ThemeContext';
 
 const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
