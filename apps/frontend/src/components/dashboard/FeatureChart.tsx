@@ -27,7 +27,7 @@ const FeatureChart: React.FC<FeatureChartProps> = ({ data, competitors }) => {
           <p className="text-[#6E6E73] dark:text-[#86868B] text-[10px] font-black uppercase tracking-widest mt-2 italic opacity-60">Innovation trends across top competitors</p>
         </div>
         <a 
-          href="/api/v1/intelligence/innovation-trends" 
+          href={`${import.meta.env.VITE_API_URL || ''}/api/v1/intelligence/innovation-trends`} 
           target="_blank"
           className="p-3 rounded-2xl bg-[#F5F5F7] dark:bg-white/5 text-[#86868B] hover:text-[#0071E3] transition-all opacity-0 group-hover:opacity-100"
         >

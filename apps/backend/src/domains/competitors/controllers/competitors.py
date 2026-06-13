@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 
 from src.core.database import db
 from src.services.data.delta_engine import FREQUENCY_DEFAULT_HOURS
@@ -157,12 +157,7 @@ async def delete_competitor(
     except Exception as e:
         print(f"Warning: Failed to delete reports for {competitor_id}: {e}")
 
-    # 3. Delete from intelligence cache
-    try:
-        cache_coll = db.db["cache"]
-        await cache_coll.delete_one({"competitor_id": competitor_id})
-    except Exception as e:
-        print(f"Warning: Failed to delete cache for {competitor_id}: {e}")
+
 
     # 4. Delete the competitor itself
     await collection.delete_one({"_id": ObjectId(competitor_id)})
@@ -174,4 +169,69 @@ async def delete_competitor(
     )
     
     return {"status": "success", "message": "Competitor and associated data deleted successfully"}
+
+
+@router.post("/competitors/{competitor_id}/scan")
+async def run_competitor_scan_endpoint(
+    competitor_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+):
+    from bson import ObjectId
+    from fastapi import HTTPException
+    
+    if not ObjectId.is_valid(competitor_id):
+        raise HTTPException(status_code=400, detail="Invalid competitor ID")
+        
+    collection = await get_competitor_collection()
+    
+    competitor = await collection.find_one({
+        "_id": ObjectId(competitor_id),
+        "user_id": str(current_user.id)
+    })
+    
+    if not competitor:
+        raise HTTPException(status_code=404, detail="Competitor not found or not owned by user")
+        
+    # Set status to Scanning
+    await collection.update_one(
+        {"_id": ObjectId(competitor_id)},
+        {"$set": {"status": "Scanning"}}
+    )
+    
+    from src.domains.scan.services.scan_pipeline import run_scan
+    from src.domains.scan.models.scan import ScanRequest
+    
+    scan_req = ScanRequest(
+        company_name=competitor["name"],
+        website=competitor.get("url"),
+        time_window_days=7
+    )
+    
+    try:
+        result = await run_scan(scan_req, user_id=str(current_user.id))
+    except Exception as e:
+        await collection.update_one(
+            {"_id": ObjectId(competitor_id)},
+            {"$set": {"status": "Failed"}}
+        )
+        raise HTTPException(status_code=500, detail=f"Scan failed: {e}")
+        
+    if result is None:
+        await collection.update_one(
+            {"_id": ObjectId(competitor_id)},
+            {"$set": {"status": "Failed"}}
+        )
+        raise HTTPException(status_code=500, detail="Scan failed: LLM returned empty results.")
+        
+    # Queue database persistence
+    from src.domains.scan.controllers.scan import _persist_scan_data
+    background_tasks.add_task(
+        _persist_scan_data,
+        scan_req,
+        result,
+        current_user
+    )
+    
+    return result
 

@@ -25,15 +25,13 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useIntelStore } from '@/store/intelStore';
 import { useAuthStore } from '@/store/authStore';
+import { triggerReport } from '@/services/api';
 
 import StatCard from '@/components/dashboard/StatCard';
 import FeatureChart from '@/components/dashboard/FeatureChart';
-import SourceCard from '@/components/dashboard/SourceCard';
 import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
-import MarketComparison from '@/components/dashboard/MarketComparison';
 import MissionBriefing from '@/components/dashboard/MissionBriefing';
 import SevenDayReleases from '@/components/dashboard/SevenDayReleases';
-import IntelligenceHub from '@/components/dashboard/IntelligenceHub';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/utils/utils';
 
@@ -73,7 +71,7 @@ const SystemStatusBar = ({ stats, latency, lastSync }: { stats: any, latency: nu
 );
 
 const DashboardPage = () => {
-  const { fetchCompetitors } = useCompetitorStore();
+  const { competitors, fetchCompetitors } = useCompetitorStore();
   const { 
     history, 
     signals, 
@@ -100,12 +98,20 @@ const DashboardPage = () => {
   const { searchQuery: globalSearchQuery } = useOutletContext<{ searchQuery: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState('Just now');
+  const [isSending, setIsSending] = useState(false);
+  const [selected7DayComp, setSelected7DayComp] = useState<string>('');
 
   const { user } = useAuthStore();
 
   useEffect(() => {
     setSearchQuery(globalSearchQuery);
   }, [globalSearchQuery]);
+
+  useEffect(() => {
+    if (competitors.length > 0 && !selected7DayComp) {
+      setSelected7DayComp(competitors[0].name);
+    }
+  }, [competitors, selected7DayComp]);
 
   const refreshAllData = useCallback(() => {
     fetchCompetitors(searchQuery);
@@ -116,11 +122,11 @@ const DashboardPage = () => {
     fetchGlobalMetrics();
     fetchSystemStats();
     fetchMarketComparison();
-    fetchLastSevenDays();
+    fetchLastSevenDays(selected7DayComp || undefined);
     fetchMissionBriefing();
     fetchLatestReport();
     setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-  }, [fetchCompetitors, fetchHistory, fetchSignals, fetchActivityTimeline, fetchInnovationTrends, fetchGlobalMetrics, fetchMarketComparison, fetchLastSevenDays, fetchMissionBriefing, fetchLatestReport, searchQuery]);
+  }, [fetchCompetitors, fetchHistory, fetchSignals, fetchActivityTimeline, fetchInnovationTrends, fetchGlobalMetrics, fetchMarketComparison, fetchLastSevenDays, fetchMissionBriefing, fetchLatestReport, searchQuery, selected7DayComp]);
 
   const handleExportIntel = () => {
     // Generate a comprehensive strategic briefing PDF report
@@ -164,7 +170,6 @@ const DashboardPage = () => {
             <div class="grid">
               <div class="card"><div class="card-label">Entities Monitored</div><div class="card-val">${globalMetrics?.total_competitors || 0}</div></div>
               <div class="card"><div class="card-label">Signals Processed</div><div class="card-val">${globalMetrics?.features_found || 0}</div></div>
-              <div class="card"><div class="card-label">Intelligence Volume</div><div class="card-val">${globalMetrics?.articles_processed || 0}</div></div>
             </div>
           </div>
 
@@ -208,6 +213,17 @@ const DashboardPage = () => {
     reportWindow.document.close();
   };
 
+  const handleSendReport = async () => {
+    setIsSending(true);
+    try {
+      await triggerReport();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const handleNewOperation = () => {
     navigate('/dashboard/add-competitor');
   };
@@ -220,7 +236,7 @@ const DashboardPage = () => {
     // Listen for manual refreshes from the modal completion
     window.addEventListener('intelligence-refresh', refreshAllData);
     
-    const interval = setInterval(refreshAllData, 30000); // 30s Real-time Heartbeat
+    const interval = setInterval(refreshAllData, 10000); // 10s Real-time Heartbeat
     return () => {
       window.removeEventListener('intelligence-refresh', refreshAllData);
       clearInterval(interval);
@@ -242,7 +258,7 @@ const DashboardPage = () => {
   })), [signals]);
 
   return (
-    <div className="min-h-screen bg-[#FBFBFE] dark:bg-[#050505] -mx-8 -mt-8 selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#FBFBFE] dark:bg-[#050505] -mx-4 md:-mx-10 -mt-4 md:-mt-10 selection:bg-blue-600 selection:text-white">
       <SystemStatusBar 
         stats={systemStats} 
         latency={globalMetrics?.system_latency || 0}
@@ -251,7 +267,7 @@ const DashboardPage = () => {
       
       <div className="p-6 lg:p-10 space-y-12">
         {/* Header Section - The Big Tech "Identity" */}
-        <header className="glass-card rounded-[40px] border border-[#F0F0F3] dark:border-white/5 bg-white dark:bg-[#0A0A0C] p-10 lg:p-12 shadow-apple flex flex-col lg:flex-row lg:items-end justify-between gap-10">
+        <header className="glass-card rounded-[24px] md:rounded-[40px] border border-[#F0F0F3] dark:border-white/5 bg-white dark:bg-[#0A0A0C] p-6 md:p-10 lg:p-12 shadow-apple flex flex-col lg:flex-row lg:items-end justify-between gap-6 md:gap-10">
           <div className="space-y-6 flex-1">
             <div className="flex flex-wrap items-center gap-3">
                <div className="px-4 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.25em] italic">
@@ -266,16 +282,16 @@ const DashboardPage = () => {
             </h1>
             <p className="text-base lg:text-lg text-[#86868B] font-medium italic max-w-3xl leading-relaxed opacity-80">
               Strategic Console active for {user?.full_name || 'Authorized Personnel'}. 
-              Synthesizing global market intelligence from {globalMetrics?.articles_processed || 0} technical sources. 
+              Synthesizing global market intelligence from technical sources. 
               Real-time monitoring of <span className="text-[#1D1D1F] dark:text-white font-bold">{globalMetrics?.total_competitors || 0} competitors</span> across all domains.
             </p>
           </div>
           
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-3 lg:gap-4 w-full lg:w-auto mt-6 lg:mt-0">
              <Button 
                variant="outline" 
                onClick={refreshAllData}
-               className="h-14 lg:h-16 px-8 lg:px-10 rounded-2xl border-[#F0F0F3] dark:border-white/10 bg-white dark:bg-white/5 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs hover:bg-[#F5F5F7] dark:hover:bg-white/10 transition-all italic flex items-center gap-2 group"
+               className="h-12 lg:h-16 px-4 lg:px-10 rounded-2xl border-[#F0F0F3] dark:border-white/10 bg-white dark:bg-white/5 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs hover:bg-[#F5F5F7] dark:hover:bg-white/10 transition-all italic flex items-center gap-2 group"
              >
                 <Activity size={14} className="text-emerald-500 group-hover:rotate-180 transition-transform duration-500" />
                 Recalibrate
@@ -283,13 +299,21 @@ const DashboardPage = () => {
              <Button 
                variant="outline" 
                onClick={handleExportIntel}
-               className="h-14 lg:h-16 px-8 lg:px-10 rounded-2xl border-[#F0F0F3] dark:border-white/10 bg-white dark:bg-white/5 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs hover:bg-[#F5F5F7] dark:hover:bg-white/10 transition-all italic"
+               className="h-12 lg:h-16 px-4 lg:px-10 rounded-2xl border-[#F0F0F3] dark:border-white/10 bg-white dark:bg-white/5 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs hover:bg-[#F5F5F7] dark:hover:bg-white/10 transition-all italic"
              >
                 Export Intel
              </Button>
              <Button 
+               variant="outline" 
+               onClick={handleSendReport}
+               disabled={isSending}
+               className="h-12 lg:h-16 px-4 lg:px-10 rounded-2xl border-[#F0F0F3] dark:border-white/10 bg-white dark:bg-white/5 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs hover:bg-[#F5F5F7] dark:hover:bg-white/10 transition-all italic text-blue-600 border-blue-600/30 hover:bg-blue-50"
+             >
+                {isSending ? "Sending..." : "Email Report"}
+             </Button>
+             <Button 
                onClick={handleNewOperation}
-               className="h-14 lg:h-16 px-8 lg:px-10 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs shadow-2xl shadow-blue-600/30 active:scale-95 transition-all italic"
+               className="h-12 lg:h-16 px-4 lg:px-10 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs shadow-2xl shadow-blue-600/30 active:scale-95 transition-all italic"
              >
                 New Operation
              </Button>
@@ -301,6 +325,131 @@ const DashboardPage = () => {
            <MissionBriefing data={missionBriefing} />
         </section>
 
+        {/* Latest Scan Dossier - Renders the latest live scan report */}
+        {scanReport && (
+           <section className="mb-12 glass-card rounded-[40px] border border-blue-500/20 bg-white dark:bg-[#0A0A0C] p-6 md:p-10 lg:p-12 shadow-apple-large space-y-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-[#F0F0F3] dark:border-white/5 pb-8 relative z-10">
+                 <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-3xl font-black text-blue-600 uppercase italic">
+                       {scanReport.competitor ? scanReport.competitor[0] : '?'}
+                    </div>
+                    <div>
+                       <span className="text-[9px] font-black text-blue-600 uppercase tracking-[0.25em] italic">Latest Scan Dossier</span>
+                       <h2 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter leading-none mt-1">
+                          {scanReport.competitor}
+                       </h2>
+                    </div>
+                 </div>
+                 <div className="flex flex-wrap items-center gap-3 text-[10px] font-black uppercase tracking-widest text-[#86868B]">
+                    <div className="px-4 py-2 rounded-xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[#1D1D1F] dark:text-white">
+                       Date: {new Date(scanReport.scan_date).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
+                    </div>
+                    <div className="px-4 py-2 rounded-xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[#1D1D1F] dark:text-white">
+                       Scanned: {scanReport.total_sources_scanned || 0} Sources
+                    </div>
+                    <div className="px-4 py-2 rounded-xl bg-[#34C759]/10 border border-[#34C759]/20 text-[#34C759]">
+                       Verified: {scanReport.total_valid_updates || 0} Signals
+                    </div>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+                 {/* Financial Summary */}
+                 <div className="p-6 rounded-3xl bg-[#F5F5F7]/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/5">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-[#86868B] mb-4">Financial Dossier</h4>
+                    <div className="space-y-3">
+                       <div className="flex justify-between text-xs">
+                          <span className="text-[#86868B]">Price</span>
+                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.financials?.current_price ? `$${scanReport.financials.current_price}` : 'N/A'}</span>
+                       </div>
+                       <div className="flex justify-between text-xs">
+                          <span className="text-[#86868B]">Change</span>
+                          <span className={cn("font-bold", (scanReport.financials?.percent_change ?? 0) >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                             {scanReport.financials?.percent_change ? `${scanReport.financials.percent_change >= 0 ? '+' : ''}${scanReport.financials.percent_change}%` : 'N/A'}
+                          </span>
+                       </div>
+                       <div className="flex justify-between text-xs">
+                          <span className="text-[#86868B]">Revenue</span>
+                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.financials?.revenue_ttm || 'N/A'}</span>
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* GitHub Summary */}
+                 <div className="p-6 rounded-3xl bg-[#F5F5F7]/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/5">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-[#86868B] mb-4">Engineering Dossier</h4>
+                    <div className="space-y-3">
+                       <div className="flex justify-between text-xs">
+                          <span className="text-[#86868B]">Active Repos</span>
+                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.github?.repos?.length || 0}</span>
+                       </div>
+                       <div className="flex justify-between text-xs">
+                          <span className="text-[#86868B]">Total Stars</span>
+                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.github?.repos?.reduce((acc: number, r: any) => acc + (r.stargazers_count || 0), 0) || 0}</span>
+                       </div>
+                       <div className="flex justify-between text-xs">
+                          <span className="text-[#86868B]">Primary Tech</span>
+                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.github?.repos?.[0]?.language || 'N/A'}</span>
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* Search Visibility Summary */}
+                 <div className="p-6 rounded-3xl bg-[#F5F5F7]/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/5">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-[#86868B] mb-4">Surveillance Dossier</h4>
+                    <div className="space-y-3">
+                       <div className="flex justify-between text-xs">
+                          <span className="text-[#86868B]">Search Hits</span>
+                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.search_visibility?.total_results || 'N/A'}</span>
+                       </div>
+                       <div className="flex justify-between text-xs">
+                          <span className="text-[#86868B]">Exa Discoveries</span>
+                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.search_visibility?.exa_discovery?.length || 0}</span>
+                       </div>
+                       <div className="flex justify-between text-xs">
+                          <span className="text-[#86868B]">Firmography Scale</span>
+                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.company?.employees || 'Scaling'}</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="space-y-4 relative z-10">
+                 <h3 className="text-lg font-bold text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter border-b border-[#F0F0F3] dark:border-white/5 pb-2">Extracted Technical Features</h3>
+                 {scanReport.features && scanReport.features.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                       {scanReport.features.map((feature: any, i: number) => (
+                          <div key={i} className="p-5 rounded-2xl bg-white dark:bg-[#151518] border border-[#E5E5EA] dark:border-white/5 relative overflow-hidden flex flex-col justify-between">
+                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
+                             <div>
+                                <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-[#86868B] mb-2">
+                                   <span>{feature.category || 'Feature'}</span>
+                                   <span className="text-blue-600">Conf: {feature.confidence_score || feature.confidence || 80}%</span>
+                                </div>
+                                <h5 className="text-sm font-bold text-[#1D1D1F] dark:text-white mb-2 line-clamp-1">{feature.feature_title || feature.title}</h5>
+                                <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] leading-relaxed mb-4 line-clamp-3">{feature.technical_summary || feature.description}</p>
+                             </div>
+                             {(feature.source_url || feature.source_urls?.[0]) && (
+                                <a 
+                                   href={feature.source_url || feature.source_urls[0]} 
+                                   target="_blank" 
+                                   rel="noopener noreferrer" 
+                                   className="inline-flex items-center gap-1 text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                                >
+                                   View Source <ExternalLink size={10} />
+                                </a>
+                             )}
+                          </div>
+                       ))}
+                    </div>
+                 ) : (
+                    <div className="text-center py-8 text-xs text-[#86868B] italic">No new technical features verified during this scan.</div>
+                 )}
+              </div>
+           </section>
+        )}
+
         {/* Global Telemetry - Real-Time Performance Gauges */}
         <section className="mb-16">
            <div className="flex items-center justify-between mb-8">
@@ -309,7 +458,7 @@ const DashboardPage = () => {
                 <p className="text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em] mt-1 italic">Real-time surveillance across 50+ technical endpoints</p>
               </div>
            </div>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <StatCard 
                 title="Entities Monitored" 
                 value={globalMetrics?.total_competitors || 0}
@@ -326,40 +475,16 @@ const DashboardPage = () => {
                 internalLink="#live-surveillance"
                 className="border-emerald-500/10"
               />
-              <StatCard 
-                title="Intelligence Volume" 
-                value={globalMetrics?.articles_processed || 0}
-                icon={Newspaper}
-                trendValue={globalMetrics?.articles_trend || 0}
-                internalLink="#source-assets"
-                className="border-indigo-500/10"
-              />
            </div>
         </section>
 
-           {/* 7-Day Innovation Pulse - High Priority Visibility */}
-           <div className="col-span-12">
-             <AnimatePresence>
-               {lastSevenDays && (
-                 <motion.section 
-                   initial={{ opacity: 0, y: 20 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   exit={{ opacity: 0, y: -20 }}
-                   className="glass-card rounded-[40px] border border-[#F0F0F3] dark:border-white/5 bg-white dark:bg-[#0A0A0C] p-10 lg:p-12 shadow-apple"
-                 >
-                   <div className="max-h-[520px] overflow-y-auto custom-scrollbar pr-2">
-                     <SevenDayReleases features={lastSevenDays} />
-                   </div>
-                 </motion.section>
-               )}
-             </AnimatePresence>
-           </div>
+
 
         {/* Intelligence Visualization Layer */}
         <div className="grid grid-cols-12 gap-8">
            {/* Timeline Analysis */}
-           <div className="col-span-12 xl:col-span-8">
-              <div className="premium-card p-10 lg:p-12 overflow-hidden h-full">
+           <div className="col-span-12">
+              <div className="premium-card p-6 md:p-10 lg:p-12 overflow-hidden h-full">
                  <div className="flex items-center justify-between mb-10">
                     <div>
                        <h3 className="text-3xl font-black uppercase tracking-tighter italic">Innovation <span className="text-blue-600">Trajectory.</span></h3>
@@ -379,8 +504,8 @@ const DashboardPage = () => {
            </div>
 
            {/* Innovation Surface - Right Panel */}
-           <div className="col-span-12 xl:col-span-4">
-              <div className="premium-card p-10 lg:p-12 h-full flex flex-col">
+           <div className="col-span-12">
+              <div className="premium-card p-6 md:p-10 lg:p-12 h-full flex flex-col">
                  <div className="mb-10">
                     <h3 className="text-3xl font-black uppercase tracking-tighter italic">Sector <span className="text-purple-600">Pulse.</span></h3>
                     <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#86868B] mt-2 italic">Real-time Velocity Shifts</p>
@@ -457,6 +582,39 @@ const DashboardPage = () => {
            </div>
         </div>
 
+        {/* Last 7 Days Surveillance - Specific Competitor Pulse */}
+        <section className="glass-card rounded-[40px] border border-[#F0F0F3] dark:border-white/5 bg-white dark:bg-[#0A0A0C] p-6 md:p-10 lg:p-12 shadow-apple space-y-8">
+           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#F0F0F3] dark:border-white/5 pb-8">
+              <div>
+                 <h2 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">
+                   7-Day <span className="text-[#AF52DE]">Surveillance</span>
+                 </h2>
+                 <p className="text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em] mt-1 italic">
+                   Historical telemetry scan for the selected target node
+                 </p>
+              </div>
+              <div className="flex items-center gap-4">
+                 <span className="text-[10px] font-black text-[#86868B] uppercase tracking-widest italic">Select Target:</span>
+                 <select
+                   value={selected7DayComp}
+                   onChange={(e) => setSelected7DayComp(e.target.value)}
+                   className="h-10 px-6 rounded-full border border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#1C1C1E] text-[10px] font-black uppercase tracking-widest text-[#1D1D1F] dark:text-white focus:outline-none shadow-apple-sm transition-all italic"
+                 >
+                   <option value="">ALL TARGETS</option>
+                   {competitors.map((c: any) => (
+                     <option key={c.id || c._id} value={c.name}>{c.name.toUpperCase()}</option>
+                   ))}
+                 </select>
+              </div>
+           </div>
+
+           <SevenDayReleases 
+             features={lastSevenDays} 
+             title="Innovation Releases" 
+             subtitle={`Technical developments logged in the last 7 days for ${selected7DayComp || 'monitored entities'}`} 
+           />
+        </section>
+
         {/* Live Surveillance Feed - Unified Operations Section */}
         <section id="live-surveillance" className="space-y-10">
            <div className="flex items-center justify-between">
@@ -478,8 +636,8 @@ const DashboardPage = () => {
 
            <div className="grid grid-cols-12 gap-8">
               {/* Activity Timeline */}
-              <div className="col-span-12 lg:col-span-8">
-                 <div className="premium-card p-10 lg:p-12 shadow-apple-large relative overflow-hidden">
+              <div className="col-span-12">
+                 <div className="premium-card p-6 md:p-10 lg:p-12 shadow-apple-large relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
                     <div className="max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
                       <ActivityTimeline days={activities} />
@@ -489,7 +647,7 @@ const DashboardPage = () => {
 
 
               {/* Real-time Signals Strip */}
-              <div className="col-span-12 lg:col-span-4">
+              <div className="col-span-12">
                  <div className="max-h-[600px] overflow-y-auto custom-scrollbar pr-1 space-y-3">
                     {signals.slice(0, 8).map((signal, i) => {
                        const domain = (() => {
@@ -507,12 +665,7 @@ const DashboardPage = () => {
                            <div className="absolute left-0 top-0 w-[3px] h-full bg-blue-600 rounded-l-[20px] scale-y-0 group-hover:scale-y-100 transition-transform origin-top duration-200" />
                            <div className="flex items-center justify-between gap-2">
                              <div className="flex items-center gap-2 min-w-0">
-                               <img
-                                 src={`https://www.google.com/s2/favicons?sz=16&domain=${domain}`}
-                                 alt=""
-                                 className="w-3.5 h-3.5 rounded-sm shrink-0 opacity-75"
-                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                               />
+                               <Globe className="w-3.5 h-3.5 text-blue-500 opacity-75 shrink-0" />
                                <span className="text-[9px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest truncate">{domain}</span>
                              </div>
                              <span className="text-[9px] font-bold text-[#A1A1A6] shrink-0 tabular-nums">
@@ -551,100 +704,7 @@ const DashboardPage = () => {
            </div>
         </section>
 
-        {/* Intelligence Matrix - Market Comparison */}
-        <section className="pt-20 border-t border-[#F0F0F3] dark:border-white/5">
-           <div className="flex items-center justify-between mb-10">
-              <div>
-                 <h2 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase italic dark:text-white leading-none">Intelligence <span className="text-blue-600">Matrix.</span></h2>
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#86868B] mt-2 italic opacity-60">Comparative Analytics & Sector Dominance</p>
-              </div>
-           </div>
-           {comparisonMatrix && comparisonMatrix.length > 0 ? (
-             <div className="max-h-[540px] overflow-y-auto custom-scrollbar pr-2 rounded-[32px]">
-               <MarketComparison data={comparisonMatrix} />
-             </div>
-           ) : (
-             <div className="p-20 rounded-[40px] bg-white/50 dark:bg-white/5 border border-dashed border-[#E5E5EA] dark:border-white/10 text-center">
-               <p className="text-[10px] font-black text-[#86868B] uppercase tracking-widest italic mb-2">Awaiting Sector Intelligence</p>
-               <p className="text-xs font-medium text-[#6E6E73] italic">Execute a system-wide scan to populate the comparison matrix.</p>
-             </div>
-           )}
-        </section>
 
-
-        {/* Global Asset Mapping - Source Explorer */}
-        <section id="source-assets" className="space-y-10">
-           <div className="flex items-center justify-between">
-              <div>
-                 <h2 className="text-4xl font-black tracking-tighter uppercase italic dark:text-white">Source <span className="text-indigo-600">Assets.</span></h2>
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#86868B] mt-1">Verification Endpoints & Citations</p>
-              </div>
-              <Button variant="outline" className="rounded-full h-10 px-6 border-[#E5E5EA] dark:border-white/10 text-[10px] font-black uppercase tracking-widest italic">
-                 View All Signals
-              </Button>
-           </div>
-           
-           
-           <div className="max-h-[640px] overflow-y-auto custom-scrollbar pr-2 rounded-[32px]">
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {signals.length > 0 ? (
-                  signals.map((source, i) => (
-                    <SourceCard 
-                     key={source.id || i} 
-                     title={source.summary}
-                     source={source.source}
-                     date={new Date(source.timestamp).toLocaleDateString('en-IN')}
-                     url={source.url || "#"}
-                    />
-                  ))
-                ) : (
-                  [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-48 rounded-[32px]" />)
-                )}
-             </div>
-           </div>
-        </section>
-
-        {/* Production Verification - Bottom Intelligence Hub */}
-        <section className="pt-20 border-t border-[#F0F0F3] dark:border-white/5">
-            <div className="flex items-center justify-between mb-10">
-              <div className="flex items-center gap-4">
-                <Shield className="text-blue-600" />
-                <h2 className="text-2xl font-black uppercase tracking-tighter italic">Intelligence Hub <span className="text-blue-600">Verification</span></h2>
-              </div>
-              {!scanReport && (
-                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[10px] font-black uppercase tracking-widest">
-                   System Standby
-                 </div>
-              )}
-            </div>
-            
-            <AnimatePresence mode="wait">
-              {scanReport ? (
-                <motion.div
-                  key="report"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                >
-                  <IntelligenceHub report={scanReport} />
-                </motion.div>
-              ) : (
-                <motion.div 
-                  key="placeholder"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="glass-card rounded-[40px] border border-[#F0F0F3] dark:border-white/5 bg-white/30 dark:bg-white/5 backdrop-blur-3xl p-20 flex flex-col items-center justify-center text-center"
-                >
-                  <Cloud className="text-[#86868B] mb-6 animate-bounce" size={48} />
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter mb-2">Awaiting Intelligence Scan</h3>
-                  <p className="text-[#86868B] text-sm font-medium max-w-md">
-                    Run a "New Operation" to generate a high-fidelity intelligence report and verify technical signals in real-time.
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-        </section>
       </div>
     </div>
   );

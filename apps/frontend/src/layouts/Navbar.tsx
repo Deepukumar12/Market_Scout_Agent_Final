@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown, Menu, Moon, Sun, Zap } from 'lucide-react';
+import { Search, Bell, Plus, LogOut, Settings, Shield, ChevronDown, Menu, Moon, Sun, Zap, User } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -135,8 +135,8 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => navigate('/dashboard')}
         >
-          <div className="w-10 h-10 bg-[#0071E3] rounded-xl flex items-center justify-center shadow-lg shadow-[#0071E3]/20 overflow-hidden">
-            <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
+          <div className="w-10 h-10 bg-[#0071E3] rounded-xl flex items-center justify-center shadow-lg shadow-[#0071E3]/20 overflow-hidden text-white">
+            <Zap size={24} className="fill-current" />
           </div>
           <span className="text-2xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">SCOUTFORGE<span className="text-blue-600">AI</span></span>
         </motion.div>
@@ -257,15 +257,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
               className="flex items-center gap-2 p-1 pl-1 pr-3 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] border border-transparent hover:border-[#E5E5EA] dark:hover:border-white/10 transition-all"
             >
               <div className="w-8 h-8 bg-gradient-to-br from-[#0071E3] to-[#00c6ff] rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
-                {user?.avatar_url ? (
-                  <img 
-                    src={user.avatar_url.startsWith('http') ? user.avatar_url : `http://localhost:8000${user.avatar_url}`} 
-                    alt={user?.full_name || 'User'} 
-                    className="w-full h-full object-cover" 
-                  />
-                ) : (
-                  <span>{user?.full_name?.[0] || 'U'}</span>
-                )}
+                <User size={16} />
               </div>
               <div className="hidden sm:flex flex-col items-start leading-tight">
                 <span className="text-sm font-bold text-[#1D1D1F] dark:text-white">

@@ -86,11 +86,12 @@ const AiSuggestionPage = () => {
   }, [competitors]);
 
   useEffect(() => {
+    const onRefresh = () => { handleGenerate(); };
     // Listen for manual refreshes from the modal completion or websocket
-    window.addEventListener('intelligence-refresh', handleGenerate);
+    window.addEventListener('intelligence-refresh', onRefresh);
     
     return () => {
-      window.removeEventListener('intelligence-refresh', handleGenerate);
+      window.removeEventListener('intelligence-refresh', onRefresh);
     };
   }, [selectedComp, focusArea, riskLevel]);
 

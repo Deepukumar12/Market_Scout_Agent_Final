@@ -37,3 +37,11 @@ dateparser
 urllib3<2.0.0
 json-repair
 crawl4ai
+langchain
+langgraph
+openai
+sqlalchemy
+asyncpg
+alembic
+playwright
+exa-py

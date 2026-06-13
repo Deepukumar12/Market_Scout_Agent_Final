@@ -94,6 +94,24 @@ async def get_system_stats(current_user: User = Depends(get_current_user)):
     # 3. Success Rate based on real signal counts
     success_rate = 99.5 if report_count > 0 else 100.0
     
+    # Total dynamic nodes representing the "Living Cluster"
+    from src.shared.websockets import manager as ws_manager
+    from datetime import timezone
+    
+    # 1. Core Infrastructure Nodes (DB + Telemetry)
+    base_nodes = 2
+    
+    # 2. Network Nodes (Active WebSocket links for logs/notifications)
+    network_nodes = ws_manager.get_active_count() if hasattr(ws_manager, 'get_active_count') else 1
+    
+    # 3. Operational Nodes (Recent scan activity in the last 15 mins)
+    now_utc = datetime.now(timezone.utc)
+    recent_cutoff = now_utc - timedelta(minutes=15)
+    active_op_nodes = await db.db["competitors"].count_documents({"last_scan": {"$gte": recent_cutoff}})
+    
+    # Total dynamic nodes representing the "Living Cluster"
+    total_dynamic_nodes = base_nodes + network_nodes + active_op_nodes
+    
     # 100% Dynamic system stats gathering
     return SystemStats(
         active_scrapers=competitor_count,
@@ -109,7 +127,7 @@ async def get_system_stats(current_user: User = Depends(get_current_user)):
         latency=f"{int(2 + (cpu_usage/15))}ms",
         latency_change="Stable",
         status="Online",
-        nodes=max(1, competitor_count // 5) if competitor_count > 0 else 0,
+        nodes=total_dynamic_nodes,
         region="AWS-Mumbai-1",
         uptime="100.0%",
         last_heartbeat=get_now_ist().isoformat(),

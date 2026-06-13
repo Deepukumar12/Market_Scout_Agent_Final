@@ -41,6 +41,12 @@ class Competitor(CompetitorBase):
     status: CompetitorStatus = CompetitorStatus.ACTIVE
     last_scan: Optional[datetime] = None
     firmographics: Optional[dict] = Field(default_factory=dict)
+    financials: Optional[dict] = Field(default_factory=dict)
+    github_metrics: Optional[dict] = Field(default_factory=dict)
+    search_metrics: Optional[dict] = Field(default_factory=dict)
+    innovation_score: Optional[int] = 0
+    risk_level: Optional[str] = "Low"
+    velocity: Optional[str] = "Steady"
     scan_success_rate: float = 0.0
     risk_score: float = 0.0
     confidence_score: float = 0.0

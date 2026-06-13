@@ -3,8 +3,8 @@ import os
 import certifi
 from motor.motor_asyncio import AsyncIOMotorClient
 from src.domains.intelligence.controllers.intel_data import (
-    get_global_metrics, get_analytics, get_activity_timeline,
-    get_target_universe, get_market_comparison, get_risk_assessment,
+    get_global_metrics, get_signal_analytics, get_activity_timeline,
+    get_market_comparison, get_risk_assessment,
     get_sentiment_matrix, get_mission_briefing
 )
 from src.domains.users.models.user import User
@@ -23,9 +23,10 @@ async def main():
     user_doc = await db.db["users"].find_one()
     if not user_doc:
         print("No user found in database. Using a dummy user object for testing purposes.")
-        test_user = User(id="000000000000000000000000", email="test@example.com", is_active=True, is_superuser=False)
+        test_user = User(id="000000000000000000000000", email="test@example.com", is_active=True, role="user")
     else:
         print(f"Testing with User ID: {user_doc['_id']}")
+        user_doc["id"] = str(user_doc.pop("_id"))
         test_user = User(**user_doc)
 
     print("\n--- Testing Endpoints ---")
@@ -35,7 +36,7 @@ async def main():
         print(metrics.model_dump_json(indent=2))
         
         print("\n2. Analytics:")
-        analytics = await get_analytics(test_user, competitor_id="all")
+        analytics = await get_signal_analytics(competitor_id="all", current_user=test_user)
         print(analytics.model_dump_json(indent=2))
         
         print("\n3. Market Comparison:")
@@ -43,11 +44,11 @@ async def main():
         print([c.model_dump_json() for c in comparison])
         
         print("\n4. Sentiment Matrix:")
-        sentiment = await get_sentiment_matrix(test_user, "all")
+        sentiment = await get_sentiment_matrix(competitor_id="all", current_user=test_user)
         print(sentiment.model_dump_json(indent=2))
         
         print("\n5. Risk Assessment:")
-        risk = await get_risk_assessment(test_user, "all")
+        risk = await get_risk_assessment(competitor_id="all", current_user=test_user)
         print(risk.model_dump_json(indent=2))
         
         print("\n6. Mission Briefing:")
@@ -63,7 +64,7 @@ async def main():
         traceback.print_exc()
         
     finally:
-        await db.close()
+        db.disconnect()
 
 if __name__ == "__main__":
     asyncio.run(main())

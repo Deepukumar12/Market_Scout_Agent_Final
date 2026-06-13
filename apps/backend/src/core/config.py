@@ -66,15 +66,17 @@ class Settings(BaseSettings):
     # ---------------------------------------------------
     # LLM PRIORITY CONTROL
     # ---------------------------------------------------
+    # ---------------------------------------------------
     # Options: ollama | groq | gemini
-    LLM_PROVIDER: str = "groq"
+    LLM_PROVIDER: str = "ollama"
 
 
     # ---------------------------------------------------
     # OLLAMA (LOCAL LLM FALLBACK)
     # ---------------------------------------------------
+    # ---------------------------------------------------
     OLLAMA_HOST: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "llama3"
+    OLLAMA_MODEL: str = "qwen3:14b"
 
 
     # ---------------------------------------------------
@@ -92,6 +94,18 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
+    # ---------------------------------------------------
+    # OPENAI (ALTERNATE LLM)
+    # ---------------------------------------------------
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o"
+
+    # ---------------------------------------------------
+    # ANTHROPIC (ALTERNATE LLM)
+    # ---------------------------------------------------
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20240620"
+
 
     # ---------------------------------------------------
     # SEARCH & DISCOVERY APIs
@@ -101,6 +115,8 @@ class Settings(BaseSettings):
     EXA_API_KEY: str = ""
     CLEARBIT_API_KEY: str = ""
     FIRECRAWL_API_KEY: str = ""
+    NEWSAPI_API_KEY: str = ""
+    GNEWS_API_KEY: str = ""
 
 
     # ---------------------------------------------------
@@ -108,6 +124,12 @@ class Settings(BaseSettings):
     # ---------------------------------------------------
     ALPHA_VANTAGE_API_KEY: str = ""
     FINNHUB_API_KEY: str = ""
+
+    # ---------------------------------------------------
+    # EMAIL ALERTING
+    # ---------------------------------------------------
+    EMAIL_USER: str = ""
+    EMAIL_PASS: str = ""
 
 
     # ---------------------------------------------------

@@ -37,12 +37,8 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
             window.open(url, '_blank');
           }}
         >
-          <div className="w-24 h-24 rounded-3xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover/profile:scale-105 transition-transform">
-            {report.company?.logo ? (
-              <img src={report.company.logo} alt="Logo" className="w-16 h-16 object-contain" />
-            ) : (
-              <Building2 className="w-12 h-12 text-blue-500" />
-            )}
+          <div className="w-24 h-24 rounded-3xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover/profile:scale-105 transition-transform text-blue-600 dark:text-[#0071E3] text-4xl font-black uppercase italic">
+            { (report.company?.name || report.competitor)?.[0] || <Building2 className="w-12 h-12" /> }
           </div>
           <div className="space-y-2 flex-1">
             <h2 className="text-4xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tight flex items-center gap-3 pr-8">

@@ -41,7 +41,7 @@ const RiskPage = () => {
 
   useEffect(() => {
     if (competitors.length > 0 && !selectedCompetitorId) {
-      setSelectedCompetitorId(competitors[0].id);
+      setSelectedCompetitorId(competitors[0].id || null);
     }
   }, [competitors, selectedCompetitorId, setSelectedCompetitorId]);
 

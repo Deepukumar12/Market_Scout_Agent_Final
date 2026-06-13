@@ -45,53 +45,111 @@ def synthesize_report(company_name: str, scraped_texts: list[str]) -> str:
     """
     Feeds scraped content into Gemini 2.5 Flash to generate a final summary report.
     Returns markdown text. Only includes updates from the last 7 days; no disclaimers.
+    Uses Prompt 4 (fact_verify) and Prompt 5 (synthesize_briefing) via GeminiClient.
     """
     if not scraped_texts:
-        return f"No relevant content found for {company_name}."
+        return "No verified technical feature releases found within the last 7 days."
 
-    context = "\n\n---\n\n".join(scraped_texts)
-    today = datetime.now(timezone.utc)
-    cutoff = (today - timedelta(days=7)).strftime("%B %d, %Y")
-    today_str = today.strftime("%B %d, %Y")
-    # Past 7 days in DD-MM-YYYY (newest first) for consistent date-wise output
-    date_list = [((today - timedelta(days=i)).strftime("%d-%m-%Y")) for i in range(7)]
-    date_line = ", ".join(date_list)
+    import json
+    import asyncio
+    import concurrent.futures
+    from src.services.ai.gemini_client import GeminiClient
 
-    prompt = f"""
-You are a Senior Technical ScoutForge AI. Output ONLY the report. No meta-commentary, no disclaimers.
+    # Parse and normalize inputs into structured data dicts
+    scraped_data = []
+    for item in scraped_texts:
+        if isinstance(item, dict):
+            scraped_data.append(item)
+        elif isinstance(item, str):
+            item_stripped = item.strip()
+            if not item_stripped:
+                continue
+            # Try to parse as JSON first
+            try:
+                parsed = json.loads(item_stripped)
+                if isinstance(parsed, dict):
+                    scraped_data.append(parsed)
+                elif isinstance(parsed, list):
+                    scraped_data.extend([x for x in parsed if isinstance(x, dict)])
+                else:
+                    scraped_data.append({"content": item_stripped})
+            except json.JSONDecodeError:
+                # If not JSON, parse lines or treat as a single content block
+                lines = item_stripped.split("\n")
+                title = ""
+                url = ""
+                date = ""
+                # Simple parsing of title/url/date if present in first few lines
+                for line in lines[:5]:
+                    line_lower = line.lower()
+                    if line_lower.startswith("title:"):
+                        title = line[6:].strip()
+                    elif line_lower.startswith("url:") or line_lower.startswith("source:"):
+                        url = line[7:].strip()
+                    elif line_lower.startswith("date:") or line_lower.startswith("published:"):
+                        date = line[10:].strip()
+                
+                # Check for url if not found in first few lines
+                if not url:
+                    url_match = re.search(r"https?://[^\s)]+", item_stripped)
+                    if url_match:
+                        url = url_match.group(0)
+                
+                scraped_data.append({
+                    "title": title or "Scraped Source",
+                    "detected_date": date or None,
+                    "date_mentioned": date or None,
+                    "source_url": url or "",
+                    "content": item_stripped,
+                    "raw_excerpt": item_stripped[:1000]
+                })
 
-PRIMARY GOAL:
-Create a DATE-WISE intelligence report for "{company_name}" for the past 7 days only.
+    # Normalize fields
+    for item in scraped_data:
+        if not item.get("detected_date"):
+            item["detected_date"] = item.get("date_mentioned") or item.get("publish_date") or item.get("date")
+        if not item.get("date_mentioned"):
+            item["date_mentioned"] = item.get("detected_date")
+        if not item.get("source_url"):
+            item["source_url"] = item.get("url") or ""
+        if not item.get("url"):
+            item["url"] = item.get("source_url") or ""
+        if not item.get("raw_excerpt"):
+            item["raw_excerpt"] = item.get("excerpt") or item.get("snippet") or item.get("content", "")[:1000]
+        if not item.get("content"):
+            item["content"] = item.get("raw_excerpt") or ""
+        if not item.get("feature_name"):
+            item["feature_name"] = item.get("title") or "Unknown Feature"
 
-REQUIRED STRUCTURE — past 7 days (newest first):
-- List exactly these 7 dates as level-2 headings: {date_line}
-- For each date use: ## DD-MM-YYYY then bullet points or "No technical or latest press releases or documentation updates in the past 7 days."
+    client = GeminiClient()
 
-STRICT 7-DAY RULE:
-- Only include updates explicitly dated within the last 7 days (on or after {cutoff}; today is {today_str}).
-- Omit undated or older content. Prefer fewer, recent items.
-
-FORMATTING:
-1. Under each date: bullet points like * **Update Title**: Description. [Source](full_url) — use markdown link so the link is clickable.
-2. If the content below contains a URL or source, use it in the link: [Source](url) or [Read more](url). Never output raw URLs only; use [text](url).
-3. Only include technical changes (APIs, SDKs, features, changelog, release notes).
-4. For dates with no updates in the content, write exactly: No technical or latest press releases or documentation updates in the past 7 days.
-
-OUTPUT: Report body only. All 7 date sections. No disclaimers.
-
-INTELLIGENCE CONTEXT:
-{context}
-"""
-    system = "You output a date-wise report (DD-MM-YYYY) for the past 7 days. Use markdown [Source](url) for clickable links. No disclaimers."
-    
-    # Primary: Ollama
-    raw = generate_text_ollama(prompt, system=system, max_tokens=2048)
-    
-    if not raw:
-        from src.services.ai.groq_sync import generate_text_groq
-        raw = generate_text_groq(prompt, system=system, max_tokens=2048)
+    async def _run_pipeline():
+        # Step 1: Fact verification (Prompt 4)
+        verified_data = await client.fact_verify(
+            company_name=company_name,
+            scraped_data=scraped_data
+        )
         
-    if not raw:
-        raw = generate_text(prompt, system=system, max_tokens=2048)
-        
-    return _strip_disclaimers(raw) if raw else f"Error synthesizing report for {company_name}."
+        # Step 2: Synthesis briefing (Prompt 5)
+        report_md = await client.synthesize_briefing(
+            company_name=company_name,
+            verified_data=verified_data,
+            total_scanned_count=len(scraped_data),
+            raw_scraped_count=len(scraped_data)
+        )
+        return report_md
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    if loop.is_running():
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(lambda: asyncio.run(_run_pipeline()))
+            raw_report = future.result()
+    else:
+        raw_report = loop.run_until_complete(_run_pipeline())
+
+    return _strip_disclaimers(raw_report) if raw_report else f"Error synthesizing report for {company_name}."

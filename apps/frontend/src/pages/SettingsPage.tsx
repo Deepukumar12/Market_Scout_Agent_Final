@@ -59,6 +59,7 @@ const SettingsPage = () => {
   const [profileForm, setProfileForm] = useState({
     full_name: '',
     email: '',
+    username: '',
     avatar_url: '',
     bio: '',
     company: '',
@@ -111,6 +112,7 @@ const SettingsPage = () => {
       setProfileForm({
         full_name: user.full_name || '',
         email: user.email || '',
+        username: user.username || '',
         avatar_url: user.avatar_url || '',
         bio: user.bio || '',
         company: user.company || '',
@@ -406,11 +408,7 @@ const SettingsPage = () => {
                       <div className="relative group">
                          <div className="w-28 h-28 rounded-[36px] bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-1 shadow-2xl">
                             <div className="w-full h-full rounded-[32px] bg-white dark:bg-[#1D1D1F] flex items-center justify-center overflow-hidden">
-                               {user?.avatar_url ? (
-                                 <img src={user.avatar_url.startsWith('http') ? user.avatar_url : `http://localhost:8000${user.avatar_url}`} className="w-full h-full object-cover" />
-                               ) : (
-                                 <span className="text-4xl font-black text-blue-600 italic">{user?.full_name?.charAt(0) || 'A'}</span>
-                               )}
+                                  <span className="text-4xl font-black text-blue-600 italic">{user?.full_name?.charAt(0) || 'A'}</span>
                             </div>
                          </div>
                          <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 rounded-[36px] cursor-pointer transition-opacity">
@@ -422,14 +420,15 @@ const SettingsPage = () => {
 
                   <SectionCard title="Operational Identity" icon={<Shield size={20} className="text-blue-600" />}>
                      <form onSubmit={handleProfileUpdate} className="space-y-10">
-                       <div className="grid grid-cols-2 gap-10">
-                          <FormInput label="Full Identity" value={profileForm.full_name} onChange={(v) => { setProfileForm({...profileForm, full_name: v}); setIsDirty(true); }} placeholder="Full Name" icon={<User size={14} />} />
-                          <FormInput label="Strategic Email" value={profileForm.email} onChange={(v) => { setProfileForm({...profileForm, email: v}); setIsDirty(true); }} placeholder="email@scout.ai" icon={<Globe size={14} />} />
-                       </div>
-                       <div className="grid grid-cols-2 gap-10">
-                          <FormInput label="Headquarters" value={profileForm.company} onChange={(v) => { setProfileForm({...profileForm, company: v}); setIsDirty(true); }} placeholder="Strategic HQ" icon={<MapPin size={14} />} />
-                          <FormInput label="Intelligence Role" value={profileForm.job_title} onChange={(v) => { setProfileForm({...profileForm, job_title: v}); setIsDirty(true); }} placeholder="Lead Agent" icon={<Cpu size={14} />} />
-                       </div>
+                        <div className="grid grid-cols-3 gap-6">
+                           <FormInput label="Full Identity" value={profileForm.full_name} onChange={(v) => { setProfileForm({...profileForm, full_name: v}); setIsDirty(true); }} placeholder="Full Name" icon={<User size={14} />} />
+                           <FormInput label="Tactical Handle" value={profileForm.username} onChange={(v) => { setProfileForm({...profileForm, username: v}); setIsDirty(true); }} placeholder="username" icon={<Shield size={14} />} />
+                           <FormInput label="Strategic Email" value={profileForm.email} onChange={(v) => { setProfileForm({...profileForm, email: v}); setIsDirty(true); }} placeholder="email@scout.ai" icon={<Globe size={14} />} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-10">
+                           <FormInput label="Headquarters" value={profileForm.company} onChange={(v) => { setProfileForm({...profileForm, company: v}); setIsDirty(true); }} placeholder="Strategic HQ" icon={<MapPin size={14} />} />
+                           <FormInput label="Intelligence Role" value={profileForm.job_title} onChange={(v) => { setProfileForm({...profileForm, job_title: v}); setIsDirty(true); }} placeholder="Lead Agent" icon={<Cpu size={14} />} />
+                        </div>
                        <div className="space-y-4">
                           <label className="text-[11px] font-black uppercase tracking-[0.3em] text-[#86868B] italic">Agent Dossier / Mission Background</label>
                           <textarea 

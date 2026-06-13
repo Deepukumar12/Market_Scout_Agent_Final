@@ -3,7 +3,7 @@ import uuid
 import os
 import shutil
 
-from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 
 from src.core import config
@@ -16,10 +16,10 @@ router = APIRouter()
 
 
 @router.post("/register")
-async def register(user: UserCreate):
+async def register(user: UserCreate, background_tasks: BackgroundTasks):
     """
-    Register a new user and immediately issue a JWT so the client can be
-    considered authenticated right after signup.
+    Register a new user and immediately issue a JWT.
+    Welcome protocols (Email) are dispatched asynchronously.
     """
     print(f"DEBUG: Registering user {user.email}")
     
@@ -29,17 +29,23 @@ async def register(user: UserCreate):
     collection = database["users"]
     existing_user = await collection.find_one({"email": user.email})
     if existing_user:
-        print(f"ERROR: Email {user.email} already exists")
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = get_password_hash(user.password)
 
-    # Pydantic V2: model_dump()
     new_user = user.model_dump()
     new_user["hashed_password"] = hashed_password
-    # Set sensible defaults for new accounts
     new_user.setdefault("role", "user")
     new_user.setdefault("is_active", True)
+    
+    # 📧 Intelligence Alerting Protocol: Enable email alerts by default for all new personnel
+    new_user.setdefault("preferences", {
+        "emailAlerts": True,
+        "theme": "dark",
+        "notifications": True,
+        "scanFrequency": "Daily"
+    })
+
     if "password" in new_user:
         del new_user["password"]
 
@@ -47,10 +53,7 @@ async def register(user: UserCreate):
         result = await collection.insert_one(new_user)
         created_user = await collection.find_one({"_id": result.inserted_id})
 
-        # Issue a JWT so the user is logged in immediately after registration
-        access_token_expires = timedelta(
-            minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        access_token_expires = timedelta(minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={
                 "sub": created_user["email"],
@@ -60,7 +63,8 @@ async def register(user: UserCreate):
             },
             expires_delta=access_token_expires,
         )
-        # Push welcome notification
+
+        # Push welcome notification (In-app)
         from src.domains.notifications.services.notification_service import notification_service
         from src.domains.notifications.models.notification import NotificationType
         await notification_service.create_notification(
@@ -68,6 +72,45 @@ async def register(user: UserCreate):
             title="System Initialization",
             message=f"Welcome {created_user.get('full_name', 'Agent')}. Your intelligence profile has been activated.",
             type=NotificationType.SUCCESS
+        )
+
+        # Offload Welcome Email to Background Task
+        from src.domains.notifications.services.email_service import send_email_report
+        
+        full_name = created_user.get('full_name', 'Agent')
+        email = created_user['email']
+        username = created_user.get('username', 'recon_agent')
+
+        welcome_subject = "ScoutForge AI | Protocol Activated"
+        welcome_text = f"Welcome {full_name}. Your strategic profile is active. Head to your dashboard: http://localhost:5173/dashboard"
+        
+        welcome_html = f"""
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #000; color: #fff; padding: 40px; border-radius: 20px;">
+            <h1 style="color: #0071E3; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; italic: true;">PROTOCOL ACTIVATED</h1>
+            <p style="font-size: 18px; color: #86868B;">Welcome, <b>{full_name}</b>.</p>
+            <p style="line-height: 1.6; color: #E5E5EA;">Your strategic intelligence uplink has been successfully established. The ScoutForge AI network is now at your disposal for deep-reconnaissance and technical surveillance missions.</p>
+            
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin: 30px 0;">
+                <h3 style="margin-top: 0; font-size: 12px; text-transform: uppercase; color: #0071E3;">Tactical Credentials</h3>
+                <p style="margin: 5px 0; font-family: monospace;"><b>USERNAME:</b> {username}</p>
+                <p style="margin: 5px 0; font-family: monospace;"><b>ACCESS LEVEL:</b> Enterprise Agent</p>
+            </div>
+
+            <a href="http://localhost:5173/dashboard" style="display: inline-block; background-color: #0071E3; color: #fff; padding: 15px 30px; border-radius: 12px; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-top: 20px;">Access Command Center</a>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 40px 0;">
+            <p style="font-size: 10px; color: #6E6E73; text-align: center;">THIS IS AN AUTOMATED INTELLIGENCE DISPATCH. DO NOT REPLY.</p>
+        </div>
+        """
+
+        print(f"🚀 [AUTH] Initializing welcome protocol for: {email} (User: {username})")
+
+        background_tasks.add_task(
+            send_email_report,
+            to_email=email,
+            subject=welcome_subject,
+            content=welcome_text,
+            html_content=welcome_html
         )
 
         return {"access_token": access_token, "token_type": "bearer"}

@@ -19,7 +19,7 @@ const MarketComparison = ({ data }: MarketComparisonProps) => {
         </div>
         <div className="flex items-center gap-4">
           <a
-            href="/api/v1/intelligence/market-comparison"
+            href={`${import.meta.env.VITE_API_URL || ''}/api/v1/intelligence/market-comparison`}
             target="_blank"
             className="text-[10px] font-black uppercase tracking-widest text-[#0071E3] bg-[#0071E3]/10 px-4 py-2 rounded-full border border-[#0071E3]/20 hover:scale-105 transition-all italic"
           >

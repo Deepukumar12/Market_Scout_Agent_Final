@@ -13,6 +13,8 @@ import { useExecutionStore } from '@/store/executionStore';
 import { useIntelStore } from '@/store/intelStore';
 import { analyzeCompany } from '@/services/api';
 
+import LogConsole from '@/components/dashboard/LogConsole';
+
 const DashboardLayout = () => {
   const { user, initSync } = useAuthStore();
   const { fetchCompetitors } = useCompetitorStore();
@@ -28,10 +30,10 @@ const DashboardLayout = () => {
   
   const progressSteps = [
     'Initializing AI Scout agents...',
-    'Searching technical repositories...',
-    'Scraping latest feature releases...',
-    'Analyzing competitive edge...',
-    'Generating intelligence report...'
+    'Phase 1: Auditing official documentation...',
+    'Phase 2: Intelligence domain expansion...',
+    'Phase 3: Fact verification & Synthesis...',
+    'Intelligence secured. Synchronizing console.'
   ];
 
 
@@ -55,23 +57,15 @@ const DashboardLayout = () => {
     setAnalyzeStatus('running');
     startExecution(progressSteps.length);
     
-    // Simulate progress while the API call is running
-    const progressInterval = setInterval(() => {
-      setStep((prev: number) => {
-        // Stop simulation at 80% to let real completion signal take over
-        if (prev < progressSteps.length - 2) {
-          return prev + 1;
-        }
-        return prev;
-      });
-    }, 4500); 
+    // NOTE: Simulated progress is removed. 
+    // The LogConsole now receives real-time "Phase X" signals via WebSockets
+    // which automatically updates the executionStore steps.
     
     try {
       console.log(`Starting mission for ${company.name} (Force Refresh: ${forceRefresh})...`);
       const scanResult = await analyzeCompany(company, forceRefresh);
       
       // Critical Path Success
-      clearInterval(progressInterval);
       setStep(progressSteps.length - 1);
       setAnalyzeStatus('completed');
       setScanReport(scanResult);
@@ -81,9 +75,6 @@ const DashboardLayout = () => {
       try {
         await Promise.all([
           fetchCompetitors(),
-          // Use window access or store state if needed, but for now we ensure 
-          // that the primary competitor list is refreshed.
-          // Note: Full dashboard refresh happens via these store calls
         ]);
         
         // Broadcast a custom event for other components to refresh
@@ -92,22 +83,12 @@ const DashboardLayout = () => {
         console.warn('Dashboard sync delayed:', refreshErr);
       }
     } catch (error: any) {
-      clearInterval(progressInterval);
       console.error('Mission failed:', error);
       
       // Categorize error for better UX
-      const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
-      if (isTimeout) {
-         setAnalyzeStatus('error');
-         // We could add a specific 'timeout' state if needed
-      } else {
-         setAnalyzeStatus('error');
-      }
-      
+      setAnalyzeStatus('error');
       setStep(0);
       stopExecution();
-    } finally {
-      clearInterval(progressInterval);
     }
   };
 
@@ -157,6 +138,9 @@ const DashboardLayout = () => {
         progressSteps={progressSteps}
         currentStep={realStep}
       />
+
+      {/* Global Real-Time Telemetry Link */}
+      <LogConsole />
     </div>
   );
 };

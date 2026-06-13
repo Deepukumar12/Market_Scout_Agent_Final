@@ -25,10 +25,6 @@ class DiscoveryService:
         query = query.strip().lower()
         if not query: return []
 
-        cache_key = f"discovery:search:{query}"
-        cached_results = await redis_service.get(cache_key)
-        if cached_results: return cached_results
-
         # 1. Primary: Clearbit Autocomplete (Free & Fast)
         results = await self._clearbit_autocomplete(query)
 
@@ -42,9 +38,7 @@ class DiscoveryService:
                     results.append(wr)
                     seen_domains.add(wr["domain"])
 
-        # 3. Store and Return
-        if results:
-            await redis_service.set(cache_key, results, expire=self.cache_ttl)
+
         return results
 
     async def _clearbit_autocomplete(self, query: str) -> List[Dict[str, Any]]:

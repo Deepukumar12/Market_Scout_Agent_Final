@@ -9,15 +9,15 @@ echo "📦 Starting Production Sync..."
 
 # 2. Rebuild images with production cache
 echo "🏗️ Building production containers..."
-docker-compose -f docker-compose.prod.yml build --no-cache
+docker compose -f docker-compose.prod.yml build --no-cache
 
-# 3. Run database migrations
-echo "🗄️ Running migrations..."
-docker-compose -f docker-compose.prod.yml run --rm backend python -m src.core.migrations
+# 3. Run database migrations (Skipped for MongoDB setup)
+# echo "🗄️ Running migrations..."
+# docker compose -f docker-compose.prod.yml run --rm backend python -m src.core.migrations
 
 # 4. Restart services
 echo "🚀 Restarting all services..."
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # 5. Verify health
 echo "🩺 Verifying health..."

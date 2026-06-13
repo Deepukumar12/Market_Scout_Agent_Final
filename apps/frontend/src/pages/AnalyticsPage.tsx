@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/utils';
 import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';
-import { getSignalAnalytics } from '@/services/api';
+import { getSignalAnalytics, runCompetitorScan } from '@/services/api';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 // --- Types ---
@@ -74,19 +74,20 @@ const AnalyticsPage = () => {
 
   useEffect(() => {
     if (competitors.length > 0 && !selectedCompetitorId) {
-      setSelectedCompetitorId(competitors[0].id);
+      setSelectedCompetitorId(competitors[0].id || null);
     }
   }, [competitors, selectedCompetitorId, setSelectedCompetitorId]);
 
   useEffect(() => {
+    const onRefresh = () => { fetchData(); };
     fetchData();
     
     // Listen for manual refreshes from the modal completion or websocket
-    window.addEventListener('intelligence-refresh', fetchData);
+    window.addEventListener('intelligence-refresh', onRefresh);
     
-    const interval = setInterval(fetchData, 30000); 
+    const interval = setInterval(() => { fetchData(); }, 30000); 
     return () => {
-      window.removeEventListener('intelligence-refresh', fetchData);
+      window.removeEventListener('intelligence-refresh', onRefresh);
       clearInterval(interval);
     };
   }, [fetchData]);

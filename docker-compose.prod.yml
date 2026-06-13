@@ -1,66 +1,74 @@
 version: '3.8'
 
 services:
-  backend:
-    build:
-      context: ./apps/backend
-      dockerfile: ../../infrastructure/docker/backend.Dockerfile
-    restart: always
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - ENV=production
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-      - redis
-
-  worker:
-    build:
-      context: ./apps/worker
-      dockerfile: ../../infrastructure/docker/worker.Dockerfile
-    restart: always
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - ENV=production
-    depends_on:
-      - db
-      - redis
-
-  admin:
-    build:
-      context: ./apps/admin
-      dockerfile: ../../infrastructure/docker/admin.Dockerfile
+  mongodb:
+    image: mongo:6.0
     restart: always
     ports:
-      - "8080:80"
-
-  frontend:
-    build:
-      context: ./apps/frontend
-      dockerfile: ../../infrastructure/docker/admin.Dockerfile
-    restart: always
-    ports:
-      - "3000:80"
-
-  db:
-    image: postgres:15-alpine
-    restart: always
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - "27017:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongodb_data:/data/db
 
   redis:
     image: redis:7-alpine
     restart: always
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
 
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - apps/backend/.env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+    depends_on:
+      - mongodb
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/worker.Dockerfile
+    restart: always
+    env_file:
+      - apps/backend/.env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+    depends_on:
+      - mongodb
+      - redis
+
+  admin:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/admin.Dockerfile
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend.Dockerfile
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
 volumes:
-  postgres_data:
+  mongodb_data:
   redis_data:

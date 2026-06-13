@@ -3,21 +3,27 @@ FROM node:20-alpine as builder
 
 WORKDIR /app
 
-# Install dependencies - leveraging layer cache
+# Copy package dependency configuration files
 COPY package*.json ./
+COPY turbo.json ./
+COPY apps/admin/package*.json ./apps/admin/
+COPY packages/platform/package*.json ./packages/platform/
+COPY packages/types/package*.json ./packages/types/
+COPY packages/utils/package*.json ./packages/utils/
+
+# Install dependencies for workspaces
 RUN npm ci
 
 # Copy source and build
 COPY . .
-RUN npm run build
+RUN npx turbo run build --filter=admin
 
 # Final stage - serve with Nginx
 FROM nginx:stable-alpine
 
-# Copy built assets
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/admin/dist /usr/share/nginx/html
 
-# Add custom Nginx config for SPA routing with security headers
+# Add custom Nginx config for SPA routing with security headers and API proxies
 RUN printf 'server {\n\
     listen 80;\n\
     server_tokens off;\n\
@@ -25,6 +31,28 @@ RUN printf 'server {\n\
         root /usr/share/nginx/html;\n\
         index index.html index.htm;\n\
         try_files $uri $uri/ /index.html;\n\
+    }\n\
+    # Proxy API requests to backend\n\
+    location /api/ {\n\
+        proxy_pass http://backend:8000;\n\
+        proxy_http_version 1.1;\n\
+        proxy_set_header Upgrade $http_upgrade;\n\
+        proxy_set_header Connection "upgrade";\n\
+        proxy_set_header Host $host;\n\
+        proxy_set_header X-Real-IP $remote_addr;\n\
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n\
+        proxy_set_header X-Forwarded-Proto $scheme;\n\
+    }\n\
+    # Proxy WebSocket requests to backend\n\
+    location /ws {\n\
+        proxy_pass http://backend:8000;\n\
+        proxy_http_version 1.1;\n\
+        proxy_set_header Upgrade $http_upgrade;\n\
+        proxy_set_header Connection "upgrade";\n\
+        proxy_set_header Host $host;\n\
+        proxy_set_header X-Real-IP $remote_addr;\n\
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n\
+        proxy_set_header X-Forwarded-Proto $scheme;\n\
     }\n\
     # Cache static assets\n\
     location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg)$ {\n\

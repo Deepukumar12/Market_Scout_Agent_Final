@@ -73,8 +73,8 @@ export function Footer() {
         <div className="grid lg:grid-cols-4 gap-12 mb-32 border-b border-[#F0F0F3] dark:border-white/5 pb-24">
           <div className="lg:col-span-2 space-y-10">
             <div className="flex items-center gap-4 group">
-              <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-600/40 group-hover:scale-110 transition-all duration-500 overflow-hidden">
-                <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
+              <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-600/40 group-hover:scale-110 transition-all duration-500 overflow-hidden text-white">
+                <Zap size={32} className="fill-current" />
               </div>
               <div className="flex flex-col">
                 <span className="text-3xl font-black tracking-tighter text-[#1D1D1F] dark:text-white uppercase italic">
@@ -124,18 +124,12 @@ export function Footer() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8">
               <MetricCard 
                 icon={<Globe className="text-blue-600" size={24} />}
                 label="Global Nodes"
                 value={globalMetrics?.total_competitors || "0"}
                 subValue="+12% Active"
-              />
-              <MetricCard 
-                icon={<Activity className="text-blue-600" size={24} />}
-                label="Signal Synthesis"
-                value={globalMetrics?.articles_processed || "0"}
-                subValue="Real-time Flow"
               />
             </div>
           </div>

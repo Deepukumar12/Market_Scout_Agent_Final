@@ -206,8 +206,8 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
       
       <div className="glass-card w-full max-w-md p-10 rounded-[2.5rem] relative z-10 animate-fade-in">
         <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden mb-6 group hover:scale-110 transition-transform duration-500 shadow-2xl shadow-blue-600/40">
-            <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
+          <div className="w-16 h-16 rounded-2xl bg-[#1D1D1F] dark:bg-white text-white dark:text-black flex items-center justify-center mb-6 group hover:scale-110 transition-transform duration-500 shadow-2xl shadow-blue-600/40 overflow-hidden">
+            <Zap size={32} className="fill-current" />
           </div>
           <h1 className="text-4xl font-black text-[var(--text-primary)] tracking-tighter uppercase italic">SCOUTFORGE<span className="text-[#0071E3]">AI</span></h1>
           <p className="text-[var(--text-secondary)] text-[10px] uppercase tracking-[0.3em] font-black mt-2 italic">Administrative Command</p>
@@ -312,7 +312,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
   const [isAddUserModalOpen, setAddUserModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ email: '', full_name: '', password: '', role: 'user' });
   const [actionLoading, setActionLoading] = useState(false);
-  const [lastSync, setLastSync] = useState<Date>(new Date());
+
 
   useEffect(() => {
     // Check if user is already authenticated (token exists in localStorage via PlatformClient)
@@ -344,7 +344,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
       setChartData(signals);
       setVault(vaultData);
       setUsers(userList);
-      setLastSync(new Date());
+
     } catch (err: any) {
       console.error("Failed to fetch live admin data", err);
       if (err.response?.status === 401) {
@@ -371,8 +371,8 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
       {/* Sidebar */}
       <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} glass-card border-r-0 border-white/5 transition-all duration-500 ease-in-out flex flex-col z-30`}>
         <div className="p-8 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-blue-600/30 group cursor-pointer shrink-0 transition-transform hover:scale-110">
-            <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
+          <div className="w-12 h-12 rounded-xl bg-[#0071E3] flex items-center justify-center text-white shadow-lg shadow-blue-600/30 group cursor-pointer shrink-0 transition-transform hover:scale-110 overflow-hidden">
+            <Zap size={24} className="fill-current" />
           </div>
           {isSidebarOpen && (
             <div className="flex flex-col overflow-hidden">
@@ -408,7 +408,7 @@ const AuthPortal = ({ onLogin }: { onLogin: () => void }) => {
           
           <div className="pt-6 border-t border-white/5 mt-6">
             <a
-              href="http://localhost:5173"
+              href={import.meta.env.VITE_MISSION_CONTROL_URL || "http://localhost:5173"}
               className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group whitespace-nowrap text-blue-400 hover:bg-blue-500/10 hover:text-blue-300`}
             >
               <Globe size={22} className="shrink-0" />

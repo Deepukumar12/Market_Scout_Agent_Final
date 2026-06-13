@@ -5,6 +5,9 @@ from src.services.ai.auto_scan_agent import run_auto_scan
 # Standardize on AsyncIOScheduler to share the same event loop as FastAPI/Motor
 scheduler = AsyncIOScheduler()
 
+import logging
+logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
+
 from src.core.database import db
 
 async def init_scheduler():

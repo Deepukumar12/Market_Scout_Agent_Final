@@ -4,7 +4,7 @@ Uses hash_id = hash(company + feature_name + release_date) to deduplicate.
 """
 import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
 
 from src.core.database import db
@@ -31,8 +31,35 @@ def _make_hash_id(company: str, feature_title: str, publish_date: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def _feature_to_doc(company: str, f: ScanFeature) -> dict[str, Any]:
-    hash_id = _make_hash_id(company, f.feature_title, f.publish_date or "")
+def _feature_to_doc(company: str, f: ScanFeature) -> Optional[dict[str, Any]]:
+    now = datetime.now(timezone.utc)
+    # Enforce strict publish date check
+    if not f.publish_date or f.publish_date == "UNKNOWN" or f.publish_date == "YYYY-MM-DD":
+        logger.warning(f"Feature '{f.feature_title}' has no valid publish date. Falling back to today.")
+        f.publish_date = now.strftime("%Y-%m-%d")
+
+    parsed_dt = None
+    try:
+        from src.services.data.scraper_service import _parse_iso_date
+        parsed_dt = _parse_iso_date(f.publish_date)
+    except: pass
+    
+    if not parsed_dt:
+        logger.warning(f"Feature '{f.feature_title}' has unparseable publish date: '{f.publish_date}'. Falling back to today.")
+        parsed_dt = now
+        f.publish_date = now.strftime("%Y-%m-%d")
+        
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=7)
+    
+    if parsed_dt.tzinfo is None:
+        parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
+        
+    if parsed_dt < cutoff or parsed_dt > now + timedelta(days=1):
+        logger.warning(f"Feature '{f.feature_title}' date {f.publish_date} is outside the 7-day window. Discarding.")
+        return None
+
+    hash_id = _make_hash_id(company, f.feature_title, f.publish_date)
     return {
         "company_name": company,
         "feature_name": f.feature_title,
@@ -41,7 +68,7 @@ def _feature_to_doc(company: str, f: ScanFeature) -> dict[str, Any]:
         "technical_summary": f.technical_summary,
         "source_url": f.source_url,
         "hash_id": hash_id,
-        "created_at": datetime.now(timezone.utc),
+        "created_at": parsed_dt,
     }
 
 
@@ -80,7 +107,7 @@ async def store_new_features(company: str, features: list[ScanFeature]) -> int:
     docs = []
     for f in new_only:
         doc = _feature_to_doc(company, f)
-        if doc["hash_id"] not in seen_hashes:
+        if doc and doc["hash_id"] not in seen_hashes:
             docs.append(doc)
             seen_hashes.add(doc["hash_id"])
             

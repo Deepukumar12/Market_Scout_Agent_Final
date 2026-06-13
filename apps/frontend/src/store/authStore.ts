@@ -15,7 +15,7 @@ interface AuthState {
     updateProfile: (data: any) => Promise<void>;
     changePassword: (data: any) => Promise<void>;
     deleteAccount: () => Promise<void>;
-    initSync: () => void;
+    initSync: () => () => void;
 }
 
 // Simple JWT decoder for client-side use

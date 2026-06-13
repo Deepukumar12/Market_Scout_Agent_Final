@@ -86,6 +86,26 @@ class OllamaClient:
             logger.error(f"Ollama generation failed: {e}")
             raise RuntimeError("Ollama text generation failed")
 
+    async def validate_organization_guardrail(self, company_name: str, max_retries: int = 1) -> bool:
+        """
+        Enterprise Guardrail: Verify if the input is a real-world organization.
+        """
+        prompt = (
+            "You are an Enterprise AI Guardrail. Your only job is to verify if the given input "
+            "is a valid, real-world company or organization. "
+            f"Input: {company_name}\n"
+            "If the input is a generic noun, verb, random string, harmful phrase, unethical request, "
+            "or NOT a specific organization/company, return exactly: {\"valid\": false}. "
+            "If it IS a valid real-world organization or company, return exactly: {\"valid\": true}."
+        )
+        try:
+            res_text = self.generate(prompt, system="Output ONLY valid JSON. Standard format.")
+            data = self._clean_json(res_text)
+            return bool(data.get("valid", False))
+        except Exception as e:
+            logger.warning(f"Ollama guardrail validation failed: {e}. Defaulting to False for security.")
+            return False
+
     async def generate_search_queries(
         self,
         company_name: str,

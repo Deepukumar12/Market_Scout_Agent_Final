@@ -7,6 +7,7 @@ Intel pipeline: runs ScoutForge AI scan for a competitor with:
 import logging
 from datetime import datetime, timezone
 from typing import Optional, Union
+from bson import ObjectId
 
 from src.core.database import db
 from src.domains.competitors.models.competitor import Competitor
@@ -23,6 +24,7 @@ from src.services.data.delta_engine import (
     get_cached_features,
 )
 from src.domains.scan.services.scan_pipeline import run_scan
+from src.domains.notifications.services.email_service import send_email_report
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +145,7 @@ async def run_competitor_scan(
         "competitor_id": str(doc.get("_id", "")),
         "company": competitor.name, # Ensure 'company' is present for Dashboard mapping
         "source_url": str(competitor.url) if competitor.url else None,
-        "generated_at": now.strftime("%Y-%m-%d %H:%M"),
+        "generated_at": now,
         "status": "Completed"
     })
     await db.db["reports"].insert_one(report_doc)
@@ -151,4 +153,54 @@ async def run_competitor_scan(
     # Cache the full final ScanResponse for "View Analysis" speedup
     await store_report_cache(db.db, str(doc.get("_id", q.get("_id"))), competitor.name, result.model_dump())
     
+    # 📧 [ALERT PROTOCOL] Dispatch intelligence briefing if new signals were captured
+    if count_new > 0 and doc.get("user_id"):
+        try:
+            user_doc = await db.db["users"].find_one({"_id": ObjectId(doc["user_id"])})
+            if user_doc and user_doc.get("preferences", {}).get("emailAlerts", True):
+                print(f"📡 [ALERT] Dispatching intelligence briefing for {competitor.name} to {user_doc['email']}")
+                
+                subject = f"ScoutForge AI | New Technical Signals detected for {competitor.name}"
+                content = f"Our autonomous agents have identified {count_new} new technical updates for {competitor.name}."
+                
+                # Build HTML Summary
+                feature_list_html = "".join([
+                    f"<div style='margin-bottom: 15px; padding: 10px; border-left: 4px solid #0071E3; background: #1C1C1E;'>"
+                    f"<strong style='color: #0071E3;'>{f.feature_title}</strong><br/>"
+                    f"<span style='color: #8E8E93; font-size: 12px;'>{f.publish_date} | {f.category}</span><br/>"
+                    f"<p style='color: #F5F5F7; margin-top: 5px;'>{f.technical_summary[:150]}...</p>"
+                    f"</div>" for f in result.features[:count_new]
+                ])
+                
+                html_content = f"""
+                <div style="background-color: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; border-radius: 12px;">
+                    <h2 style="color: #0071E3; border-bottom: 1px solid #333; padding-bottom: 10px;">INTELLIGENCE ALERT</h2>
+                    <p style="font-size: 16px; color: #F5F5F7;">New technical vectors have been identified for <strong>{competitor.name}</strong>.</p>
+                    
+                    <div style="margin-top: 25px;">
+                        {feature_list_html}
+                    </div>
+                    
+                    <div style="margin-top: 30px; text-align: center;">
+                        <a href="{settings.FRONTEND_URL}/dashboard" style="background-color: #0071E3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View Tactical Dashboard</a>
+                    </div>
+                    
+                    <p style="margin-top: 40px; font-size: 12px; color: #8E8E93; text-align: center;">
+                        Sent by ScoutForge AI Neural Network • Confidential Intelligence Briefing
+                    </p>
+                </div>
+                """
+                
+                from fastapi import BackgroundTasks
+                # Note: Since this is inside a service, we'll call it directly or via a shared bg task queue if available.
+                # For now, we dispatch directly to ensure delivery during scheduled runs.
+                send_email_report(
+                    to_email=user_doc["email"],
+                    subject=subject,
+                    content=content,
+                    html_content=html_content
+                )
+        except Exception as e:
+            print(f"❌ [ALERT ERROR] Failed to dispatch briefing: {e}")
+
     return result

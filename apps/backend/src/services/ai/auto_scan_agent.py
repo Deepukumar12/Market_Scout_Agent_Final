@@ -3,6 +3,8 @@ import os
 import asyncio
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
+import tempfile
+from fpdf import FPDF
 from src.domains.competitors.services.competitor_service import get_all_competitors
 from src.domains.users.services.user_service import get_user_email, get_user_preferences
 from src.domains.notifications.services.email_service import send_email_report
@@ -14,7 +16,7 @@ from src.core.database import db
 logger = logging.getLogger(__name__)
 
 
-async def async_run_auto_scan():
+async def async_run_auto_scan(target_user_id: str = None):
     """
     Async logic for competitor scans and PDF report generation.
     """
@@ -27,6 +29,7 @@ async def async_run_auto_scan():
     try:
         # ✅ Refactored to await async database call
         competitors = await get_all_competitors()
+        is_manual_trigger = target_user_id is not None
 
         if not competitors:
             logger.warning("⚠️ No competitors found in database")
@@ -41,6 +44,9 @@ async def async_run_auto_scan():
 
         # 2️⃣ Loop per user
         for user_id, comps in user_competitor_map.items():
+            if target_user_id and str(user_id) != str(target_user_id):
+                continue
+                
             # ✅ Refactored to await async user lookup
             email = await get_user_email(user_id)
             if not email:
@@ -58,13 +64,18 @@ async def async_run_auto_scan():
                 try:
                     now = datetime.now(timezone.utc)
                     
-                    # ✅ 1. Check for fresh data (24h)
-                    fresh_features = await get_cached_features(company, limit=1, days=1)
+                    # ✅ 1. Check for fresh data (24h). If manual, force dynamic 100% fresh.
+                    fresh_features = await get_cached_features(company, limit=1, days=1) if not is_manual_trigger else None
                     scan_result = None
 
                     if not fresh_features:
-                        logger.info(f"🔄 Node stale for {company}, triggering background surveillance...")
-                        request = ScanRequest(company_name=company, website=website, time_window_days=7)
+                        logger.info(f"🔄 Triggering dynamic surveillance for {company} (Manual: {is_manual_trigger})...")
+                        request = ScanRequest(
+                            company_name=company, 
+                            website=website, 
+                            time_window_days=7,
+                            force_refresh=is_manual_trigger
+                        )
                         scan_result = await run_scan(request)
                         
                         if scan_result:
@@ -75,14 +86,21 @@ async def async_run_auto_scan():
                             
                             # ✅ B. Store Market Signals (Article Summaries)
                             all_signals = []
+                            from src.services.data.scraper_service import _parse_iso_date
                             for n in (scan_result.news or []):
+                                best_created_at = now
+                                pub_date = n.get("publish_date")
+                                if pub_date:
+                                    parsed_dt = _parse_iso_date(pub_date)
+                                    if parsed_dt:
+                                        best_created_at = parsed_dt
                                 all_signals.append({
                                     "query_tag": company,
                                     "url": n.get("url") or n.get("link"),
                                     "article_summary": n.get("snippet") or n.get("description") or "Market signal detected.",
                                     "sentiment": "Neutral",
                                     "scraped_at": now,
-                                    "created_at": now,
+                                    "created_at": best_created_at,
                                     "user_id": user_id
                                 })
                             
@@ -168,14 +186,19 @@ async def async_run_auto_scan():
 
             # 4️⃣ Dispatch Intelligence Briefing (Email)
             scheduler_settings = await db.db.system_settings.find_one({"_id": "scheduler"})
-            if scheduler_settings and scheduler_settings.get("email_enabled"):
+            # Default to True to ensure "auto mail send" is active by default
+            should_send = is_manual_trigger or (scheduler_settings.get("email_enabled", True) if scheduler_settings else True)
+            
+            if should_send:
                 prefs = await get_user_preferences(user_id)
                 if prefs and not prefs.get("emailAlerts", True):
                     logger.info(f"⏭️ User {email} alerts disabled.")
                 else:
                     logger.info(f"📧 Dispatching briefed intelligence to {email}...")
                     
-                    report_content = f"ScoutForge AI: Autonomous Intelligence Briefing - {datetime.now().strftime('%Y-%m-%d')}\n\n"
+                    report_content = f"ScoutForge AI: Autonomous Intelligence Briefing\n"
+                    report_content += f"Tactical Date: {datetime.now().strftime('%A, %B %d, %Y')}\n"
+                    report_content += f"Operational Time: {datetime.now().strftime('%H:%M:%S')} IST\n\n"
                     report_content += f"Surveillance cycle completed for {len(user_reports)} targets.\n\n"
                     
                     for report in user_reports:
@@ -185,18 +208,76 @@ async def async_run_auto_scan():
                         else:
                             for f in report['features'][:5]:
                                 report_content += f"• {f.feature_title}: {f.technical_summary[:150]}...\n"
+                                report_content += f"  Source: {f.source_url}\n"
                         report_content += "\n"
                     
                     report_content += "\nSecure Mission Briefing: Command Center Updated."
                     
+                    # Generate PDF
+                    pdf_path = None
+                    try:
+                        import textwrap
+                        pdf = FPDF()
+                        pdf.add_page()
+                        pdf.set_font("Helvetica", size=12)
+                        
+                        for line in report_content.split('\n'):
+                            clean_line = line.encode('latin-1', 'replace').decode('latin-1')
+                            if not clean_line.strip():
+                                pdf.ln(8)
+                                continue
+                                
+                            is_source_line = clean_line.strip().startswith("Source:")
+                            if is_source_line:
+                                pdf.set_text_color(0, 113, 227)
+                                
+                            wrapped_lines = textwrap.wrap(clean_line, width=90, break_long_words=True)
+                            for w_line in wrapped_lines:
+                                if is_source_line:
+                                    # Extract the raw URL for the clickable link
+                                    url = clean_line.replace("Source:", "").strip()
+                                    pdf.cell(w=0, h=8, text=w_line, new_x="LMARGIN", new_y="NEXT", link=url)
+                                else:
+                                    pdf.cell(w=0, h=8, text=w_line, new_x="LMARGIN", new_y="NEXT")
+                                    
+                            if is_source_line:
+                                pdf.set_text_color(0, 0, 0)
+                            
+                        pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                        pdf_path = pdf_file.name
+                        pdf_file.close()
+                        pdf.output(pdf_path)
+                    except Exception as e:
+                        logger.error(f"Failed to generate PDF: {e}")
+                        pdf_path = None
+                    
+                    
+                    trigger_type = "on-demand" if is_manual_trigger else "daily"
+                    email_body_summary = f"""ScoutForge AI: Autonomous Intelligence Briefing - {datetime.now().strftime('%Y-%m-%d')}
+
+Your {trigger_type} competitor surveillance cycle has completed successfully for {len(user_reports)} targets.
+
+We have detected the latest technical signals and feature updates using dynamic real-time scanning. Please find your comprehensive, source-grounded intelligence briefing attached as a PDF document.
+
+Secure Mission Briefing: Command Center Updated.
+"""
+
                     try:
                         send_email_report(
                             to_email=email,
                             subject=f"ScoutForge AI: Daily Intelligence Briefing ({len(user_reports)} Targets)",
-                            content=report_content
+                            content=email_body_summary,
+                            attachment_path=pdf_path,
+                            attachment_name="ScoutForge_Autonomous_Intelligence_Briefing.pdf"
                         )
                     except Exception as e:
                         logger.error(f"Failed to dispatch email: {e}")
+                    finally:
+                        if pdf_path and os.path.exists(pdf_path):
+                            try:
+                                os.remove(pdf_path)
+                            except:
+                                pass
 
             # 5️⃣ System Notification
             from src.domains.notifications.services.notification_service import notification_service
@@ -205,7 +286,7 @@ async def async_run_auto_scan():
             await notification_service.create_notification(
                 user_id=user_id,
                 title="Intelligence Sync Complete",
-                message=f"Automated briefing for {len(user_reports)} targets is now available in your command nexus.",
+                message=f"Email sent successfully to {email}. Automated briefing for {len(user_reports)} targets is now available.",
                 type=NotificationType.INFO
             )
             

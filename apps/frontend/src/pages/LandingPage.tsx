@@ -177,10 +177,10 @@ export default function LandingPage() {
         )}>
           <div className="flex items-center gap-12">
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-blue-600/30 overflow-hidden">
-                <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-blue-600/30 overflow-hidden text-white">
+                <Zap size={24} className="fill-current" />
               </div>
-              <span className="text-2xl font-black tracking-tighter uppercase italic">SCOUTFORGE<span className="text-blue-600">AI</span></span>
+              <span className="text-2xl font-black tracking-tighter uppercase italic text-[#1D1D1F] dark:text-white">SCOUTFORGE<span className="text-blue-600">AI</span></span>
             </Link>
             
             <div className="hidden lg:flex items-center gap-8">
@@ -190,7 +190,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-6">
             <button 
               onClick={toggleTheme}
               className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -199,8 +199,9 @@ export default function LandingPage() {
             </button>
             <Link to="/login" className="text-xs font-bold uppercase tracking-widest hover:text-blue-600 transition-colors hidden sm:block">Login</Link>
             <Link to="/register">
-              <Button className="bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-widest h-12 px-8 rounded-2xl shadow-xl shadow-blue-600/20 active:scale-95 transition-all">
-                Initialize System
+              <Button className="bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-widest h-10 sm:h-12 px-4 sm:px-8 rounded-2xl shadow-xl shadow-blue-600/20 active:scale-95 transition-all text-[10px] sm:text-xs">
+                <span className="hidden sm:inline">Initialize System</span>
+                <span className="sm:hidden">Start</span>
               </Button>
             </Link>
           </div>
@@ -259,7 +260,7 @@ export default function LandingPage() {
                 </Link>
                 <div className="flex items-center gap-4 text-xs font-bold text-[#86868B] uppercase tracking-widest px-6 py-4 border border-[#E5E5EA] dark:border-white/10 rounded-[20px] bg-white/50 dark:bg-transparent backdrop-blur-xl">
                   <Activity className="text-emerald-500" size={18} />
-                  {globalMetrics?.articles_processed || '...'} Intelligence Assets
+                  Intelligence Protocol Active
                 </div>
               </motion.div>
             </div>
@@ -437,8 +438,7 @@ export default function LandingPage() {
             <div className="space-y-8 pt-8">
                {[
                  { label: "Tracked Entities", val: globalMetrics?.total_competitors || '...' },
-                 { label: "Technical Signals", val: globalMetrics?.features_found || '...' },
-                 { label: "Intelligence Points", val: globalMetrics?.articles_processed || '...' }
+                 { label: "Technical Signals", val: globalMetrics?.features_found || '...' }
                ].map(item => (
                  <div key={item.label} className="flex items-center justify-between border-b border-white/10 pb-4 group cursor-default">
                     <span className="text-sm font-bold text-[#86868B] uppercase tracking-widest group-hover:text-white transition-colors">{item.label}</span>

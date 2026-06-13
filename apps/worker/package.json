@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "python3 -m worker.celery_app worker --loglevel=info",
+    "start": "source ../backend/venv/bin/activate && celery -A worker.celery_app worker --loglevel=info",
     "dev": "watchmedo auto-restart --recursive --pattern='*.py' --directory='.' python3 -m worker.celery_app worker --loglevel=info"
   },
   "dependencies": {

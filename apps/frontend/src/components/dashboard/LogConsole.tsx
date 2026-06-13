@@ -7,7 +7,7 @@ import { useExecutionStore } from '@/store/executionStore';
 
 interface LogEntry {
   message: string;
-  category: string;
+  category: 'AGENT' | 'SYSTEM' | 'RISK_ENGINE';
   timestamp: string;
 }
 

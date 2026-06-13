@@ -15,6 +15,8 @@ interface NotificationState {
     notifications: Notification[];
     unreadCount: number;
     loading: boolean;
+    socket: WebSocket | null;
+    initWebSocket: () => void;
     fetchNotifications: () => Promise<void>;
     addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => Promise<void>;
     markAsRead: (id: string) => Promise<void>;

@@ -104,7 +104,7 @@ const StatCard: React.FC<StatCardProps> = ({
       <motion.div
         whileHover={{ y: -8, transition: { duration: 0.3 } }}
         className={cn(
-          "premium-card p-10 lg:p-12 h-full group relative overflow-hidden flex flex-col justify-between cursor-pointer block",
+          "premium-card p-6 md:p-10 lg:p-12 h-full group relative overflow-hidden flex flex-col justify-between cursor-pointer block",
           className
         )}
         onClick={() => {
@@ -129,7 +129,7 @@ const StatCard: React.FC<StatCardProps> = ({
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
-          "premium-card p-10 lg:p-12 h-full group relative overflow-hidden flex flex-col justify-between cursor-pointer block",
+          "premium-card p-6 md:p-10 lg:p-12 h-full group relative overflow-hidden flex flex-col justify-between cursor-pointer block",
           className
         )}
       >
@@ -143,7 +143,7 @@ const StatCard: React.FC<StatCardProps> = ({
       whileHover={{ y: -8, transition: { duration: 0.3 } }}
       onClick={onClick}
       className={cn(
-        "premium-card p-10 lg:p-12 h-full group relative overflow-hidden flex flex-col justify-between",
+        "premium-card p-6 md:p-10 lg:p-12 h-full group relative overflow-hidden flex flex-col justify-between",
         onClick && "cursor-pointer",
         className
       )}

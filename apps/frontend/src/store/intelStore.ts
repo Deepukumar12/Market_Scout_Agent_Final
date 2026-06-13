@@ -38,14 +38,12 @@ export interface GlobalMetrics {
   competitors_trend: number;
   features_found: number;
   features_trend: number;
-  articles_processed: number;
-  articles_trend: number;
   system_latency: number;
   last_update: string;
 }
 
 export interface IntelligenceInsight {
-  text: str;
+  text: string;
   url?: string;
 }
 
@@ -75,6 +73,7 @@ export interface SevenDaySignal {
   hash_id: string;
   summary?: string;
   source_type: string;
+  confidence_score: number;
 }
 
 export interface InnovationTrends {
@@ -134,6 +133,7 @@ export interface ScanReport {
   total_valid_updates: number;
   features: any[];
   company?: any;
+  github?: any;
   financials?: any;
   news: any[];
   search_visibility?: any;
@@ -204,6 +204,7 @@ export const useIntelStore = create<IntelState>((set) => ({
   activities: [],
   innovationTrends: null,
   globalMetrics: null,
+  systemStats: null,
   comparisonMatrix: [],
   lastSevenDays: [],
   missionBriefing: null,

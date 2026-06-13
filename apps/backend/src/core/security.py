@@ -15,6 +15,7 @@ from src.domains.users.models.user import User
 
 # Align the OAuth2 password flow with the actual login endpoint
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 def verify_password(plain_password, hashed_password):
@@ -92,3 +93,34 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 
     return User(**user_data)
 
+
+async def get_optional_user(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[User]:
+    """
+    Decode the JWT if present. Returns a `User` model instance if valid, otherwise None.
+    """
+    if not token:
+        return None
+        
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        email: str = payload.get("sub")
+        if not email:
+            return None
+    except JWTError:
+        return None
+
+    from src.core.database import get_database
+    database = await get_database()
+    
+    collection = database["users"]
+    user_data = await collection.find_one({"email": email})
+    if not user_data or not user_data.get("is_active", True):
+        return None
+
+    user_data = user_data.copy()
+    if "_id" in user_data:
+        user_data["id"] = str(user_data.pop("_id"))
+
+    return User(**user_data)

@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: '/api/v1',
+    baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : '/api/v1',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -55,6 +55,11 @@ export const runCompetitorScan = async (competitorId: string) => {
 };
 
 
+
+export const triggerReport = async () => {
+    const response = await api.post('/scan/trigger-report');
+    return response.data;
+};
 
 export const runScan = async (payload: {
     company_name: string;

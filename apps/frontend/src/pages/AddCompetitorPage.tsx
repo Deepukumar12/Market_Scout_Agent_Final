@@ -21,10 +21,26 @@ const AddCompetitorPage = () => {
   const { addCompetitor, fetchCompetitors } = useCompetitorStore();
   const { currentStep: realStep, setStep, startExecution, stopExecution } = useExecutionStore();
   
-  const [url, setUrl] = useState('');
+  const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isPromptInjection = (input: string) => {
+    const patterns = [
+      /ignore previous/i,
+      /you are/i,
+      /which model/i,
+      /who are you/i,
+      /list files/i,
+      /delete/i,
+      /drop table/i,
+      /<script/i,
+      /system/i,
+      /admin/i
+    ];
+    return patterns.some(p => p.test(input));
+  };
 
   const progressSteps = [
     'Initializing AI Scout agents...',
@@ -46,7 +62,7 @@ const AddCompetitorPage = () => {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url) return;
+    if (!company.trim()) return;
     
     setLoading(true);
     setError(null);
@@ -54,10 +70,9 @@ const AddCompetitorPage = () => {
     startExecution(progressSteps.length);
 
     try {
-      let companyName = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
-      if (!companyName) companyName = url;
+      const companyName = company.trim();
 
-      const newComp = await addCompetitor(companyName, url);
+      const newComp = await addCompetitor(companyName, "");
       
       if (!newComp) {
         throw new Error('Failed to initialize competitor in surveillance network.');
@@ -65,14 +80,14 @@ const AddCompetitorPage = () => {
 
       const data = await runScan({
         company_name: companyName,
-        website: url,
+        website: "",
         time_window_days: 7
       });
 
       if (data && !data.error) {
         setStep(progressSteps.length - 1); // Finalize
         setSuccess(true);
-        setUrl('');
+        setCompany('');
         fetchCompetitors();
         // Trigger global intelligence refresh
         window.dispatchEvent(new CustomEvent('intelligence-refresh'));
@@ -101,27 +116,51 @@ const AddCompetitorPage = () => {
           <form onSubmit={handleAdd} className="space-y-8">
             <div className="relative group">
               <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-[#86868B] dark:text-[#A1A1A6] group-focus-within:text-[#0071E3] transition-colors">
-                <Globe size={24} />
+                <Building2 size={24} />
               </div>
               <Input 
-                type="url"
-                placeholder="https://competitor.com"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="h-20 pl-16 pr-8 rounded-3xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border-transparent dark:text-white focus:border-[#0071E3] focus:ring-4 focus:ring-[#0071E3]/10 text-xl font-medium transition-all"
+                type="text"
+                placeholder="Enter Organization Name (e.g. Microsoft)"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className={cn(
+                  "h-20 pl-16 pr-8 rounded-3xl bg-[#F5F5F7] dark:bg-[#2C2C2E] dark:text-white text-xl font-medium transition-all border-2",
+                  isPromptInjection(company) ? "border-rose-500 bg-rose-50 dark:bg-rose-500/5" : "border-transparent focus:border-[#0071E3] focus:bg-white dark:focus:bg-[#1D1D1F]"
+                )}
                 required
               />
             </div>
 
+            <AnimatePresence>
+              {isPromptInjection(company) && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3"
+                >
+                  <Shield size={20} className="text-rose-500" />
+                  <p className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest italic">
+                    Security Exception: Input violates organizational integrity standards.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <Button 
               type="submit" 
-              className="w-full h-20 rounded-3xl bg-[#0071E3] hover:bg-[#0077ED] text-white font-black text-xl uppercase tracking-widest shadow-xl shadow-[#0071E3]/20 transition-all"
+              disabled={!company.trim() || isPromptInjection(company)}
+              className="w-full h-20 rounded-3xl bg-[#0071E3] hover:bg-[#0077ED] text-white font-black text-xl uppercase tracking-widest shadow-xl shadow-[#0071E3]/20 transition-all disabled:opacity-50"
             >
               <div className="flex items-center gap-2">
-                Begin Analysis
+                Initiate Mission
                 <ArrowRight size={24} />
               </div>
             </Button>
+            
+            <div className="flex items-center justify-center gap-2 mt-4 opacity-40">
+              <Shield size={14} className="text-blue-600" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#86868B] italic">Secured by ScoutForge AI Guardrail</span>
+            </div>
           </form>
         ) : loading ? (
           <div className="space-y-10 py-4">

@@ -191,11 +191,7 @@ const CompetitorsPage = () => {
             >
               <div className="flex items-center gap-5">
                 <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] flex items-center justify-center text-lg font-black text-[#0071E3] border border-[#E5E5EA] dark:border-white/10 group-hover:border-[#0071E3]/30 transition-all group-hover:bg-[#0071E3]/5 uppercase italic overflow-hidden">
-                  {c.firmographics?.logo ? (
-                    <img src={c.firmographics.logo} alt={c.name} className="w-full h-full object-cover" />
-                  ) : (
-                    c.name?.[0] || '?'
-                  )}
+                  {c.name?.[0] || '?'}
                 </div>
                 <div>
                   <div className="font-black uppercase italic tracking-tight text-[#1D1D1F] dark:text-white transition-colors">{c.name}</div>

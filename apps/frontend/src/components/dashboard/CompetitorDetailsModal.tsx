@@ -242,14 +242,8 @@ const CompetitorDetailsModal: React.FC<CompetitorDetailsModalProps> = ({
              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 pointer-events-none" />
              
              <div className="flex items-center gap-8 relative z-10">
-                <div className="w-24 h-24 rounded-3xl bg-white dark:bg-white/5 border border-white/20 dark:border-white/10 p-1 shadow-apple overflow-hidden shrink-0">
-                   {competitor.firmographics?.logo ? (
-                     <img src={competitor.firmographics.logo} alt={competitor.name} className="w-full h-full object-cover" />
-                   ) : (
-                     <div className="w-full h-full flex items-center justify-center text-3xl font-black text-[#0071E3] uppercase italic">
-                        {competitor.name?.[0]}
-                     </div>
-                   )}
+                <div className="w-24 h-24 rounded-3xl bg-white dark:bg-white/5 border border-white/20 dark:border-white/10 flex items-center justify-center text-5xl font-black text-[#0071E3] uppercase italic shadow-apple overflow-hidden shrink-0">
+                  {competitor.name?.[0]}
                 </div>
                 <div>
                    <div className="flex items-center gap-3 mb-2">

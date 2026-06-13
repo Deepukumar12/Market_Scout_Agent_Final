@@ -77,7 +77,12 @@ const SevenDayReleases = ({
                           <Zap size={20} />
                         </div>
                         <div>
-                          <div className="text-[10px] font-black text-[#AF52DE] uppercase tracking-widest">{feature.source_type || 'Signal'}</div>
+                          <div className="text-[10px] font-black text-[#AF52DE] uppercase tracking-widest flex items-center gap-2">
+                            {feature.source_type || 'Signal'}
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-white/50 dark:bg-white/10 text-emerald-600 dark:text-emerald-400">
+                              {Math.round(feature.confidence_score || 85)}% Conf
+                            </span>
+                          </div>
                           <div className="text-[11px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.1em] leading-none mt-1">
                             {feature.category}
                           </div>

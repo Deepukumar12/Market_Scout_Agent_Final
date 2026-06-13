@@ -142,8 +142,8 @@ export function CompetitorPins() {
     const pins = useMemo(() => {
         const _pins = [];
         for(let i=0; i<8; i++) {
-             // Random point on sphere (approx radius 2.2)
-             const phi = Math.acos( -1 + ( 2 * Math.random() ) );
+             // Even distribution on sphere (approx radius 2.2)
+             const phi = Math.acos( -1 + ( 2 * (i + 0.5) / 8 ) );
              const theta = Math.sqrt( 8 * Math.PI ) * phi;
              const r = 2.3;
              

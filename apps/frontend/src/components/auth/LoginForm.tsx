@@ -39,7 +39,7 @@ export function LoginForm() {
     <div className="w-full max-w-sm mx-auto">
       <div className="text-center mb-12">
         <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#1D1D1F] dark:bg-white text-white dark:text-black shadow-apple-large mb-8 transition-transform hover:scale-105 active:scale-95 overflow-hidden">
-          <img src="/logo.png" alt="ScoutForge AI" className="w-full h-full object-cover" />
+          <Zap size={32} className="fill-current" />
         </Link>
         <h1 className="text-4xl font-bold tracking-tight text-[#1D1D1F] dark:text-white mb-3">Sign in.</h1>
         <p className="text-sm font-medium text-[#6E6E73] dark:text-[#86868B]">Use your ScoutForge AI credentials.</p>
@@ -108,28 +108,7 @@ export function LoginForm() {
             </Button>
           </div>
           
-          <div className="relative py-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-[#E5E5EA] dark:border-white/10" />
-            </div>
-            <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-black italic">
-              <span className="bg-white dark:bg-black px-4 text-[#86868B] dark:text-[#A1A1A6]">OR</span>
-            </div>
-          </div>
 
-          <Button 
-            type="button" 
-            variant="ghost" 
-            className="w-full text-[#1D1D1F] dark:text-white hover:bg-white dark:hover:bg-white/10 rounded-full h-14 font-bold text-sm"
-            onClick={() => {
-                form.setValue("email", "demo@scoutiq.ai");
-                form.setValue("password", "demo123");
-                form.handleSubmit(onSubmit)();
-            }}
-            disabled={loading}
-          >
-            Launch Demo Console
-          </Button>
         </form>
       </Form>
       

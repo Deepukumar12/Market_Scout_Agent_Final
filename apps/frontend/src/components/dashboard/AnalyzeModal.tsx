@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Loader2, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
+import { X, Search, Loader2, CheckCircle2, ChevronRight, AlertCircle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { searchCompanies } from '@/services/api';
 import { cn } from '@/utils/utils';
@@ -38,6 +38,22 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [isSearching, setIsSearching] = useState(false);
   const [forceRefresh, setForceRefresh] = useState(false);
+
+  const isPromptInjection = (input: string) => {
+    const patterns = [
+      /ignore previous/i,
+      /you are/i,
+      /which model/i,
+      /who are you/i,
+      /list files/i,
+      /delete/i,
+      /drop table/i,
+      /<script/i,
+      /system/i,
+      /admin/i
+    ];
+    return patterns.some(p => p.test(input));
+  };
 
   React.useEffect(() => {
     const timer = setTimeout(async () => {
@@ -130,7 +146,7 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                     </div>
                     <input
                       type="text"
-                      placeholder="Search global companies (e.g. Apple, Stripe...)"
+                      placeholder="Search global companies (e.g. Apple, Stripe, Curd Rice...)"
                       value={company}
                       onChange={(e) => {
                         setCompany(e.target.value);
@@ -140,9 +156,28 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                       onKeyDown={handleKeyDown}
                       onFocus={() => setShowSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                      className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-transparent focus:border-[#0071E3] focus:bg-white dark:focus:bg-[#1D1D1F] rounded-2xl py-5 pl-14 pr-6 text-[#1D1D1F] dark:text-white text-lg font-medium outline-none transition-all placeholder:text-[#6E6E73] dark:placeholder:text-[#86868B]"
+                      className={cn(
+                        "w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border-2 rounded-2xl py-5 pl-14 pr-6 text-[#1D1D1F] dark:text-white text-lg font-medium outline-none transition-all placeholder:text-[#6E6E73] dark:placeholder:text-[#86868B]",
+                        isPromptInjection(company) ? "border-rose-500 bg-rose-50 dark:bg-rose-500/5" : "border-transparent focus:border-[#0071E3] focus:bg-white dark:focus:bg-[#1D1D1F]"
+                      )}
                       autoFocus
                     />
+                    
+                    <AnimatePresence>
+                      {isPromptInjection(company) && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="px-2 mt-3"
+                        >
+                          <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-widest italic">
+                            <Shield size={12} />
+                            Security Alert: Input resembles a system command or prompt injection.
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     
                     <AnimatePresence>
                       {showSuggestions && (
@@ -179,14 +214,8 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                               }}
                               className={`w-full text-left px-6 py-4 transition-colors border-b border-gray-50 dark:border-white/5 last:border-0 flex items-center gap-4 ${index === focusedIndex ? 'bg-[#F5F5F7] dark:bg-white/5' : 'hover:bg-[#F5F5F7] dark:hover:bg-white/5'}`}
                             >
-                              <div className="w-10 h-10 rounded-lg bg-white dark:bg-[#1D1D1F] border border-gray-200 dark:border-white/10 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                                {suggestion.logo ? (
-                                  <img src={suggestion.logo} alt={suggestion.name} className="w-8 h-8 object-contain" />
-                                ) : (
-                                  <div className="w-full h-full bg-blue-50 dark:bg-[#0071E3]/20 flex items-center justify-center text-blue-600 dark:text-[#0071E3] font-bold uppercase">
-                                    {suggestion.name[0]}
-                                  </div>
-                                )}
+                              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#0071E3]/20 flex items-center justify-center text-blue-600 dark:text-[#0071E3] font-black uppercase overflow-hidden shrink-0">
+                                {suggestion.name[0]}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2">
@@ -245,12 +274,16 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                   
                   <div className="pt-4">
                     <Button 
-                      disabled={!company.trim()}
+                      disabled={!company.trim() || isPromptInjection(company)}
                       className="w-full h-16 rounded-2xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-lg font-bold shadow-lg shadow-[#0071E3]/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2 group"
                     >
                       Analyze Company
                       <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                     </Button>
+                    <div className="flex items-center justify-center gap-2 mt-4 opacity-40">
+                      <Shield size={12} className="text-blue-600" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#86868B] italic">Secured by Enterprise AI Guardrail</span>
+                    </div>
                   </div>
                 </form>
               ) : (

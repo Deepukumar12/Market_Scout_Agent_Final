@@ -39,7 +39,8 @@ REQUIRED_TECHNICAL_KEYWORDS = re.compile(
     r'launch|product|announce|blog|news|press\s*release|report|'
     r'partnership|acquisition|expansion|growth|strategy|roadmap|'
     r'future|upcoming|milestone|capability|improvement|enhancement|'
-    r'tool|service|software|app|application|solution|innovat)\b',
+    r'tool|service|software|app|application|solution|innovat|'
+    r'moderniz|cloud|transformat|architect|digit|automation|intelligence)\b',
     re.I,
 )
 
@@ -333,24 +334,32 @@ async def scrape_url(url: str) -> Optional[Dict[str, Any]]:
     Main entry point for scraping.
     Tiered Fallback: Firecrawl -> Crawl4AI -> Direct Fetch (httpx/bs4)
     """
-    # 1. Primary: Firecrawl
+    # 1. Primary: Firecrawl (optional)
     try:
+        # Allow disabling Firecrawl via settings (useful when credits are exhausted)
+        firecrawl_enabled = getattr(settings, "FIRECRAWL_ENABLED", True)
         firecrawl_key = getattr(settings, "FIRECRAWL_API_KEY", "")
-        if firecrawl_key:
+        if firecrawl_enabled and firecrawl_key:
             result = await firecrawl_scrape(url)
             if result and result.get("content") and len(result["content"].strip()) > 300:
                 logger.info(f"Firecrawl success for {url}")
                 return result
+        elif not firecrawl_enabled:
+            logger.info("Firecrawl disabled via settings; skipping.")
     except Exception as e:
         logger.error(f"Firecrawl failed for {url}: {e}")
-
-    # 2. Secondary: Crawl4AI
+    # 2. Secondary: Crawl4AI (optional)
     try:
-        logger.info(f"Switching to Crawl4AI for {url}")
-        result = await crawl4ai_scrape(url)
-        if result and result.get("content") and len(result["content"].strip()) > 300:
-            logger.info(f"Crawl4AI success for {url}")
-            return result
+        # Respect toggle to avoid errors when Crawl4AI is unavailable or disabled
+        crawl4ai_enabled = getattr(settings, "CRAWL4AI_ENABLED", True)
+        if crawl4ai_enabled:
+            logger.info(f"Switching to Crawl4AI for {url}")
+            result = await crawl4ai_scrape(url)
+            if result and result.get("content") and len(result["content"].strip()) > 300:
+                logger.info(f"Crawl4AI success for {url}")
+                return result
+        else:
+            logger.info("Crawl4AI disabled via settings; skipping.")
     except Exception as e:
         logger.error(f"Crawl4AI failed for {url}: {e}")
 
@@ -391,9 +400,8 @@ def filter_by_time_and_technical(
     time_window_days: int,
 ) -> list[dict[str, Any]]:
     """
-    Step 3 – Date filtering. Discard if publish_date is EXPLICITLY older than time_window_days.
-    If publish_date is missing, we keep it (lenient) because Tavily already filters by 'days: 7'.
-    Today's content is INCLUDED — news published today is valid intelligence.
+    Step 3 – Date filtering. Strictly discard if publish_date is missing or older than time_window_days.
+    Official website updates must preserve their exact date and not shift.
     """
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=time_window_days)
@@ -402,25 +410,17 @@ def filter_by_time_and_technical(
     for item in items:
         pub_iso = item.get("publish_date")
         dt = _parse_iso_date(pub_iso)
+        
         if not dt:
-            # Strict Enforcement: If we can't find/verify a date, and the user wants "7 days only",
-            # we should be cautious. However, since search engines already filter, 
-            # we allow it if it's missing but discard if it's explicitly old.
-            # But to be even stricter as requested, we'll keep only if it's likely recent.
-            valid.append(item)
-            continue
-
-        dt = _parse_iso_date(pub_iso)
-        if not dt:
-            valid.append(item)
+            logger.info(f"Discarding content with missing/unclear publish date: {item.get('url')}")
             continue
 
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
 
-        # Only discard if the article is clearly older than the time window
-        if dt < cutoff:
-            logger.info(f"Discarding old content: {item.get('url')} (published {pub_iso})")
+        # Exclude anything older than the 7-day window or in the future
+        if dt < cutoff or dt > now + timedelta(days=1):
+            logger.info(f"Discarding out-of-range content: {item.get('url')} (published {pub_iso})")
             continue
 
         valid.append(item)
@@ -437,8 +437,20 @@ def filter_content_technical_only(
     - Contain at least one required technical keyword (API, Feature, Release, Update, etc.)
     - Are not dominated by non-technical content (hiring, funding, events, marketing).
     """
+    GENERIC_NEWS_DOMAINS = [
+        "forbes.com", "bloomberg.com", "cnbc.com", "reuters.com", "wsj.com",
+        "nytimes.com", "businessinsider.com", "techcrunch.com", "yahoo.com"
+    ]
+    
     result = []
     for item in items:
+        # Multi-Source Intelligence: Avoid generic news websites unless no technical source exists.
+        # Since we have an expansion step later if counts are low, we strictly filter out generic news here.
+        domain = item.get("domain", "").lower()
+        if any(news_domain in domain for news_domain in GENERIC_NEWS_DOMAINS):
+            logger.info(f"Discarding generic news source: {domain}")
+            continue
+
         combined = f"{item.get('title', '')} {item.get('content', '')} {item.get('snippet', '')}"
         if not REQUIRED_TECHNICAL_KEYWORDS.search(combined):
             continue

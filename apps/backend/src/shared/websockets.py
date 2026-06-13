@@ -28,15 +28,34 @@ class ConnectionManager:
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
 
+    def get_active_count(self) -> int:
+        """Returns the total number of active WebSocket connections."""
+        return sum(len(conns) for conns in self.active_connections.values())
+
     async def send_personal_message(self, message: dict, user_id: str):
         if user_id in self.active_connections:
+            # Create a list of connections to remove if they fail
+            disconnected = []
             for connection in self.active_connections[user_id]:
-                await connection.send_json(message)
+                try:
+                    await connection.send_json(message)
+                except Exception:
+                    disconnected.append(connection)
+            
+            for conn in disconnected:
+                self.active_connections[user_id].remove(conn)
 
     async def broadcast(self, message: dict):
-        for connections in self.active_connections.values():
-            for connection in connections:
-                await connection.send_json(message)
+        for user_id in list(self.active_connections.keys()):
+            disconnected = []
+            for connection in self.active_connections[user_id]:
+                try:
+                    await connection.send_json(message)
+                except Exception:
+                    disconnected.append(connection)
+            
+            for conn in disconnected:
+                self.active_connections[user_id].remove(conn)
 
 manager = ConnectionManager()
 
@@ -66,9 +85,38 @@ async def notification_websocket(websocket: WebSocket, token: str = Query(...)):
         })
         
         while True:
-            # Keep connection alive, wait for client messages if any (optional)
-            data = await websocket.receive_text()
-            # For now, we only push from server to client
+            # Keep connection alive
+            await websocket.receive_text()
+            
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id)
+
+@router.websocket("/ws/logs")
+async def logs_websocket(websocket: WebSocket, token: str = Query(...)):
+    """
+    Authenticated WebSocket for real-time agent execution logs.
+    """
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = str(payload.get("sub"))
+        if not user_id:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+    except JWTError:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    await manager.connect(websocket, user_id)
+    try:
+        # Initial Handshake
+        await websocket.send_json({
+            "message": "Neural Link Established. Streaming agent telemetry...",
+            "category": "SYSTEM",
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        while True:
+            await websocket.receive_text()
             
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)
