@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from src.services.ai.auto_scan_agent import run_auto_scan
@@ -13,8 +14,19 @@ from src.core.database import db
 async def init_scheduler():
     print("🕒 Scheduler (Daily Reports) started...")
 
-    # Fetch configuration from the database
-    settings = await db.db.system_settings.find_one({"_id": "scheduler"}) if db.db is not None else None
+    # Fetch configuration from the database with timeout to prevent hanging startup
+    try:
+        if db.db is not None:
+            settings = await asyncio.wait_for(
+                db.db.system_settings.find_one({"_id": "scheduler"}),
+                timeout=5.0
+            )
+        else:
+            settings = None
+    except Exception as e:
+        print(f"⚠️ Could not fetch scheduler settings from database (defaulting to 24h): {e}")
+        settings = None
+
     if settings:
         interval_unit = settings.get("interval_unit", "hours")
         interval_value = settings.get("interval_value", 24)

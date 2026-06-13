@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"OLLAMA_MODEL configured: {settings.OLLAMA_MODEL} (Local Fallback)")
     logger.info(f"GITHUB_TOKEN configured: {bool(settings.GITHUB_TOKEN)}")
     start_old_scheduler()
-    await init_scheduler()
+    asyncio.create_task(init_scheduler())
     yield
     # Shutdown: Stop scheduler, disconnect DB
     from src.domains.scan.services.scheduler_service import stop_scheduler
