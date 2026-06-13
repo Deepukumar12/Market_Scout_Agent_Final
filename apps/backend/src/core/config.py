@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     # PROJECT
     PROJECT_NAME: str = "SCOUTFORGE_AI"
     API_V1_STR: str = "/api/v1"
+    FRONTEND_URL: str = "http://localhost:5173"
 
 
     # ---------------------------------------------------

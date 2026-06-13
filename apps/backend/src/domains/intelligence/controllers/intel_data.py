@@ -102,7 +102,7 @@ async def get_last_seven_days_releases(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Returns all technical features detected within the last 7 calendar days, excluding today.
+    Returns the latest 7 technical features/data entries detected from the database.
     """
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -110,11 +110,6 @@ async def get_last_seven_days_releases(
     uid_str = str(current_user.id)
     features = []
     try:
-        now_utc = datetime.now(timezone.utc)
-        today_start_utc = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_date = today_start_utc - timedelta(days=6)
-        end_of_today = today_start_utc + timedelta(days=1)
-        
         if db.db is None: await db.connect()
         
         user_comp_names = []
@@ -126,14 +121,10 @@ async def get_last_seven_days_releases(
             
         if user_comp_names:
             cursor = db.db["feature_updates"].find({
-                "company_name": {"$in": user_comp_names},
-                "created_at": {"$gte": start_date, "$lt": end_of_today}
-            }).sort("created_at", -1)
+                "company_name": {"$in": user_comp_names}
+            }).sort("created_at", -1).limit(7)
             
             async for doc in cursor:
-                # Increased limit from 20 to 100 to ensure more complete pulse visibility
-                if len(features) >= 100: break
-                
                 s_url = doc.get("source_url", "")
                 s_type = "News"
                 if s_url and ("press-release" in s_url.lower() or "pr" in s_url.lower()):

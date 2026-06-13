@@ -254,6 +254,7 @@ async def _persist_scan_data(body: ScanRequest, result: ScanResponse, current_us
         # 7. Dispatch Automatic Email Briefing for this scan ONLY if new updates were found
         if count_new > 0:
             from src.domains.notifications.services.email_service import send_email_report
+            from src.core.config import settings
             try:
                 # We use the current_user.email which is a Pydantic EmailStr
                 to_email = str(current_user.email)
@@ -270,7 +271,7 @@ async def _persist_scan_data(body: ScanRequest, result: ScanResponse, current_us
                 for f in result.features[:5]:
                     email_body += f"\n• {f.feature_title}: {f.technical_summary[:150]}..."
                 
-                email_body += f"\n\nView full dossier: http://localhost:5173/dashboard"
+                email_body += f"\n\nView full dossier: {settings.FRONTEND_URL}/dashboard"
                 
                 send_email_report(
                     to_email=to_email,

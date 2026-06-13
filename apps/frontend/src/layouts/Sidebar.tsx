@@ -39,7 +39,8 @@ const Sidebar: React.FC<{ isOpen?: boolean, onClose?: () => void }> = ({ isOpen,
     const baseItems = [...menuItems];
     if (user?.role === 'admin') {
       baseItems.push({ icon: Cpu, text: 'Global Scheduler', path: '/dashboard/settings?tab=system' });
-      baseItems.push({ icon: ShieldAlert, text: 'Admin Center', path: 'http://localhost:5174' });
+      const adminUrl = import.meta.env.VITE_ADMIN_URL || 'http://localhost:5174';
+      baseItems.push({ icon: ShieldAlert, text: 'Admin Center', path: adminUrl });
     }
     return baseItems;
   }, [user]);
