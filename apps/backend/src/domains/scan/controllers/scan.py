@@ -1,5 +1,5 @@
 """
-POST /api/v1/scan – ScoutForge AI.
+POST /api/v1/scan - ScoutForge AI.
 Strict input: company_name, website (optional), time_window_days.
 Strict output: ScanResponse or {"error": "Gemini API unavailable"}.
 No synthetic fallback.
@@ -23,6 +23,9 @@ from src.domains.scan.models.scan import ScanFeature
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+from src.shared.rate_limiter import RateLimiter
+scan_limiter = RateLimiter(limit=5, window_seconds=600)
 
 
 @router.get("/reports")
@@ -52,7 +55,7 @@ async def trigger_email_report(
     background_tasks.add_task(async_run_auto_scan, str(current_user.id))
     return {"message": "Report generation triggered successfully. It will arrive in your inbox shortly."}
 
-@router.post("/scan", response_model=None)
+@router.post("/scan", response_model=None, dependencies=[Depends(scan_limiter)])
 async def post_scan(
     body: ScanRequest,
     background_tasks: BackgroundTasks,
@@ -61,7 +64,14 @@ async def post_scan(
     """
     Run the 15-stage LangGraph pipeline + parallel intelligence fetching via run_scan.
     Returns strict ScanResponse JSON.
+    STRICT RULE: Only searches for the exact company name provided.
     """
+    # -- COMPETITOR SEARCH IDENTITY RULE (HIGHEST PRIORITY) --------------------
+    # Validate and normalize the company name before ANY processing.
+    # Blocks multi-company queries, comparison language, and ambiguous input.
+    from src.shared.sanitizer import validate_company_name
+    body.company_name = validate_company_name(body.company_name)
+
     from src.services.activity_service import activity_service
     await activity_service.log_activity(
         user_id=str(current_user.id),
@@ -157,50 +167,79 @@ async def _persist_scan_data(body: ScanRequest, result: ScanResponse, current_us
 
         # 3. Store news and search results as Article Summaries for the signal feed
         all_signals = []
-        # Process News
-        from src.services.data.scraper_service import _parse_iso_date
+        # -- STRICT COMPANY IDENTITY FILTER ----------------------------------------
+        # Only persist news/search signals that explicitly mention the target company.
+        # This prevents cross-company contamination in the intelligence stream.
+        company_lower = body.company_name.lower()
+
+        def _signal_belongs_to_company(item: dict) -> bool:
+            title = (item.get("title") or "").lower()
+            snippet = (item.get("snippet") or item.get("description") or "").lower()
+            # Accept if company name appears in title OR snippet
+            return company_lower in title or company_lower in snippet
+
+        from src.core.datetime_utils import get_authoritative_publication_date
         for n in (result.news or []):
-            best_created_at = now
-            pub_date = n.get("publish_date")
-            if pub_date:
-                parsed_dt = _parse_iso_date(pub_date)
-                if parsed_dt:
-                    best_created_at = parsed_dt
+            # Identity gate - skip articles that don't mention the company
+            if not _signal_belongs_to_company(n):
+                logger.debug(
+                    f"[persist] DROPPED news signal - company '{body.company_name}' "
+                    f"not found in title/snippet: {n.get('url')}"
+                )
+                continue
+            best_created_at = get_authoritative_publication_date(n)
+            pub_date_str = best_created_at.strftime("%Y-%m-%d")
             all_signals.append({
                 "query_tag": body.company_name,
+                "company_name": body.company_name,   # explicit field for exact-match queries
                 "url": n.get("url") or n.get("link"),
                 "article_summary": n.get("snippet") or n.get("description") or "Market signal detected.",
                 "sentiment": "Positive" if any(w in (n.get("title") or "").lower() for w in ["launch", "new", "growth", "partnership"]) else "Neutral",
                 "scraped_at": now,
                 "created_at": best_created_at,
+                "published_date": pub_date_str,  # Actual publication date (authoritative)
                 "user_id": uid_str
             })
         
         # Process Search Visibility (Exa discovery, etc.)
         search_data = result.search_visibility or {}
         for s in (search_data.get("exa_discovery") or []):
-             all_signals.append({
+            # Identity gate for Exa discovery results
+            exa_title = (s.get("title") or "").lower()
+            exa_snippet = (s.get("snippet") or "").lower()
+            if company_lower not in exa_title and company_lower not in exa_snippet:
+                continue
+            best_created_at = get_authoritative_publication_date(s)
+            pub_date_str = best_created_at.strftime("%Y-%m-%d")
+            all_signals.append({
                 "query_tag": body.company_name,
+                "company_name": body.company_name,
                 "url": s.get("url"),
                 "article_summary": s.get("snippet") or "Strategic endpoint identified.",
                 "sentiment": "Neutral",
                 "scraped_at": now,
-                "created_at": now,
+                "created_at": best_created_at,
+                "published_date": pub_date_str,
                 "user_id": uid_str
             })
 
-        # Process GitHub Activity (New Signal Type)
+        # Process GitHub Activity (always company-scoped by the GitHub fetcher)
         github_data = result.github or {}
         for repo in (github_data.get("repos") or []):
+            best_created_at = get_authoritative_publication_date(repo)
+            pub_date_str = best_created_at.strftime("%Y-%m-%d")
             all_signals.append({
                 "query_tag": body.company_name,
+                "company_name": body.company_name,
                 "url": repo.get("html_url"),
                 "article_summary": f"Active Repo: {repo.get('full_name')} - {repo.get('description') or 'No description'}",
                 "sentiment": "Positive" if repo.get("stargazers_count", 0) > 100 else "Neutral",
                 "scraped_at": now,
-                "created_at": now,
+                "created_at": best_created_at,
+                "published_date": pub_date_str,
                 "user_id": uid_str
             })
+
 
         if all_signals:
             # Deduplicate by URL to prevent BulkWriteError
@@ -212,7 +251,7 @@ async def _persist_scan_data(body: ScanRequest, result: ScanResponse, current_us
                     seen_urls.add(s["url"])
             if unique_signals:
                 await db.db["article_summaries"].insert_many(unique_signals)
-            logger.info(f"Stored {len(unique_signals)} market signals for {body.company_name}")
+            logger.info(f"Stored {len(unique_signals)} verified market signals for {body.company_name}")
 
         # 4. Store the Strategic Report for the dashboard
         report_doc = result.model_dump()
@@ -269,7 +308,7 @@ async def _persist_scan_data(body: ScanRequest, result: ScanResponse, current_us
                 email_body += f"Key Technical Updates:\n"
                 
                 for f in result.features[:5]:
-                    email_body += f"\n• {f.feature_title}: {f.technical_summary[:150]}..."
+                    email_body += f"\n- {f.feature_title}: {f.technical_summary[:150]}..."
                 
                 email_body += f"\n\nView full dossier: {settings.FRONTEND_URL}/dashboard"
                 

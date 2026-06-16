@@ -103,7 +103,7 @@ export function AuthLayout() {
 
           <div className="mt-8 text-center relative z-10">
              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#86868B] dark:text-[#A1A1A6] italic">
-                © 2026 Scout Agent Autonomous Systems. All protocols active.
+                (c) 2026 Scout Agent Autonomous Systems. All protocols active.
              </p>
           </div>
        </div>

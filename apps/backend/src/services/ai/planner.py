@@ -41,17 +41,28 @@ Example format: ["query1", "query2", ..., "query8"]
     sys_text = "Output only valid JSON. Return a JSON array of 8 strings."
     try:
         content = ""
-        # Primary: Ollama
-        content = generate_text_ollama(prompt, system=sys_text, max_tokens=600)
+        provider_pref = (settings.LLM_PROVIDER or "ollama").lower().strip()
         
-        # Fallback: Groq
-        if not content and settings.GROQ_API_KEY:
-            logger.info("Ollama failed, falling back to Groq for planning.")
-            content = generate_text_groq(prompt, system=sys_text, max_tokens=600)
-            
-        if not content and settings.GEMINI_API_KEY:
-            logger.info("Groq failed, falling back to Gemini for planning.")
-            content = generate_text_gemini(prompt, system=sys_text, max_tokens=600)
+        funcs = {
+            "gemini": lambda: generate_text_gemini(prompt, system=sys_text, max_tokens=600) if settings.GEMINI_API_KEY else "",
+            "groq": lambda: generate_text_groq(prompt, system=sys_text, max_tokens=600) if settings.GROQ_API_KEY else "",
+            "ollama": lambda: generate_text_ollama(prompt, system=sys_text, max_tokens=600)
+        }
+        
+        order = [provider_pref]
+        for p in ["gemini", "groq", "ollama"]:
+            if p not in order:
+                order.append(p)
+                
+        content = ""
+        for provider in order:
+            try:
+                content = funcs[provider]()
+                if content:
+                    logger.info(f"Successfully generated queries using {provider}")
+                    break
+            except Exception as e:
+                logger.warning(f"Planner fallback from {provider} failed: {e}")
         
         if not content:
             return [

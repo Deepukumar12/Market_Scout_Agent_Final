@@ -16,21 +16,86 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+    failedQueue.forEach((prom) => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            const isAuthEndpoint = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
+    async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
+                originalRequest.url?.includes('/auth/register') ||
+                originalRequest.url?.includes('/auth/refresh') ||
+                originalRequest.url?.includes('/auth/forgot-password') ||
+                originalRequest.url?.includes('/auth/reset-password');
+
             if (!isAuthEndpoint) {
-                localStorage.removeItem('scoutiq_token');
-                // We don't force a redirect here anymore because public pages 
-                // like the LandingPage might trigger 401s for non-essential metrics.
-                // The ProtectedDashboard component in main.tsx handles redirects for private routes.
+                if (isRefreshing) {
+                    return new Promise((resolve, reject) => {
+                        failedQueue.push({ resolve, reject });
+                    })
+                        .then((token) => {
+                            originalRequest.headers.Authorization = `Bearer ${token}`;
+                            return api(originalRequest);
+                        })
+                        .catch((err) => {
+                            return Promise.reject(err);
+                        });
+                }
+
+                originalRequest._retry = true;
+                isRefreshing = true;
+
+                const refreshToken = localStorage.getItem('scoutiq_refresh_token');
+                if (refreshToken) {
+                    try {
+                        const response = await axios.post(
+                            import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/refresh` : '/api/v1/auth/refresh',
+                            { refresh_token: refreshToken }
+                        );
+
+                        const { access_token, refresh_token } = response.data;
+
+                        localStorage.setItem('scoutiq_token', access_token);
+                        localStorage.setItem('scoutiq_refresh_token', refresh_token);
+
+                        api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+                        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+
+                        processQueue(null, access_token);
+                        isRefreshing = false;
+
+                        return api(originalRequest);
+                    } catch (refreshError) {
+                        processQueue(refreshError, null);
+                        isRefreshing = false;
+                        localStorage.removeItem('scoutiq_token');
+                        localStorage.removeItem('scoutiq_refresh_token');
+                        window.dispatchEvent(new Event('auth-logout'));
+                        return Promise.reject(refreshError);
+                    }
+                } else {
+                    localStorage.removeItem('scoutiq_token');
+                }
             }
         }
         return Promise.reject(error);
     }
 );
+
 
 export const getCompetitors = async (q?: string) => {
     const response = await api.get('/competitors', {
@@ -132,8 +197,10 @@ export const getOrgRepos = async (org: string, perPage = 20, page = 1, sort = 'u
 };
 
 // Intelligence Endpoints
-export const getGlobalMetrics = async () => {
-    const response = await api.get('/intelligence/global-metrics');
+export const getGlobalMetrics = async (competitor?: string) => {
+    const response = await api.get('/intelligence/global-metrics', {
+        params: competitor ? { competitor } : {}
+    });
     return response.data;
 };
 
@@ -147,13 +214,17 @@ export const getRecommendations = async () => {
     return response.data;
 };
 
-export const getInnovationTrends = async () => {
-    const response = await api.get('/intelligence/innovation-trends');
+export const getInnovationTrends = async (competitor?: string) => {
+    const response = await api.get('/intelligence/innovation-trends', {
+        params: competitor ? { competitor } : {}
+    });
     return response.data;
 };
 
-export const getMarketComparison = async () => {
-    const response = await api.get('/intelligence/market-comparison');
+export const getMarketComparison = async (competitor?: string) => {
+    const response = await api.get('/intelligence/market-comparison', {
+        params: competitor ? { competitor } : {}
+    });
     return response.data;
 };
 
@@ -164,8 +235,10 @@ export const getLastSevenDays = async (competitor?: string) => {
     return response.data;
 };
 
-export const getMissionBriefing = async () => {
-    const response = await api.get('/intelligence/mission-briefing');
+export const getMissionBriefing = async (competitor?: string) => {
+    const response = await api.get('/intelligence/mission-briefing', {
+        params: competitor ? { competitor } : {}
+    });
     return response.data;
 };
 
@@ -174,13 +247,17 @@ export const getStrategicPlan = async (payload: { competitor_id: string, focus_a
     return response.data;
 };
 
-export const getPredictivePipeline = async () => {
-    const response = await api.get('/intelligence/predictive-pipeline');
+export const getPredictivePipeline = async (competitor?: string) => {
+    const response = await api.get('/intelligence/predictive-pipeline', {
+        params: competitor ? { competitor } : {}
+    });
     return response.data;
 };
 
-export const getSentimentMatrix = async () => {
-    const response = await api.get('/intelligence/sentiment-matrix');
+export const getSentimentMatrix = async (competitorId?: string) => {
+    const response = await api.get('/intelligence/sentiment-matrix', {
+        params: competitorId ? { competitor_id: competitorId } : {}
+    });
     return response.data;
 };
 
@@ -198,8 +275,10 @@ export const getSignalAnalytics = async (competitorId?: string) => {
     return response.data;
 };
 
-export const getRiskMatrix = async () => {
-    const response = await api.get('/intelligence/risk-matrix');
+export const getRiskMatrix = async (competitorId?: string) => {
+    const response = await api.get('/intelligence/risk-matrix', {
+        params: competitorId ? { competitor_id: competitorId } : {}
+    });
     return response.data;
 };
 
@@ -295,4 +374,52 @@ export const uploadAvatar = async (file: File) => {
     return response.data;
 };
 
+// User Email Scheduler Endpoints
+export const getEmailSchedules = async () => {
+    const response = await api.get('/settings/email-schedules');
+    return response.data;
+};
+
+export const createEmailSchedule = async (data: {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'once';
+    time_of_day: string;
+    day_of_week?: number | null;
+    day_of_month?: number | null;
+    target_date?: string | null;
+    is_enabled?: boolean;
+    time_zone?: string;
+}) => {
+    const response = await api.post('/settings/email-schedules', data);
+    return response.data;
+};
+
+export const updateEmailSchedule = async (scheduleId: string, data: {
+    frequency?: 'daily' | 'weekly' | 'monthly' | 'once';
+    time_of_day?: string;
+    day_of_week?: number | null;
+    day_of_month?: number | null;
+    target_date?: string | null;
+    is_enabled?: boolean;
+    time_zone?: string;
+}) => {
+    const response = await api.put(`/settings/email-schedules/${scheduleId}`, data);
+    return response.data;
+};
+
+export const deleteEmailSchedule = async (scheduleId: string) => {
+    const response = await api.delete(`/settings/email-schedules/${scheduleId}`);
+    return response.data;
+};
+
+export const forgotPassword = async (email: string) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+};
+
+export const resetPassword = async (data: { email: string; token: string; new_password: string }) => {
+    const response = await api.post('/auth/reset-password', data);
+    return response.data;
+};
+
 export default api;
+

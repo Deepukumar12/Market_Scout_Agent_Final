@@ -13,14 +13,35 @@ class AlphaVantageAdapter(BaseAdapter):
         super().__init__("AlphaVantage", settings.ALPHA_VANTAGE_API_KEY)
 
     async def resolve_symbol(self, company_name: str) -> Optional[str]:
-        """Resolve a company name to a stock ticker symbol."""
+        """Resolve a company name to a stock ticker symbol with Redis caching."""
+        is_placeholder = not self.api_key or "your_" in self.api_key.lower() or "placeholder" in self.api_key.lower()
+        if is_placeholder:
+            return None
+
+        name_clean = company_name.lower().strip()
+        cache_key = f"resolve_symbol_cache:alphavantage:{name_clean}"
+        from src.shared.redis_service import redis_service
+        try:
+            cached = await redis_service.get(cache_key)
+            if cached:
+                logger.info(f"[AlphaVantage] Symbol cache hit for {company_name}: {cached}")
+                return cached
+        except Exception as e:
+            logger.warning(f"[AlphaVantage] Symbol cache fetch failed: {e}")
+
         url = f"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={company_name}&apikey={self.api_key}"
         try:
             response = await self.client.get(url)
             if response.status_code == 200:
                 best_matches = response.json().get("bestMatches", [])
                 if best_matches:
-                    return best_matches[0].get("1. symbol")
+                    sym = best_matches[0].get("1. symbol")
+                    if sym:
+                        try:
+                            await redis_service.set(cache_key, sym, expire=86400)
+                        except Exception as e:
+                            logger.warning(f"[AlphaVantage] Symbol cache save failed: {e}")
+                        return sym
         except Exception as e:
             logger.error(f"AlphaVantage symbol resolution failed: {e}")
         return None

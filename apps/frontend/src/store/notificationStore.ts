@@ -33,14 +33,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     initWebSocket: () => {
         const { socket } = get();
-        if (socket?.readyState === WebSocket.OPEN) return;
+        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
 
         const token = localStorage.getItem('scoutiq_token'); // Standardized token key
         if (!token) return;
 
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Correct path as per main.py and api.py inclusion
-        const wsUrl = `${protocol}//${window.location.host.replace(':5173', ':8000')}/ws/notifications?token=${token}`;
+        const apiUrl = (import.meta as any).env.VITE_API_URL;
+        let wsUrl;
+        if (apiUrl) {
+            wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws/notifications?token=${token}`;
+        } else {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${protocol}//${window.location.host.replace(':5173', ':8000')}/ws/notifications?token=${token}`;
+        }
 
         const ws = new WebSocket(wsUrl);
 

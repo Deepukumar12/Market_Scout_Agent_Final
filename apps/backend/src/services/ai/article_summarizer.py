@@ -1,5 +1,5 @@
 """
-Per-Article LLM Summarization: Groq (Llama 3) when available, else Gemini (~200–250 words).
+Per-Article LLM Summarization: Groq (Llama 3) when available, else Gemini (~200-250 words).
 Keeps each request under ~1.2k input + ~300 output tokens.
 """
 import json
@@ -22,7 +22,7 @@ BATCH_SIZE = 4  # Summarize 4 articles per API call to reduce requests
 
 def summarize_article(url: str, article_input: str) -> str:
     """
-    Summarize one article in 200–250 words. Returns summary text or empty on failure.
+    Summarize one article in 200-250 words. Returns summary text or empty on failure.
     """
     if not article_input or not article_input.strip():
         return ""

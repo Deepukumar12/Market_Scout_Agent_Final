@@ -153,12 +153,12 @@ async def run_competitor_scan(
     # Cache the full final ScanResponse for "View Analysis" speedup
     await store_report_cache(db.db, str(doc.get("_id", q.get("_id"))), competitor.name, result.model_dump())
     
-    # 📧 [ALERT PROTOCOL] Dispatch intelligence briefing if new signals were captured
+    # [EMAIL] [ALERT PROTOCOL] Dispatch intelligence briefing if new signals were captured
     if count_new > 0 and doc.get("user_id"):
         try:
             user_doc = await db.db["users"].find_one({"_id": ObjectId(doc["user_id"])})
             if user_doc and user_doc.get("preferences", {}).get("emailAlerts", True):
-                print(f"📡 [ALERT] Dispatching intelligence briefing for {competitor.name} to {user_doc['email']}")
+                print(f"[SCAN] [ALERT] Dispatching intelligence briefing for {competitor.name} to {user_doc['email']}")
                 
                 subject = f"ScoutForge AI | New Technical Signals detected for {competitor.name}"
                 content = f"Our autonomous agents have identified {count_new} new technical updates for {competitor.name}."
@@ -186,7 +186,7 @@ async def run_competitor_scan(
                     </div>
                     
                     <p style="margin-top: 40px; font-size: 12px; color: #8E8E93; text-align: center;">
-                        Sent by ScoutForge AI Neural Network • Confidential Intelligence Briefing
+                        Sent by ScoutForge AI Neural Network - Confidential Intelligence Briefing
                     </p>
                 </div>
                 """
@@ -201,6 +201,6 @@ async def run_competitor_scan(
                     html_content=html_content
                 )
         except Exception as e:
-            print(f"❌ [ALERT ERROR] Failed to dispatch briefing: {e}")
+            print(f"[ERROR] [ALERT ERROR] Failed to dispatch briefing: {e}")
 
     return result

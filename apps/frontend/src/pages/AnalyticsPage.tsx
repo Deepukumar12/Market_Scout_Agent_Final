@@ -22,6 +22,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { getSignalAnalytics, runCompetitorScan } from '@/services/api';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { formatTimeToIST } from '@/utils/dateUtils';
 
 // --- Types ---
 interface IntensityPoint { time: string; value: number; }
@@ -60,7 +61,7 @@ const AnalyticsPage = () => {
           }
           const json = await getSignalAnalytics(selectedCompetitorId);
           setData(json);
-          setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+          setLastSyncTime(formatTimeToIST(new Date()));
       } catch(e) {
           console.error(e);
       } finally {

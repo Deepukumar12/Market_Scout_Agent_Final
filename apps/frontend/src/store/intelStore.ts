@@ -74,6 +74,8 @@ export interface SevenDaySignal {
   summary?: string;
   source_type: string;
   confidence_score: number;
+  rice_score?: number;
+  curd_score?: number;
 }
 
 export interface InnovationTrends {
@@ -176,12 +178,12 @@ interface IntelState {
   fetchRecommendations: () => Promise<void>;
   runMarketScan: (payload: any) => Promise<void>;
   fetchActivityTimeline: (query?: string) => Promise<void>;
-  fetchInnovationTrends: () => Promise<void>;
-  fetchGlobalMetrics: () => Promise<void>;
+  fetchInnovationTrends: (query?: string) => Promise<void>;
+  fetchGlobalMetrics: (query?: string) => Promise<void>;
   fetchSystemStats: () => Promise<void>;
-  fetchMarketComparison: () => Promise<void>;
+  fetchMarketComparison: (query?: string) => Promise<void>;
   fetchLastSevenDays: (query?: string) => Promise<void>;
-  fetchMissionBriefing: () => Promise<void>;
+  fetchMissionBriefing: (query?: string) => Promise<void>;
   fetchStrategicPlan: (competitorId: string, focusArea: string, riskLevel: string) => Promise<void>;
   fetchCompetitors: (query?: string) => Promise<void>;
   clear: () => void;
@@ -326,18 +328,18 @@ export const useIntelStore = create<IntelState>((set) => ({
     }
   },
 
-  fetchInnovationTrends: async () => {
+  fetchInnovationTrends: async (query?: string) => {
     try {
-      const data = await getInnovationTrends();
+      const data = await getInnovationTrends(query);
       set({ innovationTrends: data });
     } catch (err) {
       console.error("Failed to fetch innovation trends:", err);
     }
   },
 
-  fetchGlobalMetrics: async () => {
+  fetchGlobalMetrics: async (query?: string) => {
     try {
-      const data = await getGlobalMetrics();
+      const data = await getGlobalMetrics(query);
       set({ globalMetrics: data });
     } catch (err) {
       console.error("Failed to fetch global metrics:", err);
@@ -353,9 +355,9 @@ export const useIntelStore = create<IntelState>((set) => ({
     }
   },
 
-  fetchMarketComparison: async () => {
+  fetchMarketComparison: async (query?: string) => {
     try {
-      const data = await getMarketComparison();
+      const data = await getMarketComparison(query);
       set({ comparisonMatrix: data });
     } catch (err) {
       console.error("Failed to fetch market comparison:", err);
@@ -371,9 +373,9 @@ export const useIntelStore = create<IntelState>((set) => ({
     }
   },
 
-  fetchMissionBriefing: async () => {
+  fetchMissionBriefing: async (query?: string) => {
     try {
-      const data = await getMissionBriefing();
+      const data = await getMissionBriefing(query);
       set({ missionBriefing: data });
     } catch (err) {
       console.error("Failed to fetch mission briefing:", err);

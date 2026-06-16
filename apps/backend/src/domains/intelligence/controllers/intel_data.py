@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import logging
 import asyncio
 import psutil
+import hashlib
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 import json
@@ -13,10 +14,77 @@ from src.core.database import db
 
 from src.core.security import get_current_user, get_optional_user
 from src.domains.users.models.user import User
-from src.core.datetime_utils import get_now_ist
+from src.core.datetime_utils import get_now_ist, get_authoritative_publication_date, to_ist, IST
 from bson import ObjectId
 
 router = APIRouter()
+
+def merge_and_deduplicate(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Deduplicate and merge signals / updates in-memory.
+    """
+    merged = {}
+    for item in items:
+        url = (item.get("url") or item.get("source_url") or "").strip()
+        title = (item.get("title") or item.get("feature_name") or "").strip().lower()
+        company = (item.get("company_name") or item.get("query_tag") or item.get("organization") or "").strip().lower()
+        
+        match_key = None
+        if url:
+            for k, val in merged.items():
+                v_url = (val.get("url") or val.get("source_url") or "").strip()
+                if v_url == url:
+                    match_key = k
+                    break
+        if not match_key and title and company:
+            for k, val in merged.items():
+                v_title = (val.get("title") or val.get("feature_name") or "").strip().lower()
+                v_company = (val.get("company_name") or val.get("query_tag") or val.get("organization") or "").strip().lower()
+                if v_company == company and v_title == title:
+                    match_key = k
+                    break
+                    
+        if match_key:
+            existing = merged[match_key]
+            # Keep earliest publication date
+            if item["_authoritative_date"] < existing["_authoritative_date"]:
+                existing["_authoritative_date"] = item["_authoritative_date"]
+                if "release_date" in existing and "release_date" in item:
+                    existing["release_date"] = item["release_date"]
+                if "time" in existing and "time" in item:
+                    existing["time"] = item["time"]
+                if "timestamp" in existing and "timestamp" in item:
+                    existing["timestamp"] = item["timestamp"]
+                    
+            # Keep longest summary
+            existing_summary = existing.get("summary") or existing.get("description") or existing.get("technical_summary") or ""
+            item_summary = item.get("summary") or item.get("description") or item.get("technical_summary") or ""
+            if len(item_summary) > len(existing_summary):
+                if "summary" in existing:
+                    existing["summary"] = item_summary
+                if "description" in existing:
+                    existing["description"] = item_summary
+                if "technical_summary" in existing:
+                    existing["technical_summary"] = item_summary
+                if "feature_name" in existing and "feature_name" in item and len(item.get("feature_name", "")) > len(existing.get("feature_name", "")):
+                    existing["feature_name"] = item["feature_name"]
+                if "title" in existing and "title" in item and len(item.get("title", "")) > len(existing.get("title", "")):
+                    existing["title"] = item["title"]
+
+            # Merge citations
+            citations = existing.setdefault("citations", [])
+            if url and url not in citations:
+                citations.append(url)
+            for c in item.get("citations", []):
+                if c and c not in citations:
+                    citations.append(c)
+        else:
+            # Initialize citations
+            item["citations"] = [url] if url else []
+            key = url if url else f"{company}|{title}"
+            merged[key] = item
+            
+    return list(merged.values())
 
 # --- MODELS ---
 class GlobalMetrics(BaseModel):
@@ -94,6 +162,8 @@ class SevenDaySignal(BaseModel):
     summary: Optional[str] = None
     source_type: str = "News"
     confidence_score: float = 85.0
+    rice_score: Optional[float] = None
+    curd_score: Optional[float] = None
 
 @router.get("/last-seven-days", response_model=List[SevenDaySignal])
 async def get_last_seven_days_releases(
@@ -102,50 +172,147 @@ async def get_last_seven_days_releases(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Returns the latest 7 technical features/data entries detected from the database.
+    Returns the latest technical features/data entries detected from the database for the selected competitor.
     """
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     uid_str = str(current_user.id)
     features = []
+    
+    if not competitor or not competitor.strip():
+        return features
+
     try:
         if db.db is None: await db.connect()
         
-        user_comp_names = []
-        if competitor and competitor.strip():
-            user_comp_names = [re.compile(f"^{re.escape(competitor.strip())}$", re.I)]
-        else:
-            cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-            user_comp_names = [re.compile(f"^{re.escape(c['name'])}$", re.I) for c in await cursor.to_list(length=500)]
+        # Verify competitor ownership
+        comp_doc = await db.db["competitors"].find_one({
+            "user_id": uid_str, 
+            "name": {"$regex": f"^{re.escape(competitor.strip())}$", "$options": "i"}
+        })
+        if not comp_doc:
+            return features
             
-        if user_comp_names:
-            cursor = db.db["feature_updates"].find({
-                "company_name": {"$in": user_comp_names}
-            }).sort("created_at", -1).limit(7)
+        comp_name = comp_doc["name"]
+        user_comp_names = [re.compile(f"^{re.escape(comp_name)}$", re.I)]
+        
+        now = get_now_ist()
+        ten_days_ago_str = (now - timedelta(days=10)).strftime("%Y-%m-%d")
+        ten_days_ago_dt = now - timedelta(days=10)
+        
+        # 8-day window in IST
+        today_str = now.strftime("%Y-%m-%d")
+        eight_days_ago_str = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+        
+        raw_items = []
+        
+        # 1. Fetch technical features (10 days of raw data)
+        cursor_feat = db.db["feature_updates"].find({
+            "company_name": {"$in": user_comp_names},
+            "$or": [
+                {"publish_date": {"$gte": ten_days_ago_str}},
+                {"release_date": {"$gte": ten_days_ago_str}},
+                {"created_at": {"$gte": ten_days_ago_dt}}
+            ]
+        }).limit(500)
+        
+        async for doc in cursor_feat:
+            auth_dt = get_authoritative_publication_date(doc)
+            date_key = auth_dt.strftime("%Y-%m-%d")
             
-            async for doc in cursor:
-                s_url = doc.get("source_url", "")
-                s_type = "News"
-                if s_url and ("press-release" in s_url.lower() or "pr" in s_url.lower()):
-                    s_type = "Press Release"
-                elif s_url and "blog" in s_url.lower():
-                    s_type = "Blog"
-                    
-                features.append(SevenDaySignal(
-                    company_name=doc["company_name"],
-                    feature_name=doc["feature_name"],
-                    category=doc["category"],
-                    release_date=doc["release_date"] if doc.get("release_date") else doc["created_at"].strftime("%Y-%m-%d"),
-                    created_at=doc["created_at"],
-                    source_url=s_url if s_url else None,
-                    hash_id=doc["hash_id"],
-                    summary=doc.get("technical_summary", ""),
-                    source_type=s_type,
-                    confidence_score=doc.get("confidence_score", 85.0)
-                ))
+            # Verify if within the 8-day window in IST
+            if not (eight_days_ago_str <= date_key <= today_str):
+                continue
+                
+            s_url = doc.get("source_url", "")
+            s_type = "News"
+            if s_url and ("press-release" in s_url.lower() or "pr" in s_url.lower()):
+                s_type = "Press Release"
+            elif s_url and "blog" in s_url.lower():
+                s_type = "Blog"
+                
+            raw_items.append({
+                "_authoritative_date": auth_dt,
+                "company_name": doc["company_name"],
+                "feature_name": doc["feature_name"],
+                "category": doc["category"],
+                "release_date": date_key,
+                "created_at": auth_dt,
+                "source_url": s_url if s_url else None,
+                "hash_id": doc["hash_id"],
+                "summary": doc.get("technical_summary", ""),
+                "source_type": s_type,
+                "confidence_score": doc.get("confidence_score", 85.0),
+                "rice_score": doc.get("rice_score"),
+                "curd_score": doc.get("curd_score")
+            })
+
+        # 2. Fetch article summaries (10 days of raw data)
+        cursor_articles = db.db["article_summaries"].find({
+            "query_tag": {"$in": user_comp_names},
+            "$or": [
+                {"published_date": {"$gte": ten_days_ago_str}},
+                {"publish_date": {"$gte": ten_days_ago_str}},
+                {"created_at": {"$gte": ten_days_ago_dt}}
+            ]
+        }).limit(500)
+        
+        async for doc in cursor_articles:
+            auth_dt = get_authoritative_publication_date(doc)
+            date_key = auth_dt.strftime("%Y-%m-%d")
+            
+            if not (eight_days_ago_str <= date_key <= today_str):
+                continue
+                
+            s_url = doc.get("url") or doc.get("source_url") or ""
+            s_type = "News"
+            if s_url and ("press-release" in s_url.lower() or "pr" in s_url.lower()):
+                s_type = "Press Release"
+            elif s_url and "blog" in s_url.lower():
+                s_type = "Blog"
+                
+            hash_val = doc.get("hash_id") or (hashlib.sha256(s_url.encode()).hexdigest() if s_url else str(doc["_id"]))
+            
+            raw_items.append({
+                "_authoritative_date": auth_dt,
+                "company_name": doc["query_tag"],
+                "feature_name": doc.get("article_summary", "")[:100],
+                "category": "Market",
+                "release_date": date_key,
+                "created_at": auth_dt,
+                "source_url": s_url if s_url else None,
+                "hash_id": hash_val,
+                "summary": doc.get("article_summary", ""),
+                "source_type": s_type,
+                "confidence_score": doc.get("confidence", 85.0)
+            })
+            
+        # Deduplicate and merge in memory
+        merged_items = merge_and_deduplicate(raw_items)
+        
+        # Sort chronologically newest first
+        merged_items.sort(key=lambda x: x["_authoritative_date"], reverse=True)
+        
+        # Convert to SevenDaySignal models
+        for item in merged_items:
+            features.append(SevenDaySignal(
+                company_name=item["company_name"],
+                feature_name=item["feature_name"],
+                category=item["category"],
+                release_date=item["release_date"],
+                created_at=item["created_at"],
+                source_url=item["source_url"],
+                hash_id=item["hash_id"],
+                summary=item["summary"],
+                source_type=item["source_type"],
+                confidence_score=item.get("confidence_score", 85.0),
+                rice_score=item.get("rice_score"),
+                curd_score=item.get("curd_score")
+            ))
+            
     except Exception as e:
-        logging.error(f"Last 7 Days Error: {e}")
+        logging.error(f"Last 7 Days Error: {e}", exc_info=True)
     return features
 
 @router.get("/stream", response_model=IntelResponse)
@@ -156,9 +323,10 @@ async def get_intel_stream(
 ):
     """
     Returns a unified stream of intelligence signals (summaries + features) from the database.
-    Strictly 100% database driven. Optional 'q' to filter by competitor.
-    If no user is logged in, returns global signals.
+    Strictly 100% database driven. Requires 'q' to filter by competitor.
     """
+    if not q or not q.strip() or q in ["null", "all"]:
+        return IntelResponse(signals=[], total_count=0)
     signals = []
     try:
         if db.db is None: await db.connect()
@@ -167,18 +335,14 @@ async def get_intel_stream(
         # 1. Get user's competitor names (or filter by q if provided)
         comp_query = {"user_id": uid_str} if uid_str else {}
         if q:
+            # STRICT COMPANY IDENTITY: when q is provided, match ONLY that exact company name.
+            # Using anchored regex ^name$ to prevent prefix leakage (e.g. "Stripe" matching "StripePayments").
             pipeline = [
-                {"$match": comp_query},
-                {"$addFields": {
-                    "searchScore": {
-                        "$cond": [
-                            {"$regexMatch": {"input": "$name", "regex": f"^{re.escape(q)}", "options": "i"}},
-                            2,
-                            1
-                        ]
-                    }
+                {"$match": {
+                    **comp_query,
+                    "name": {"$regex": f"^{re.escape(q)}$", "$options": "i"}
                 }},
-                {"$sort": {"searchScore": -1, "name": 1}},
+                {"$sort": {"name": 1}},
                 {"$limit": 100}
             ]
             cursor = db.db["competitors"].aggregate(pipeline)
@@ -190,17 +354,46 @@ async def get_intel_stream(
         comp_names = list(comp_map.keys())
         
         if comp_names:
-            # 2. Parallel Fetch from article_summaries and feature_updates
-            summary_query = {"query_tag": {"$in": [re.compile(f"^{re.escape(n)}$", re.I) for n in comp_names]}}
-            feature_query = {"company_name": {"$in": [re.compile(f"^{re.escape(n)}$", re.I) for n in comp_names]}}
+            now = get_now_ist()
+            ten_days_ago_str = (now - timedelta(days=10)).strftime("%Y-%m-%d")
+            ten_days_ago_dt = now - timedelta(days=10)
             
-            sum_task = db.db["article_summaries"].find(summary_query).sort("created_at", -1).limit(limit).to_list(length=limit)
-            feat_task = db.db["feature_updates"].find(feature_query).sort("created_at", -1).limit(limit).to_list(length=limit)
+            # 8-day window in IST
+            today_str = now.strftime("%Y-%m-%d")
+            eight_days_ago_str = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+
+            comp_regex_list = [re.compile(f"^{re.escape(n)}$", re.I) for n in comp_names]
+            summary_query = {
+                "query_tag": {"$in": comp_regex_list},
+                "$or": [
+                    {"published_date": {"$gte": ten_days_ago_str}},
+                    {"publish_date": {"$gte": ten_days_ago_str}},
+                    {"created_at": {"$gte": ten_days_ago_dt}}
+                ]
+            }
+            feature_query = {
+                "company_name": {"$in": comp_regex_list},
+                "$or": [
+                    {"publish_date": {"$gte": ten_days_ago_str}},
+                    {"release_date": {"$gte": ten_days_ago_str}},
+                    {"created_at": {"$gte": ten_days_ago_dt}}
+                ]
+            }
+            
+            sum_task = db.db["article_summaries"].find(summary_query).limit(500).to_list(length=500)
+            feat_task = db.db["feature_updates"].find(feature_query).limit(500).to_list(length=500)
             
             raw_summaries, raw_features = await asyncio.gather(sum_task, feat_task)
             
+            raw_items = []
+            
             # Process Summaries
             for s in raw_summaries:
+                auth_dt = get_authoritative_publication_date(s)
+                date_key = auth_dt.strftime("%Y-%m-%d")
+                if not (eight_days_ago_str <= date_key <= today_str):
+                    continue
+                    
                 sent = s.get("sentiment", "Neutral")
                 full_url = s.get("url") or s.get("source_url") or ""
                 domain = "Open Web"
@@ -209,26 +402,28 @@ async def get_intel_stream(
                     domain = urlparse(full_url).netloc or "Open Web"
                 except: pass
 
-                ts = s.get("created_at") or s.get("scraped_at") or datetime.now(timezone.utc)
-                if isinstance(ts, datetime) and ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
-
-                signals.append(IntelSignal(
-                    id=str(s["_id"]),
-                    company_name=s["query_tag"],
-                    sector=comp_map.get(s["query_tag"], "Technology"),
-                    signal_type="Market Signal",
-                    confidence_score=float(s.get("confidence", 0.85)),
-                    timestamp=ts,
-                    summary=s.get("article_summary") or s.get("technical_summary", "Market intelligence detected."),
-                    source=domain,
-                    url=full_url,
-                    sentiment=sent,
-                    impact_score=90 if sent == "Positive" else (30 if sent == "Negative" else 60)
-                ))
+                raw_items.append({
+                    "_authoritative_date": auth_dt,
+                    "id": str(s["_id"]),
+                    "company_name": s["query_tag"],
+                    "sector": comp_map.get(s["query_tag"], "Technology"),
+                    "signal_type": "Market Signal",
+                    "confidence_score": float(s.get("confidence", 0.85)),
+                    "timestamp": auth_dt,
+                    "summary": s.get("article_summary") or s.get("technical_summary", "Market intelligence detected."),
+                    "source": domain,
+                    "url": full_url,
+                    "sentiment": sent,
+                    "impact_score": 90 if sent == "Positive" else (30 if sent == "Negative" else 60)
+                })
 
             # Process Features
             for f in raw_features:
+                auth_dt = get_authoritative_publication_date(f)
+                date_key = auth_dt.strftime("%Y-%m-%d")
+                if not (eight_days_ago_str <= date_key <= today_str):
+                    continue
+                    
                 full_url = f.get("source_url") or ""
                 domain = "Internal Repository"
                 try:
@@ -238,22 +433,38 @@ async def get_intel_stream(
                         domain = parsed.netloc
                 except: pass
 
-                ts = f.get("created_at") or datetime.now(timezone.utc)
-                if isinstance(ts, datetime) and ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
+                raw_items.append({
+                    "_authoritative_date": auth_dt,
+                    "id": str(f["_id"]),
+                    "company_name": f["company_name"],
+                    "sector": comp_map.get(f["company_name"], "Technology"),
+                    "signal_type": "Technical Vector",
+                    "confidence_score": float(f.get("confidence_score", 70.0)) / 100.0,
+                    "timestamp": auth_dt,
+                    "summary": f.get("feature_name", "Technical Update") + ": " + f.get("technical_summary", "Architecture change detected."),
+                    "source": domain,
+                    "url": full_url,
+                    "sentiment": "Positive",
+                    "impact_score": 85
+                })
 
+            # Deduplicate and merge in memory
+            merged_items = merge_and_deduplicate(raw_items)
+            
+            # Convert to IntelSignal pydantic models
+            for item in merged_items:
                 signals.append(IntelSignal(
-                    id=str(f["_id"]),
-                    company_name=f["company_name"],
-                    sector=comp_map.get(f["company_name"], "Technology"),
-                    signal_type="Technical Vector",
-                    confidence_score=float(f.get("confidence_score", 70.0)) / 100.0,
-                    timestamp=ts,
-                    summary=f.get("feature_name", "Technical Update") + ": " + f.get("technical_summary", "Architecture change detected."),
-                    source=domain,
-                    url=full_url,
-                    sentiment="Positive",
-                    impact_score=85
+                    id=item["id"],
+                    company_name=item["company_name"],
+                    sector=item["sector"],
+                    signal_type=item["signal_type"],
+                    confidence_score=item["confidence_score"],
+                    timestamp=item["timestamp"],
+                    summary=item["summary"],
+                    source=item["source"],
+                    url=item["url"],
+                    sentiment=item["sentiment"],
+                    impact_score=item["impact_score"]
                 ))
 
         # 4. If no specific user competitors found, return empty (Zero tolerance for mock/global fallbacks)
@@ -279,9 +490,9 @@ class Recommendation(BaseModel):
 @router.get("/recommendations", response_model=List[Recommendation])
 async def get_recommendations(current_user: User = Depends(get_current_user)):
     """
-    Returns real recommendations based on user portfolio sectors.
+    Returns empty recommendations list to prevent global surveillance background scans.
     """
-    recommendations = []
+    return []
     try:
         if db.db is None: await db.connect()
         uid_str = str(current_user.id)
@@ -335,49 +546,98 @@ async def get_recommendations(current_user: User = Depends(get_current_user)):
     return recommendations
 
 @router.get("/global-metrics", response_model=GlobalMetrics)
-async def get_global_metrics(current_user: Optional[User] = Depends(get_optional_user)):
+async def get_global_metrics(
+    competitor: Optional[str] = Query(None),
+    current_user: Optional[User] = Depends(get_optional_user)
+):
     """
-    Returns real aggregated metrics from the database for the current user.
-    If no user is logged in, returns global system metrics.
+    Returns aggregated metrics from the database for the active competitor.
+    If no competitor is provided, returns zeroed structures.
     """
     import time
     start_time = time.perf_counter()
+    
+    if not competitor or not competitor.strip() or competitor in ["null", "all"]:
+        return GlobalMetrics(
+            total_competitors=0,
+            competitors_trend=0.0,
+            features_found=0,
+            features_trend=0.0,
+            system_latency=0.0,
+            last_update=get_now_ist()
+        )
+        
     try:
         if db.db is None:
             await db.connect()
             
         uid_str = str(current_user.id) if current_user else None
-        
-        # 1. Run first wave of independent queries concurrently
-        match_stage = {"user_id": uid_str} if uid_str else {}
-        
-        comp_count_task = db.db["competitors"].count_documents(match_stage)
-        cursor_task = db.db["competitors"].find(match_stage, {"name": 1}).to_list(length=500)
-        
-        comp_count, comps = await asyncio.gather(comp_count_task, cursor_task)
-        comp_names = [c["name"] for c in comps]
-        
-        # 2. Run dependent queries concurrently
-        feature_count = 0
-        if comp_names:
-            feature_count = await db.db["feature_updates"].count_documents({"company_name": {"$in": comp_names}})
-        elif not uid_str:
-            feature_count = await db.db["feature_updates"].count_documents({})
+        if not uid_str:
+            return GlobalMetrics(
+                total_competitors=0,
+                competitors_trend=0.0,
+                features_found=0,
+                features_trend=0.0,
+                system_latency=0.0,
+                last_update=get_now_ist()
+            )
             
-        if feature_count == 0:
-            # Fallback if scans exist but delta not processed yet
-            if comp_names:
-                feature_count = await db.db["article_summaries"].count_documents({"query_tag": {"$in": comp_names}})
-            elif not uid_str:
-                feature_count = await db.db["article_summaries"].count_documents({})
-
-        # 3. Calculate Trends (Compare against last 7 days)
+        # Verify competitor ownership
+        comp_doc = await db.db["competitors"].find_one({
+            "user_id": uid_str,
+            "name": {"$regex": f"^{re.escape(competitor.strip())}$", "$options": "i"}
+        })
+        if not comp_doc:
+            return GlobalMetrics(
+                total_competitors=0,
+                competitors_trend=0.0,
+                features_found=0,
+                features_trend=0.0,
+                system_latency=0.0,
+                last_update=get_now_ist()
+            )
+            
+        comp_name = comp_doc["name"]
+        user_comp_names = [re.compile(f"^{re.escape(comp_name)}$", re.I)]
+        
         last_week = datetime.now(timezone.utc) - timedelta(days=7)
+        last_week_naive = datetime.utcnow() - timedelta(days=7)
         
-        c_count_old_task = db.db["competitors"].count_documents({"user_id": uid_str, "created_at": {"$lt": last_week}})
-        feat_count_old_task = db.db["feature_updates"].count_documents({"company_name": {"$in": comp_names}, "created_at": {"$lt": last_week}}) if comp_names else asyncio.sleep(0, result=0)
+        feature_count = await db.db["feature_updates"].count_documents({
+            "company_name": {"$in": user_comp_names},
+            "$or": [
+                {"created_at": {"$gte": last_week}},
+                {"created_at": {"$gte": last_week_naive}}
+            ]
+        })
+        article_count = await db.db["article_summaries"].count_documents({
+            "query_tag": {"$in": user_comp_names},
+            "$or": [
+                {"created_at": {"$gte": last_week}},
+                {"created_at": {"$gte": last_week_naive}}
+            ]
+        })
+        features_found = feature_count + article_count
         
-        c_old, feat_old = await asyncio.gather(c_count_old_task, feat_count_old_task)
+        # Calculate Trends (Compare against previous 7 days)
+        two_weeks_ago = datetime.now(timezone.utc) - timedelta(days=14)
+        two_weeks_ago_naive = datetime.utcnow() - timedelta(days=14)
+        
+        feat_old = await db.db["feature_updates"].count_documents({
+            "company_name": {"$in": user_comp_names},
+            "$or": [
+                {"created_at": {"$gte": two_weeks_ago, "$lt": last_week}},
+                {"created_at": {"$gte": two_weeks_ago_naive, "$lt": last_week_naive}}
+            ]
+        })
+        article_old = await db.db["article_summaries"].count_documents({
+            "query_tag": {"$in": user_comp_names},
+            "$or": [
+                {"created_at": {"$gte": two_weeks_ago, "$lt": last_week}},
+                {"created_at": {"$gte": two_weeks_ago_naive, "$lt": last_week_naive}}
+            ]
+        })
+        features_old = feat_old + article_old
 
         def calc_trend(current, old):
             if old == 0: return 100.0 if current > 0 else 0.0
@@ -387,10 +647,10 @@ async def get_global_metrics(current_user: Optional[User] = Depends(get_optional
         latency = (end_time - start_time) * 1000.0  # ms
 
         return GlobalMetrics(
-            total_competitors=comp_count,
-            competitors_trend=calc_trend(comp_count, c_old),
-            features_found=feature_count,
-            features_trend=calc_trend(feature_count, feat_old),
+            total_competitors=1,
+            competitors_trend=0.0,
+            features_found=features_found,
+            features_trend=calc_trend(features_found, features_old),
             system_latency=float(round(latency, 1)), 
             last_update=get_now_ist()
         )
@@ -413,38 +673,45 @@ class SuggestedCompany(BaseModel):
     deployment_status: str
 
 @router.get("/suggest-similar", response_model=List[SuggestedCompany])
-async def suggest_similar_companies(query: str = Query(..., min_length=1)):
+async def suggest_similar_companies(
+    query: str = Query(..., min_length=1),
+    current_user: User = Depends(get_current_user)
+):
     """
-    Returns suggested competitors based on sector matching.
+    Returns the exact company matching the query from the user's competitor list.
+    STRICT RULE: Only returns the exact company that was requested.
+    Does NOT suggest, recommend, or return similar/related companies.
+    If no exact match is found, returns an empty list - never substitutes alternatives.
     """
     suggestions = []
     try:
         if db.db is None: await db.connect()
-        
-        # Search for competitors that match the query or sector
+        uid_str = str(current_user.id)
+
+        # STRICT: exact anchored match only - no fuzzy, no prefix, no sector fallback
         cursor = db.db["competitors"].find({
-            "$or": [
-                {"name": {"$regex": query, "$options": "i"}},
-                {"sector": {"$regex": query, "$options": "i"}}
-            ]
-        }).limit(5)
-        
+            "user_id": uid_str,
+            "name": {"$regex": f"^{re.escape(query)}$", "$options": "i"}
+        }).limit(1)
+
         async for comp in cursor:
-            is_exact_match = query.lower() in comp["name"].lower()
-            sim_score = 100 if is_exact_match else 75
-            
             c_features = comp.get("top_features", [])
             suggestions.append(SuggestedCompany(
                 id=str(comp["_id"]),
                 name=comp["name"],
-                similarity_score=sim_score,
+                similarity_score=100,  # Always 100 - exact match only
                 common_features=c_features,
                 sector=comp.get("sector", "Technology"),
                 deployment_status="Active"
             ))
+
+        # If no exact match found, return empty - do NOT suggest alternatives
+        if not suggestions:
+            logger.info(f"[suggest-similar] No exact match for '{query}' - returning empty per identity rule.")
+
     except Exception as e:
-        print(f"Suggestion Error: {e}")
-        
+        logger.error(f"Suggestion Error: {e}")
+
     return suggestions
 
 # --- PREDICTIVE PIPELINE LOGIC ---
@@ -467,18 +734,32 @@ class PredictiveAnalysisResult(BaseModel):
     analysis_timestamp: datetime
 
 @router.get("/predictive-pipeline", response_model=PredictiveAnalysisResult)
-async def run_predictive_pipeline(current_user: User = Depends(get_current_user)):
+async def run_predictive_pipeline(
+    competitor: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
     """
-    Analyzes all added competitors for change velocity and predictive trends.
+    Analyzes the selected competitor for change velocity and predictive trends.
     Uses real report frequencies and sentiment from audited sources.
     """
+    if not competitor or not competitor.strip() or competitor in ["null", "all"]:
+         return PredictiveAnalysisResult(
+            top_performers=[],
+            stable_performers=[],
+            trending_predictions=[],
+            analysis_timestamp=get_now_ist()
+        )
+         
     uid_str = str(current_user.id)
     metrics = []
     
     try:
         if db.db is None: await db.connect()
-        cursor = db.db["competitors"].find({"user_id": uid_str})
-        real_competitors = await cursor.to_list(length=50)
+        cursor = db.db["competitors"].find({
+            "user_id": uid_str,
+            "name": {"$regex": f"^{re.escape(competitor.strip())}$", "$options": "i"}
+        })
+        real_competitors = await cursor.to_list(length=1)
         
         if not real_competitors:
              return PredictiveAnalysisResult(
@@ -500,8 +781,9 @@ async def run_predictive_pipeline(current_user: User = Depends(get_current_user)
             source_url = url_doc.get("source_url") or url_doc.get("url") if url_doc else None
 
             # 1. Concurrently count reports, signals, and features (Fixes N+1 scaling issue)
-            now = get_now_ist()
+            now = datetime.now(timezone.utc)
             seven_days_ago = now - timedelta(days=7)
+            seven_days_ago_naive = datetime.utcnow() - timedelta(days=7)
             
             reports_task = db.db["reports"].count_documents({
                 "$or": [
@@ -509,15 +791,24 @@ async def run_predictive_pipeline(current_user: User = Depends(get_current_user)
                     {"target_company": {"$regex": f"^{re.escape(comp_name)}$", "$options": "i"}}, 
                     {"competitor_id": comp_id}
                 ],
-                "generated_at": {"$gte": seven_days_ago}
+                "$or": [
+                    {"generated_at": {"$gte": seven_days_ago}},
+                    {"generated_at": {"$gte": seven_days_ago_naive}}
+                ]
             })
             signals_task = db.db["article_summaries"].count_documents({
                 "query_tag": {"$regex": f"^{re.escape(comp_name)}$", "$options": "i"}, 
-                "created_at": {"$gte": seven_days_ago}
+                "$or": [
+                    {"created_at": {"$gte": seven_days_ago}},
+                    {"created_at": {"$gte": seven_days_ago_naive}}
+                ]
             })
             features_task = db.db["feature_updates"].count_documents({
                 "company_name": {"$regex": f"^{re.escape(comp_name)}$", "$options": "i"},
-                "created_at": {"$gte": seven_days_ago}
+                "$or": [
+                    {"created_at": {"$gte": seven_days_ago}},
+                    {"created_at": {"$gte": seven_days_ago_naive}}
+                ]
             })
  
             reports_count, signals_count, feature_count = await asyncio.gather(reports_task, signals_task, features_task)
@@ -526,7 +817,10 @@ async def run_predictive_pipeline(current_user: User = Depends(get_current_user)
             pos, neu, neg = 0, 0, 0
             art_cursor = db.db["article_summaries"].find({
                 "query_tag": {"$regex": f"^{re.escape(comp_name)}$", "$options": "i"},
-                "created_at": {"$gte": seven_days_ago}
+                "$or": [
+                    {"created_at": {"$gte": seven_days_ago}},
+                    {"created_at": {"$gte": seven_days_ago_naive}}
+                ]
             })
             async for m in art_cursor:
                 sent = m.get("sentiment")
@@ -628,6 +922,9 @@ async def get_sentiment_matrix(
     """
     Returns sentiment analysis based on real article scans.
     """
+    if not competitor_id or competitor_id in ["null", "all"]:
+        return SentimentMatrixResponse(profiles=[], market_average=0)
+        
     profiles = []
     market_total = 0
     try:
@@ -657,8 +954,22 @@ async def get_sentiment_matrix(
         
         # Concurrently fetch articles and features for all competitors in the 7-day window
         seven_days_ago_dt = now - timedelta(days=7)
-        articles_task = db.db["article_summaries"].find({"query_tag": {"$in": name_regexes}}).sort("_id", -1).to_list(length=2000)
-        features_task = db.db["feature_updates"].find({"company_name": {"$in": name_regexes}}).sort("_id", -1).to_list(length=1000)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+        cutoff_naive = datetime.utcnow() - timedelta(days=7)
+        articles_task = db.db["article_summaries"].find({
+            "query_tag": {"$in": name_regexes},
+            "$or": [
+                {"created_at": {"$gte": cutoff_date}},
+                {"created_at": {"$gte": cutoff_naive}}
+            ]
+        }).sort("_id", -1).to_list(length=2000)
+        features_task = db.db["feature_updates"].find({
+            "company_name": {"$in": name_regexes},
+            "$or": [
+                {"created_at": {"$gte": cutoff_date}},
+                {"created_at": {"$gte": cutoff_naive}}
+            ]
+        }).sort("_id", -1).to_list(length=1000)
         
         all_articles, all_features = await asyncio.gather(articles_task, features_task)
         
@@ -739,7 +1050,7 @@ async def get_sentiment_matrix(
             # Use pre-fetched articles for history too
             for s in comp_articles:
                 dt = s.get("created_at") or s.get("scraped_at")
-                if not dt or not hasattr(dt, "date", None): continue
+                if not dt or not hasattr(dt, "date"): continue
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=timezone.utc)
                 if dt < seven_days_ago_dt: continue
@@ -844,6 +1155,20 @@ async def get_signal_analytics(
     """
     Returns real telemetry from surveillance logs.
     """
+    if not competitor_id or competitor_id in ["null", "all"]:
+        return SignalAnalyticsResponse(
+            total_signals_24h=0,
+            active_sources_count=0,
+            system_load_percent=0,
+            processing_latency_ms=0.0,
+            intensity_history=[],
+            category_distribution=[],
+            top_sources=[],
+            trending_topics=[],
+            geo_activity=[],
+            recent_signals=[]
+        )
+        
     try:
         import time
         start_time = time.perf_counter()
@@ -903,7 +1228,7 @@ async def get_signal_analytics(
             
             # 100% Accurate Data: Return raw signal counts per hour.
             wave_val = real_count
-            history.append(IntensityPoint(time=t.strftime("%H:%M"), value=wave_val))
+            history.append(IntensityPoint(time=t.strftime("%I:%M %p"), value=wave_val))
 
         # 3. Category Distribution
         pipeline = [
@@ -977,7 +1302,13 @@ async def get_signal_analytics(
             top_sources=sources,
             trending_topics=topics,
             geo_activity=geo_activity or [GeoMetric(region="Global", count=0, active_node="CLOUD-0")],
-            recent_signals=[s.get("article_summary", s.get("technical_summary", "Vector Identified"))[:80] + "..." for s in (await db.db["article_summaries"].find({"query_tag": {"$in": names}}).sort("created_at", -1).limit(5).to_list(length=5))]
+            recent_signals=[s.get("article_summary", s.get("technical_summary", "Vector Identified"))[:80] + "..." for s in (await db.db["article_summaries"].find({
+                "query_tag": {"$in": names},
+                "$or": [
+                    {"created_at": {"$gte": seven_days_ago}},
+                    {"created_at": {"$gte": now - timedelta(days=7)}}
+                ]
+            }).sort("created_at", -1).limit(5).to_list(length=5))]
         )
     except Exception as e:
         print(f"Analytics Error: {e}")
@@ -1015,10 +1346,21 @@ class RiskMatrixResponse(BaseModel):
 
 
 @router.get("/risk-matrix", response_model=RiskMatrixResponse)
-async def get_risk_matrix(current_user: User = Depends(get_current_user)):
+async def get_risk_matrix(
+    competitor_id: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
     """
     Returns risk assessment based on real threats detected.
     """
+    if not competitor_id or competitor_id in ["null", "all"]:
+        return RiskMatrixResponse(
+            global_threat_level=0,
+            active_risks=[],
+            recent_alerts=[],
+            compliance_score=100
+        )
+        
     active_risks = []
     threat_level = 0
     now = get_now_ist()
@@ -1026,22 +1368,39 @@ async def get_risk_matrix(current_user: User = Depends(get_current_user)):
         if db.db is None: await db.connect()
         uid_str = str(current_user.id)
         
-        # 1. Get user's specific competitor pool to ensure real-time relevance
-        cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-        user_comp_names = [re.compile(f"^{re.escape(c['name'])}$", re.I) for c in await cursor.to_list(length=500)]
+        # Resolve competitor name
+        from bson import ObjectId
+        comp_name = competitor_id
+        try:
+            if len(competitor_id) == 24:
+                comp_doc = await db.db["competitors"].find_one({"_id": ObjectId(competitor_id)})
+                if comp_doc:
+                    comp_name = comp_doc["name"]
+        except:
+            pass
+            
+        user_comp_names = [re.compile(f"^{re.escape(comp_name)}$", re.I)]
         
         if user_comp_names:
-            # 2. Identify risks from recent feature updates of *only* user-tracked competitors
-            # Impact/probability is derived from the volume of cross-referenced market mentions
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+            cutoff_naive = datetime.utcnow() - timedelta(days=7)
             cursor = db.db["feature_updates"].find({
-                "company_name": {"$in": user_comp_names}
+                "company_name": {"$in": user_comp_names},
+                "$or": [
+                    {"created_at": {"$gte": cutoff_date}},
+                    {"created_at": {"$gte": cutoff_naive}}
+                ]
             }).sort("created_at", -1).limit(20)
             
             async for f in cursor:
                 # Correlate technical release with market signal volume for high-fidelity impact scoring
                 mentions = await db.db["article_summaries"].count_documents({
                     "query_tag": f["company_name"],
-                    "technical_summary": {"$regex": re.escape(f.get("feature_name", "")), "$options": "i"}
+                    "technical_summary": {"$regex": re.escape(f.get("feature_name", "")), "$options": "i"},
+                    "$or": [
+                        {"created_at": {"$gte": cutoff_date}},
+                        {"created_at": {"$gte": cutoff_naive}}
+                    ]
                 })
                 
                 # Dynamic scoring: Base risk starts at 2, scaled by market resonance (mentions)
@@ -1153,8 +1512,15 @@ async def get_sentiment_analysis(
         # Evaluate Sentiment within a 7-day lookback window for real-time relevance
         pos, neu, neg = 0, 0, 0
         mentions = []
-        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-        art_query = {"query_tag": name_query, "created_at": {"$gte": seven_days_ago}}
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+        cutoff_naive = datetime.utcnow() - timedelta(days=7)
+        art_query = {
+            "query_tag": name_query,
+            "$or": [
+                {"created_at": {"$gte": cutoff_date}},
+                {"created_at": {"$gte": cutoff_naive}}
+            ]
+        }
         art_cursor = db.db["article_summaries"].find(art_query).sort("_id", -1).limit(25)
         async for m in art_cursor:
             sent = m.get("sentiment")
@@ -1183,7 +1549,13 @@ async def get_sentiment_analysis(
 
         # 3. Get Key Drivers (Top feature names with URLs)
         drivers = []
-        feat_cursor = db.db["feature_updates"].find({"company_name": name_query}).sort("_id", -1).limit(10)
+        feat_cursor = db.db["feature_updates"].find({
+            "company_name": name_query,
+            "$or": [
+                {"created_at": {"$gte": cutoff_date}},
+                {"created_at": {"$gte": cutoff_naive}}
+            ]
+        }).sort("_id", -1).limit(10)
         async for f in feat_cursor:
             feat = f.get("feature_name", "")
             if feat:
@@ -1263,9 +1635,17 @@ async def get_risk_assessment(
         except:
             pass
 
-        # 2. Find features for this competitor to build a risk profile
+        # 2. Find features for this competitor to build a risk profile (Strict 7-day lookback)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+        cutoff_naive = datetime.utcnow() - timedelta(days=7)
         pipeline = [
-            {"$match": {"company_name": comp_name}},
+            {"$match": {
+                "company_name": comp_name,
+                "$or": [
+                    {"created_at": {"$gte": cutoff_date}},
+                    {"created_at": {"$gte": cutoff_naive}}
+                ]
+            }},
             {"$sort": {"created_at": -1}},
             {"$limit": 10}
         ]
@@ -1366,7 +1746,7 @@ async def get_activity_timeline(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Returns a real day-wise breakdown of activities for the last 7 days.
+    Returns a real day-wise breakdown of activities for the last 8 days (Today + 7 previous calendar days).
     """
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -1374,83 +1754,128 @@ async def get_activity_timeline(
     now = get_now_ist()
     uid_str = str(current_user.id)
     
+    if not competitor or not competitor.strip() or competitor in ["null", "all"]:
+        days = []
+        for i in range(8):
+            date_key = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+            days.append(DayActivity(date=date_key, activities=[]))
+        return TimelineResponse(days=days)
+        
     try:
-        import dateparser
         if db.db is None: await db.connect()
         
         # Get user's competitor names to filter feature updates
-        user_comp_names = []
-        if competitor and competitor.strip():
-            user_comp_names = [re.compile(f"^{re.escape(competitor.strip())}$", re.I)]
-        else:
-            cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-            user_comp_names = [re.compile(f"^{re.escape(c['name'])}$", re.I) for c in await cursor.to_list(length=500)]
-            
-        # We will build a dictionary of activities keyed by date string YYYY-MM-DD
-        grouped_activities = { (now - timedelta(days=i)).strftime("%Y-%m-%d"): [] for i in range(7) }
+        user_comp_names = [re.compile(f"^{re.escape(competitor.strip())}$", re.I)]
+        
+        ten_days_ago_str = (now - timedelta(days=10)).strftime("%Y-%m-%d")
+        ten_days_ago_dt = now - timedelta(days=10)
+        
+        # 8-day window in IST
+        today_str = now.strftime("%Y-%m-%d")
+        eight_days_ago_str = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+        
+        raw_items = []
         
         if user_comp_names:
-            # 1. Fetch Technical Features
-            seven_days_ago = now - timedelta(days=7)
+            # 1. Fetch Technical Features (10 days of raw data)
             f_cursor = db.db["feature_updates"].find({
                 "company_name": {"$in": user_comp_names},
-                "created_at": {"$gte": seven_days_ago}
-            }).sort("created_at", -1)
+                "$or": [
+                    {"publish_date": {"$gte": ten_days_ago_str}},
+                    {"release_date": {"$gte": ten_days_ago_str}},
+                    {"created_at": {"$gte": ten_days_ago_dt}}
+                ]
+            })
             
             async for f in f_cursor:
-                # Prioritize release_date from official source, fallback to created_at
-                date_key = f.get("release_date")
-                ts = f.get("created_at") or now
-                if not date_key or date_key == "UNKNOWN" or date_key == "YYYY-MM-DD":
-                    date_key = ts.strftime("%Y-%m-%d")
-                if date_key in grouped_activities:
-                    grouped_activities[date_key].append(TimelineActivity(
-                        id=str(f["_id"]),
-                        day=date_key,
-                        title=f.get("feature_name", "Technical Update"),
-                        organization=f["company_name"],
-                        description=f.get("technical_summary", "Architecture change detected."),
-                        type="feature",
-                        time=ts.strftime("%H:%M %p"),
-                        url=f.get("source_url")
-                    ))
+                auth_dt = get_authoritative_publication_date(f)
+                date_key = auth_dt.strftime("%Y-%m-%d")
+                
+                # Verify if within the 8-day window in IST
+                if not (eight_days_ago_str <= date_key <= today_str):
+                    continue
+                    
+                raw_items.append({
+                    "_authoritative_date": auth_dt,
+                    "id": str(f["_id"]),
+                    "day": date_key,
+                    "title": f.get("feature_name", "Technical Update"),
+                    "organization": f["company_name"],
+                    "description": f.get("technical_summary", "Architecture change detected."),
+                    "type": "feature",
+                    "url": f.get("source_url")
+                })
 
-            # 2. Fetch Market Signals (Articles)
+            # 2. Fetch Market Signals (Articles) (10 days of raw data)
             a_cursor = db.db["article_summaries"].find({
                 "query_tag": {"$in": user_comp_names},
-                "created_at": {"$gte": seven_days_ago}
-            }).sort("created_at", -1)
+                "$or": [
+                    {"published_date": {"$gte": ten_days_ago_str}},
+                    {"publish_date": {"$gte": ten_days_ago_str}},
+                    {"created_at": {"$gte": ten_days_ago_dt}}
+                ]
+            })
             
             async for a in a_cursor:
-                ts = a.get("created_at") or now
-                date_key = ts.strftime("%Y-%m-%d")
-                if date_key in grouped_activities:
-                    sent = a.get("sentiment", "Neutral")
-                    grouped_activities[date_key].append(TimelineActivity(
-                        id=str(a["_id"]),
-                        day=date_key,
-                        title="Market Intelligence Detected",
-                        organization=a["query_tag"],
-                        description=a.get("article_summary", "Competitive intelligence signal detected."),
-                        type="sentiment" if sent != "Neutral" else "none",
-                        time=ts.strftime("%H:%M %p"),
-                        url=a.get("url") or a.get("source_url")
-                    ))
-
-        # Sort each day's activities by time DESC
-        for day in grouped_activities:
-            grouped_activities[day].sort(key=lambda x: x.time, reverse=True)
+                auth_dt = get_authoritative_publication_date(a)
+                date_key = auth_dt.strftime("%Y-%m-%d")
+                
+                # Verify if within the 8-day window in IST
+                if not (eight_days_ago_str <= date_key <= today_str):
+                    continue
                     
-        # Construct the final list exactly in the last 7 days order (newest first, INCLUDING today)
+                sent = a.get("sentiment", "Neutral")
+                raw_items.append({
+                    "_authoritative_date": auth_dt,
+                    "id": str(a["_id"]),
+                    "day": date_key,
+                    "title": "Market Intelligence Detected",
+                    "organization": a["query_tag"],
+                    "description": a.get("article_summary", "Competitive intelligence signal detected."),
+                    "type": "sentiment" if sent != "Neutral" else "none",
+                    "url": a.get("url") or a.get("source_url")
+                })
+
+        # Deduplicate and merge raw items in-memory
+        merged_items = merge_and_deduplicate(raw_items)
+
+        # Build grouped_activities dict using IST date keys for 8 days
+        grouped_activities: dict = {}
+        for i in range(8):
+            d = now - timedelta(days=i)
+            grouped_activities[d.strftime("%Y-%m-%d")] = []
+            
+        for item in merged_items:
+            date_key = item["day"]
+            if date_key in grouped_activities:
+                grouped_activities[date_key].append(item)
+
+        # Sort each day's activities by ts DESC, and format time
         days = []
-        for i in range(7):
+        for i in range(8):
             date_key = (now - timedelta(days=i)).strftime("%Y-%m-%d")
-            days.append(DayActivity(date=date_key, activities=grouped_activities.get(date_key, [])))
+            raw_list = grouped_activities.get(date_key, [])
+            raw_list.sort(key=lambda x: x["_authoritative_date"], reverse=True)
+            
+            formatted_activities = []
+            for act in raw_list:
+                formatted_time = act["_authoritative_date"].strftime("%d %b %Y, %I:%M %p")
+                formatted_activities.append(TimelineActivity(
+                    id=act["id"],
+                    day=act["day"],
+                    title=act["title"],
+                    description=act["description"],
+                    type=act["type"],
+                    time=formatted_time,
+                    url=act["url"],
+                    organization=act["organization"]
+                ))
+            days.append(DayActivity(date=date_key, activities=formatted_activities))
             
     except Exception as e:
-        print(f"Activity Timeline Error: {e}")
+        print(f"Activity Timeline Error: {e}", flush=True)
         days = []
-        for i in range(1, 8):
+        for i in range(8):
             date_at = now - timedelta(days=i)
             days.append(DayActivity(date=date_at.strftime("%Y-%m-%d"), activities=[]))
 
@@ -1481,21 +1906,40 @@ class InnovationTrendsResponse(BaseModel):
 
 
 @router.get("/innovation-trends", response_model=InnovationTrendsResponse)
-async def get_innovation_trends(current_user: User = Depends(get_current_user)):
+async def get_innovation_trends(
+    competitor: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
     """
-    Returns aggregated innovation trends across all user competitors.
+    Returns aggregated innovation trends across the active competitor.
+    If no competitor is selected, returns empty lists/zeroed structures.
     """
     now_utc = datetime.now(timezone.utc)
     seven_days_ago_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=6)
     
     timeline = []
-    uid_str = str(current_user.id)
     
+    if not competitor or competitor.strip() in ["", "null", "all"]:
+        for i in range(7):
+            date_at = now_utc - timedelta(days=6-i)
+            date_str = date_at.strftime("%b %d")
+            timeline.append(InnovationTrendPoint(date=date_str, releases={}))
+        return InnovationTrendsResponse(
+            timeline=timeline,
+            top_innovators=[],
+            sector_shift=[]
+        )
+        
+    uid_str = str(current_user.id)
     competitor_pool = []
     try:
         if db.db is None: await db.connect()
-        cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-        competitor_pool = [c["name"] for c in await cursor.to_list(length=200)]
+        comp_doc = await db.db["competitors"].find_one({
+            "user_id": uid_str,
+            "name": {"$regex": f"^{re.escape(competitor.strip())}$", "$options": "i"}
+        })
+        if comp_doc:
+            competitor_pool = [comp_doc["name"]]
     except:
         pass
     
@@ -1633,17 +2077,26 @@ async def get_risk_level(score: int) -> str:
     return "Low"
 
 @router.get("/market-comparison", response_model=List[MarketComparisonMetric])
-async def get_market_comparison(current_user: User = Depends(get_current_user)):
+async def get_market_comparison(
+    competitor: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
     """
-    Returns a multi-metric comparison matrix for all user's competitors.
+    Returns a multi-metric comparison matrix row for the selected competitor.
     """
+    if not competitor or competitor.strip() in ["", "null", "all"]:
+        return []
+        
     uid_str = str(current_user.id)
     comparison = []
     
     try:
         if db.db is None: await db.connect()
-        cursor = db.db["competitors"].find({"user_id": uid_str})
-        competitors = await cursor.to_list(length=20)
+        cursor = db.db["competitors"].find({
+            "user_id": uid_str,
+            "name": {"$regex": f"^{re.escape(competitor.strip())}$", "$options": "i"}
+        })
+        competitors = await cursor.to_list(length=1)
         
         # Optimization: Pre-fetch counts and features in parallel
         seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
@@ -1722,36 +2175,82 @@ class MissionBriefing(BaseModel):
     tags: List[IntelligenceTag] = []
 
 @router.get("/mission-briefing", response_model=MissionBriefing)
-async def get_mission_briefing(current_user: User = Depends(get_current_user)):
+async def get_mission_briefing(
+    competitor: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
     """
-    Generates a high-level strategic briefing based on all competitive intelligence.
+    Generates a high-level strategic briefing scoped strictly to the selected competitor.
     """
+    if not competitor or competitor.strip() in ["", "null", "all"]:
+        return MissionBriefing(
+            executive_summary="No active target selected for surveillance.",
+            technical_risks=[],
+            market_opportunities=[],
+            sentiment_pulse="NONE",
+            confidence_score=0,
+            integrity_score=0,
+            last_updated=get_now_ist(),
+            tags=[]
+        )
+        
     uid_str = str(current_user.id)
     
     try:
         if db.db is None: await db.connect()
         
-        # Get competitor count and feature count for summary
-        comp_count = await db.db["competitors"].count_documents({"user_id": uid_str})
+        # Verify competitor ownership
+        comp_doc = await db.db["competitors"].find_one({
+            "user_id": uid_str,
+            "name": {"$regex": f"^{re.escape(competitor.strip())}$", "$options": "i"}
+        })
+        if not comp_doc:
+            return MissionBriefing(
+                executive_summary="Tracked company not found.",
+                technical_risks=[],
+                market_opportunities=[],
+                sentiment_pulse="NONE",
+                confidence_score=0,
+                integrity_score=0,
+                last_updated=get_now_ist(),
+                tags=[]
+            )
+            
+        comp_name = comp_doc["name"]
+        comp_id = str(comp_doc["_id"])
+        
+        # Get feature count for summary
+        comp_count = 1
         
         pipeline = [
-            {"$match": {"user_id": uid_str}},
+            {"$match": {
+                "user_id": uid_str,
+                "$or": [
+                    {"competitor": {"$regex": f"^{re.escape(comp_name)}$", "$options": "i"}},
+                    {"target_company": {"$regex": f"^{re.escape(comp_name)}$", "$options": "i"}},
+                    {"competitor_id": comp_id}
+                ]
+            }},
             {"$project": {"count": {"$size": {"$ifNull": ["$features", []]}}}},
             {"$group": {"_id": None, "total": {"$sum": "$count"}}}
         ]
         agg_res = await db.db["reports"].aggregate(pipeline).to_list(length=1)
         feature_count = agg_res[0]["total"] if agg_res else 0
         
-        # Get user's competitor names for filtering latest features (Increased limit for complete coverage)
-        cursor = db.db["competitors"].find({"user_id": uid_str}, {"name": 1})
-        user_comp_names = [re.compile(f"^{re.escape(c['name'])}$", re.I) for c in await cursor.to_list(length=500)]
+        # Get user's competitor names for filtering latest features
+        user_comp_names = [re.compile(f"^{re.escape(comp_name)}$", re.I)]
         
         # Get latest technical features for risk/opportunity extraction (filtered by user competitors)
         latest_features = []
         if user_comp_names:
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+            cutoff_naive = datetime.utcnow() - timedelta(days=7)
             latest_features = await db.db["feature_updates"].find({
                 "company_name": {"$in": user_comp_names},
-                "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=7)}
+                "$or": [
+                    {"created_at": {"$gte": cutoff_date}},
+                    {"created_at": {"$gte": cutoff_naive}}
+                ]
             }).sort("created_at", -1).to_list(length=100)
         
         risks = []
@@ -1808,9 +2307,14 @@ async def get_mission_briefing(current_user: User = Depends(get_current_user)):
         # Calculate sentiment pulse based on recent article sentiment distribution
         pulse_label = "Neutral"
         if user_comp_names:
+            cutoff_date_2 = datetime.now(timezone.utc) - timedelta(days=2)
+            cutoff_naive_2 = datetime.utcnow() - timedelta(days=2)
             recent_articles = await db.db["article_summaries"].find({
                 "query_tag": {"$in": user_comp_names},
-                "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=2)}
+                "$or": [
+                    {"created_at": {"$gte": cutoff_date_2}},
+                    {"created_at": {"$gte": cutoff_naive_2}}
+                ]
             }).to_list(length=100)
             
             if recent_articles:

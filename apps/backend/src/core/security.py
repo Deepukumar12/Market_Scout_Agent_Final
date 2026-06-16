@@ -52,6 +52,25 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """
+    Create a signed JWT refresh token. `data` should contain sub (email)
+    and other user attributes. It will expire in 7 days by default.
+    """
+    to_encode = data.copy()
+    to_encode["type"] = "refresh"
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(days=7)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(
+        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+    )
+    return encoded_jwt
+
+
+
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     """
     Decode the JWT, then look up the user by email to ensure the account still

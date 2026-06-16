@@ -5,6 +5,7 @@ import { useNotificationStore, Notification } from '@/store/notificationStore';
 import { Bell, X, Check, Info, AlertTriangle, Zap, Clock } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { Button } from '@/components/ui/Button';
+import { formatTimeToIST } from '@/utils/dateUtils';
 
 interface NotificationCenterProps {
   isOpen: boolean;
@@ -49,7 +50,7 @@ const NotificationItem = forwardRef<HTMLDivElement, { notification: Notification
             </h4>
             <div className="flex items-center gap-1.5 text-[9px] text-[#86868B] dark:text-[#A1A1A6] font-mono">
               <Clock className="w-3 h-3" />
-              {new Date(notification.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+              {formatTimeToIST(notification.timestamp)}
             </div>
           </div>
           <p className="text-xs text-[#6E6E73] dark:text-[#86868B] leading-relaxed pr-4">

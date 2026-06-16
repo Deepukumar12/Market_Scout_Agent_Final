@@ -28,6 +28,7 @@ import {
 } from 'recharts';
 import { getLastSevenDays, getIntelligenceStream } from '@/services/api';
 import { cn, getCompetitorColor } from '@/utils/utils';
+import { formatToIST, formatTimeToIST, formatShortDateToIST } from '@/utils/dateUtils';
 
 interface CompetitorDetailsModalProps {
   isOpen: boolean;
@@ -53,10 +54,11 @@ const CompetitorDetailsModal: React.FC<CompetitorDetailsModalProps> = ({
             getLastSevenDays(competitor.name),
             getIntelligenceStream(50, competitor.name)
           ]);
-          setFeatureSignals(featureData);
-          setSignals(streamData.filter((s: any) => 
-            s.query_tag?.toLowerCase() === competitor.name.toLowerCase() ||
-            s.company_name?.toLowerCase() === competitor.name.toLowerCase()
+          setFeatureSignals(featureData || []);
+          const rawSignals = streamData?.signals || [];
+          setSignals(rawSignals.filter((s: any) => 
+            s.company_name?.toLowerCase() === competitor.name.toLowerCase() ||
+            s.query_tag?.toLowerCase() === competitor.name.toLowerCase()
           ));
         } catch (err) {
           console.error('Failed to fetch details:', err);
@@ -69,41 +71,132 @@ const CompetitorDetailsModal: React.FC<CompetitorDetailsModalProps> = ({
   }, [isOpen, competitor]);
 
   const unifiedTimeline = useMemo(() => {
+    // ---------------------------------------------------------------------------
+    // Helper: Extract the IST local date string (YYYY-MM-DD) for any item.
+    // ---------------------------------------------------------------------------
+    const toISTDateString = (dateInput: any): string | null => {
+      if (!dateInput) return null;
+      if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
+        return dateInput.trim();
+      }
+      const d = new Date(dateInput);
+      if (isNaN(d.getTime())) return null;
+      // Extract YYYY-MM-DD in Asia/Kolkata timezone
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(d);
+      const y = parts.find(p => p.type === 'year')?.value ?? '';
+      const mo = parts.find(p => p.type === 'month')?.value ?? '';
+      const dy = parts.find(p => p.type === 'day')?.value ?? '';
+      return y && mo && dy ? `${y}-${mo}-${dy}` : null;
+    };
+
+    // ---------------------------------------------------------------------------
+    // Helper to calculate exact calendar day in IST with a given days offset
+    // ---------------------------------------------------------------------------
+    const getISTDateOffset = (offsetDays: number): string => {
+      const d = new Date();
+      // Shift UTC time by Asia/Kolkata offset (+5.5 hours)
+      const utcTime = d.getTime() + d.getTimezoneOffset() * 60000;
+      const istTime = utcTime + (5.5 * 3600000);
+      const istDate = new Date(istTime);
+      istDate.setDate(istDate.getDate() - offsetDays);
+      const y = istDate.getFullYear();
+      const m = String(istDate.getMonth() + 1).padStart(2, '0');
+      const dy = String(istDate.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dy}`;
+    };
+
+    // Build the 8-day grid (Today + 7 previous days)
+    const days: string[] = [];
+    for (let i = 0; i < 8; i++) {
+      days.push(getISTDateOffset(i));
+    }
+
+    // Map ALL items — prioritizing the actual publication date
     const all = [
       ...featureSignals.map(s => ({
         id: s.hash_id,
         type: 'Technical Vector',
+        publicationDate: s.release_date && s.release_date !== 'YYYY-MM-DD' && s.release_date !== 'UNKNOWN'
+          ? s.release_date
+          : s.created_at,
         timestamp: s.created_at,
         text: `${s.feature_name}: ${s.summary || ''}`,
         url: s.source_url,
-        sentiment: 'Positive', // Technical features are generally positive progress
-        category: s.category
+        sentiment: 'Positive',
+        category: s.category,
+        citations: [] as string[]
       })),
       ...signals.map(s => ({
         id: s.id,
         type: s.signal_type || 'Market Signal',
+        publicationDate: s.timestamp,
         timestamp: s.timestamp,
         text: s.article_summary || s.summary,
         url: s.url,
         sentiment: s.sentiment,
-        category: s.sector || 'Market'
+        category: s.sector || 'Market',
+        citations: [] as string[]
       }))
     ];
 
-    const groups: Record<string, any[]> = {};
-    const days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      return d.toISOString().split('T')[0];
+    // Deduplicate and merge updates (by URL and Title matches)
+    const merged: Record<string, any> = {};
+    all.forEach(item => {
+      const dayStr = toISTDateString(item.publicationDate);
+      if (dayStr && days.includes(dayStr)) {
+        const url = (item.url || '').trim();
+        const text = (item.text || '').trim().toLowerCase();
+        
+        let matchKey = '';
+        if (url) {
+          const existingKey = Object.keys(merged).find(k => merged[k].url === url);
+          if (existingKey) matchKey = existingKey;
+        }
+        if (!matchKey && text) {
+          const existingKey = Object.keys(merged).find(k => merged[k].text.trim().toLowerCase() === text);
+          if (existingKey) matchKey = existingKey;
+        }
+        
+        if (matchKey) {
+          const existing = merged[matchKey];
+          // Keep earliest publication date
+          const existingDate = new Date(existing.publicationDate).getTime();
+          const itemDate = new Date(item.publicationDate).getTime();
+          if (itemDate < existingDate) {
+            existing.publicationDate = item.publicationDate;
+            existing.timestamp = item.timestamp;
+          }
+          // Keep longest text
+          if (item.text.length > existing.text.length) {
+            existing.text = item.text;
+          }
+          // Merge citations
+          if (url && !existing.citations.includes(url)) {
+            existing.citations.push(url);
+          }
+          if (item.type !== 'none' && existing.type === 'none') {
+            existing.type = item.type;
+          }
+        } else {
+          item.citations = url ? [url] : [];
+          const key = url ? url : `${item.type}|${text}`;
+          merged[key] = item;
+        }
+      }
     });
 
+    const groups: Record<string, any[]> = {};
     days.forEach(day => { groups[day] = []; });
 
-    all.forEach(item => {
-      const ts = new Date(item.timestamp);
-      const day = ts.toISOString().split('T')[0];
-      if (groups[day]) {
-        groups[day].push(item);
+    Object.values(merged).forEach(item => {
+      const dayStr = toISTDateString(item.publicationDate);
+      if (dayStr && groups[dayStr]) {
+        groups[dayStr].push(item);
       }
     });
 
@@ -114,9 +207,10 @@ const CompetitorDetailsModal: React.FC<CompetitorDetailsModalProps> = ({
     return { groups, days };
   }, [featureSignals, signals]);
 
+
   const trajectoryData = useMemo(() => {
     return unifiedTimeline.days.map(day => ({
-      date: new Date(day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' }).format(new Date(day)),
       count: unifiedTimeline.groups[day].length
     })).reverse(); // Reverse to show chronological left-to-right
   }, [unifiedTimeline]);
@@ -174,7 +268,7 @@ const CompetitorDetailsModal: React.FC<CompetitorDetailsModalProps> = ({
               <div class="meta">Network Surveillance Briefing | GEN-7 ARCHIVE</div>
             </div>
             <div style="text-align: right;">
-              <div class="meta">Date: ${new Date().toLocaleDateString()}</div>
+              <div class="meta">Date: ${formatShortDateToIST(new Date())}</div>
               <div class="meta">Status: ${competitor.status || 'Active'}</div>
               <div class="meta">Security: RESTRICTED ACCESS</div>
             </div>
@@ -191,11 +285,11 @@ const CompetitorDetailsModal: React.FC<CompetitorDetailsModalProps> = ({
             <div class="section-title">7-Day Innovation Trajectory (Chronological)</div>
             ${pdfDays.map(day => `
               <div class="day-group">
-                <div class="day-header">${new Date(day).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+                <div class="day-header">${new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(day))}</div>
                 ${pdfGroups[day].length > 0 ? pdfGroups[day].map(s => `
                   <div class="signal-row">
                     <div class="signal-meta">
-                      <div class="signal-date">${new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} | ${s.category || 'Surveillance'}</div>
+                      <div class="signal-date">${formatTimeToIST(s.timestamp)} | ${s.category || 'Surveillance'}</div>
                       <div class="signal-type">${s.type}</div>
                     </div>
                     <div class="signal-summary">${s.text}</div>
@@ -270,7 +364,7 @@ const CompetitorDetailsModal: React.FC<CompetitorDetailsModalProps> = ({
                       </a>
                       <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-[#0071E3]" />
-                        <span className="opacity-60">Deployment: {new Date(competitor.created_at || Date.now()).toLocaleDateString()}</span>
+                        <span className="opacity-60">Deployment: {formatShortDateToIST(competitor.created_at || Date.now())}</span>
                       </div>
                    </div>
                 </div>
@@ -383,13 +477,13 @@ const CompetitorDetailsModal: React.FC<CompetitorDetailsModalProps> = ({
                            <div className="w-32 shrink-0">
                               <div className="sticky top-0 p-5 rounded-3xl bg-white dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 text-center shadow-apple transition-all group-hover/day:border-blue-500/30">
                                  <div className="text-[10px] font-black text-[#0071E3] uppercase tracking-widest mb-1">
-                                   {new Date(day).toLocaleDateString('en-US', { weekday: 'short' })}
+                                   {new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short' }).format(new Date(day))}
                                  </div>
                                  <div className="text-3xl font-black text-[#1D1D1F] dark:text-white italic leading-none">
-                                   {new Date(day).getDate()}
+                                   {new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date(day))}
                                  </div>
                                  <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-2">
-                                   {new Date(day).toLocaleDateString('en-US', { month: 'short' })}
+                                   {new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', month: 'short' }).format(new Date(day))}
                                  </div>
                               </div>
                            </div>
@@ -419,7 +513,7 @@ const CompetitorDetailsModal: React.FC<CompetitorDetailsModalProps> = ({
                                       )} />
                                       <div className="flex items-center justify-between mb-3">
                                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-md">
-                                            {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                            {formatTimeToIST(item.timestamp)}
                                          </span>
                                          {item.url && (
                                            <a href={item.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-blue-500/5 text-blue-500 hover:bg-blue-500/10 transition-all">

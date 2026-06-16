@@ -13,11 +13,11 @@ def test_gemini():
     try:
         response = requests.post(url, json=payload, timeout=10)
         if response.status_code == 200:
-            return "✅ Gemini: Working"
+            return "[OK] Gemini: Working"
         else:
-            return f"❌ Gemini: Failed ({response.status_code}) - {response.text[:100]}"
+            return f"[ERROR] Gemini: Failed ({response.status_code}) - {response.text[:100]}"
     except Exception as e:
-        return f"❌ Gemini: Error - {str(e)}"
+        return f"[ERROR] Gemini: Error - {str(e)}"
 
 def test_groq():
     api_key = os.getenv("GROQ_API_KEY")
@@ -31,11 +31,11 @@ def test_groq():
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.status_code == 200:
-            return "✅ Groq: Working"
+            return "[OK] Groq: Working"
         else:
-            return f"❌ Groq: Failed ({response.status_code}) - {response.text[:100]}"
+            return f"[ERROR] Groq: Failed ({response.status_code}) - {response.text[:100]}"
     except Exception as e:
-        return f"❌ Groq: Error - {str(e)}"
+        return f"[ERROR] Groq: Error - {str(e)}"
 
 def test_tavily():
     api_key = os.getenv("TAVILY_API_KEY")
@@ -44,11 +44,11 @@ def test_tavily():
     try:
         response = requests.post(url, json=payload, timeout=10)
         if response.status_code == 200:
-            return "✅ Tavily: Working"
+            return "[OK] Tavily: Working"
         else:
-            return f"❌ Tavily: Failed ({response.status_code}) - {response.text[:100]}"
+            return f"[ERROR] Tavily: Failed ({response.status_code}) - {response.text[:100]}"
     except Exception as e:
-        return f"❌ Tavily: Error - {str(e)}"
+        return f"[ERROR] Tavily: Error - {str(e)}"
 
 def test_firecrawl():
     api_key = os.getenv("FIRECRAWL_API_KEY")
@@ -58,11 +58,11 @@ def test_firecrawl():
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=30)
         if response.status_code == 200 or response.status_code == 202:
-            return "✅ Firecrawl: Working"
+            return "[OK] Firecrawl: Working"
         else:
-            return f"❌ Firecrawl: Failed ({response.status_code}) - {response.text[:100]}"
+            return f"[ERROR] Firecrawl: Failed ({response.status_code}) - {response.text[:100]}"
     except Exception as e:
-        return f"❌ Firecrawl: Error - {str(e)}"
+        return f"[ERROR] Firecrawl: Error - {str(e)}"
 
 def test_github():
     token = os.getenv("GITHUB_TOKEN")
@@ -71,11 +71,11 @@ def test_github():
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
-            return "✅ GitHub: Working"
+            return "[OK] GitHub: Working"
         else:
-            return f"❌ GitHub: Failed ({response.status_code}) - {response.text[:100]}"
+            return f"[ERROR] GitHub: Failed ({response.status_code}) - {response.text[:100]}"
     except Exception as e:
-        return f"❌ GitHub: Error - {str(e)}"
+        return f"[ERROR] GitHub: Error - {str(e)}"
 
 def test_serpapi():
     api_key = os.getenv("SERPAPI_API_KEY")
@@ -83,11 +83,11 @@ def test_serpapi():
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
-            return "✅ SerpApi: Working"
+            return "[OK] SerpApi: Working"
         else:
-            return f"❌ SerpApi: Failed ({response.status_code}) - {response.text[:100]}"
+            return f"[ERROR] SerpApi: Failed ({response.status_code}) - {response.text[:100]}"
     except Exception as e:
-        return f"❌ SerpApi: Error - {str(e)}"
+        return f"[ERROR] SerpApi: Error - {str(e)}"
 
 def test_newsapi():
     api_key = os.getenv("NEWSAPI_API_KEY")
@@ -95,11 +95,11 @@ def test_newsapi():
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
-            return "✅ NewsApi: Working"
+            return "[OK] NewsApi: Working"
         else:
-            return f"❌ NewsApi: Failed ({response.status_code}) - {response.text[:100]}"
+            return f"[ERROR] NewsApi: Failed ({response.status_code}) - {response.text[:100]}"
     except Exception as e:
-        return f"❌ NewsApi: Error - {str(e)}"
+        return f"[ERROR] NewsApi: Error - {str(e)}"
 
 def test_newsdata():
     api_key = os.getenv("GNEWS_API_KEY")
@@ -107,11 +107,11 @@ def test_newsdata():
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
-            return "✅ NewsData (Global News): Working"
+            return "[OK] NewsData (Global News): Working"
         else:
-            return f"❌ NewsData (Global News): Failed ({response.status_code}) - {response.text[:100]}"
+            return f"[ERROR] NewsData (Global News): Failed ({response.status_code}) - {response.text[:100]}"
     except Exception as e:
-        return f"❌ NewsData (Global News): Error - {str(e)}"
+        return f"[ERROR] NewsData (Global News): Error - {str(e)}"
 
 def test_finnhub():
     api_key = os.getenv("FINNHUB_API_KEY")
@@ -119,11 +119,11 @@ def test_finnhub():
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
-            return "✅ Finnhub: Working"
+            return "[OK] Finnhub: Working"
         else:
-            return f"❌ Finnhub: Failed ({response.status_code}) - {response.text[:100]}"
+            return f"[ERROR] Finnhub: Failed ({response.status_code}) - {response.text[:100]}"
     except Exception as e:
-        return f"❌ Finnhub: Error - {str(e)}"
+        return f"[ERROR] Finnhub: Error - {str(e)}"
 
 if __name__ == "__main__":
     print("--- Starting API Verification ---")

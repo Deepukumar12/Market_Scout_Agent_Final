@@ -32,43 +32,40 @@ def _make_hash_id(company: str, feature_title: str, publish_date: str) -> str:
 
 
 def _feature_to_doc(company: str, f: ScanFeature) -> Optional[dict[str, Any]]:
-    now = datetime.now(timezone.utc)
-    # Enforce strict publish date check
-    if not f.publish_date or f.publish_date == "UNKNOWN" or f.publish_date == "YYYY-MM-DD":
-        logger.warning(f"Feature '{f.feature_title}' has no valid publish date. Falling back to today.")
-        f.publish_date = now.strftime("%Y-%m-%d")
-
-    parsed_dt = None
-    try:
-        from src.services.data.scraper_service import _parse_iso_date
-        parsed_dt = _parse_iso_date(f.publish_date)
-    except: pass
+    from src.core.datetime_utils import get_authoritative_publication_date, get_now_ist
     
-    if not parsed_dt:
-        logger.warning(f"Feature '{f.feature_title}' has unparseable publish date: '{f.publish_date}'. Falling back to today.")
-        parsed_dt = now
-        f.publish_date = now.strftime("%Y-%m-%d")
-        
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(days=7)
+    # Construct a temp dictionary of dates from the feature
+    temp_doc = {
+        "published_date": getattr(f, "publish_date", None) or getattr(f, "release_date", None),
+        "release_date": getattr(f, "release_date", None),
+        "publish_date": getattr(f, "publish_date", None),
+    }
     
-    if parsed_dt.tzinfo is None:
-        parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
-        
-    if parsed_dt < cutoff or parsed_dt > now + timedelta(days=1):
-        logger.warning(f"Feature '{f.feature_title}' date {f.publish_date} is outside the 7-day window. Discarding.")
+    parsed_dt = get_authoritative_publication_date(temp_doc)
+    release_date_str = parsed_dt.strftime("%Y-%m-%d")
+    
+    now_ist = get_now_ist()
+    cutoff_ist = now_ist - timedelta(days=7)
+    
+    if parsed_dt < cutoff_ist or parsed_dt > now_ist + timedelta(days=1):
+        logger.warning(f"Feature '{f.feature_title}' date {release_date_str} is outside the 7-day window. Discarding.")
         return None
 
-    hash_id = _make_hash_id(company, f.feature_title, f.publish_date)
+    hash_id = _make_hash_id(company, f.feature_title, release_date_str)
     return {
         "company_name": company,
         "feature_name": f.feature_title,
-        "release_date": f.publish_date,
+        "release_date": release_date_str,       # YYYY-MM-DD from source (authoritative pub date)
+        "publish_date": release_date_str,        # Explicit alias for clarity in queries
         "category": f.category,
         "technical_summary": f.technical_summary,
         "source_url": f.source_url,
         "hash_id": hash_id,
-        "created_at": parsed_dt,
+        "created_at": parsed_dt,              # parsed from publish_date (NOT ingestion time)
+        "ingested_at": datetime.now(timezone.utc),  # Actual DB insertion time
+        "confidence_score": getattr(f, "confidence_score", 70.0),
+        "rice_score": getattr(f, "rice_score", None),
+        "curd_score": getattr(f, "curd_score", None),
     }
 
 

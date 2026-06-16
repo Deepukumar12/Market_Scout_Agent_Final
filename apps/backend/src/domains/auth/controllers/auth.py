@@ -8,15 +8,21 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from src.core import config
 from src.core.database import db
-from src.core.security import create_access_token, get_current_user, get_password_hash, verify_password
+from src.core.security import create_access_token, create_refresh_token, get_current_user, get_password_hash, verify_password
 from src.domains.users.models.user import User, UserCreate, UserUpdate, PasswordChange
 from bson import ObjectId
 
 router = APIRouter()
 
+from src.shared.rate_limiter import RateLimiter
 
-@router.post("/register")
-async def register(user: UserCreate, background_tasks: BackgroundTasks):
+login_limiter = RateLimiter(limit=5, window_seconds=60)
+register_limiter = RateLimiter(limit=5, window_seconds=60)
+password_recovery_limiter = RateLimiter(limit=3, window_seconds=900)
+
+
+@router.post("/register", dependencies=[Depends(register_limiter)])
+async def register(request: Request, user: UserCreate, background_tasks: BackgroundTasks):
     """
     Register a new user and immediately issue a JWT.
     Welcome protocols (Email) are dispatched asynchronously.
@@ -38,7 +44,7 @@ async def register(user: UserCreate, background_tasks: BackgroundTasks):
     new_user.setdefault("role", "user")
     new_user.setdefault("is_active", True)
     
-    # 📧 Intelligence Alerting Protocol: Enable email alerts by default for all new personnel
+    # [EMAIL] Intelligence Alerting Protocol: Enable email alerts by default for all new personnel
     new_user.setdefault("preferences", {
         "emailAlerts": True,
         "theme": "dark",
@@ -74,6 +80,30 @@ async def register(user: UserCreate, background_tasks: BackgroundTasks):
             type=NotificationType.SUCCESS
         )
 
+        # Track session with real metadata
+        from src.services.activity_service import activity_service
+        from src.services.session_service import session_service
+        
+        user_agent = request.headers.get("user-agent", "unknown")
+        ip_address = request.client.host if request.client else "unknown"
+        
+        await collection.update_one(
+            {"_id": created_user["_id"]},
+            {"$set": {"last_login": datetime.now(timezone.utc)}}
+        )
+        
+        await session_service.track_session(
+            user_id=str(created_user["_id"]),
+            user_agent=user_agent,
+            ip_address=ip_address
+        )
+        
+        await activity_service.log_activity(
+            user_id=str(created_user["_id"]),
+            action="Register",
+            metadata={"ip": ip_address, "agent": user_agent}
+        )
+
         # Offload Welcome Email to Background Task
         from src.domains.notifications.services.email_service import send_email_report
         
@@ -103,7 +133,7 @@ async def register(user: UserCreate, background_tasks: BackgroundTasks):
         </div>
         """
 
-        print(f"🚀 [AUTH] Initializing welcome protocol for: {email} (User: {username})")
+        print(f"[START] [AUTH] Initializing welcome protocol for: {email} (User: {username})")
 
         background_tasks.add_task(
             send_email_report,
@@ -113,7 +143,20 @@ async def register(user: UserCreate, background_tasks: BackgroundTasks):
             html_content=welcome_html
         )
 
-        return {"access_token": access_token, "token_type": "bearer"}
+        refresh_token = create_refresh_token(
+            data={
+                "sub": created_user["email"],
+                "role": created_user.get("role", "user"),
+                "user_id": str(created_user["_id"]),
+                "full_name": created_user.get("full_name"),
+            }
+        )
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
 
     except Exception as e:
         print(f"Error in register: {e}")
@@ -123,7 +166,7 @@ async def register(user: UserCreate, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(login_limiter)])
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     OAuth2 password flow-compatible login endpoint that returns a signed JWT.
@@ -209,7 +252,20 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             f"total_ms={total_ms:.1f}, result=success"
         )
 
-        return {"access_token": access_token, "token_type": "bearer"}
+        refresh_token = create_refresh_token(
+            data={
+                "sub": user["email"],
+                "role": user.get("role", "user"),
+                "user_id": str(user["_id"]),
+                "full_name": user.get("full_name"),
+            }
+        )
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
 
     except Exception as e:
         print(f"Error in login: {e}")
@@ -268,7 +324,12 @@ async def update_profile(
     database = await get_database()
     collection = database["users"]
 
-    update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
+    from src.shared.sanitizer import sanitize_html
+    update_data = {
+        k: (sanitize_html(v) if isinstance(v, str) else v)
+        for k, v in user_update.model_dump().items()
+        if v is not None
+    }
     
     if "email" in update_data and update_data["email"] != current_user.email:
         existing = await collection.find_one({"email": update_data["email"]})
@@ -341,7 +402,13 @@ async def deactivate_account(
     # 5. Clear reports
     await database["reports"].delete_many({"user_id": user_id_str})
 
-    # 6. Delete user record
+    # 6. Clear email schedules
+    await database["email_schedules"].delete_many({"user_id": user_id_str})
+
+    # 7. Clear article summaries
+    await database["article_summaries"].delete_many({"user_id": user_id_str})
+
+    # 8. Delete user record
     await database["users"].delete_one({"_id": user_oid})
 
     return {"status": "success", "message": "Identity and all associated data purged successfully"}
@@ -450,3 +517,218 @@ async def change_password(
     )
     
     return {"message": "Password updated successfully"}
+
+
+from pydantic import BaseModel, EmailStr
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password", dependencies=[Depends(password_recovery_limiter)])
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    Initiate the password recovery flow. Generates a 6-digit PIN and sends it via email.
+    """
+    from src.core.database import get_database
+    database = await get_database()
+    collection = database["users"]
+    
+    user = await collection.find_one({"email": payload.email})
+    # For security reasons, do not explicitly reveal if user doesn't exist.
+    if not user:
+        return {"status": "success", "message": "If the email is registered, a recovery token will be sent."}
+        
+    import random
+    reset_code = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+    
+    # Save code to DB
+    await collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {
+            "reset_code": reset_code,
+            "reset_code_expires": expires_at
+        }}
+    )
+    
+    # Print code for easy local development / sandbox recovery
+    print(f"\n[KEY] [SECURITY PROTOCOL] Password recovery code generated for {payload.email}: {reset_code}\n")
+    
+    # Send email
+    from src.domains.notifications.services.email_service import send_email_report
+    email_subject = "ScoutForge AI | Password Recovery Protocol"
+    email_text = f"Your password reset recovery code is: {reset_code}. This code is valid for 15 minutes."
+    email_html = f"""
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #000; color: #fff; padding: 40px; border-radius: 20px;">
+        <h1 style="color: #FF9500; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; italic: true;">RECOVERY REQUESTED</h1>
+        <p style="font-size: 18px; color: #86868B;">Operator, a security recovery code has been generated for your profile.</p>
+        
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; margin: 30px 0; text-align: center;">
+            <span style="font-size: 36px; font-weight: 900; letter-spacing: 5px; color: #FF9500; font-family: monospace;">{reset_code}</span>
+        </div>
+ 
+        <p style="line-height: 1.6; color: #E5E5EA;">Enter this code on the verification console to choose a new access key. If you did not request this, please verify your security settings immediately.</p>
+        
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 40px 0;">
+        <p style="font-size: 10px; color: #6E6E73; text-align: center;">THIS IS AN AUTOMATED SECURE DISPATCH. DO NOT REPLY.</p>
+    </div>
+    """
+    
+    background_tasks.add_task(
+        send_email_report,
+        to_email=payload.email,
+        subject=email_subject,
+        content=email_text,
+        html_content=email_html
+    )
+    
+    return {"status": "success", "message": "If the email is registered, a recovery token will be sent."}
+ 
+ 
+@router.post("/reset-password", dependencies=[Depends(password_recovery_limiter)])
+async def reset_password(payload: ResetPasswordRequest):
+    """
+    Verify reset token and update user password.
+    """
+    from src.core.database import get_database
+    database = await get_database()
+    collection = database["users"]
+    
+    user = await collection.find_one({"email": payload.email})
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
+        
+    db_code = user.get("reset_code")
+    db_expires = user.get("reset_code_expires")
+    
+    if not db_code or db_code != payload.token:
+        raise HTTPException(status_code=400, detail="Invalid recovery code")
+        
+    # Check expiration
+    if db_expires:
+        if db_expires.tzinfo is None:
+            db_expires = db_expires.replace(tzinfo=timezone.utc)
+        
+        if datetime.now(timezone.utc) > db_expires:
+            raise HTTPException(status_code=400, detail="Recovery code has expired")
+            
+    # Hash new password
+    hashed_password = get_password_hash(payload.new_password)
+    
+    # Update password and clear reset fields
+    await collection.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"hashed_password": hashed_password},
+            "$unset": {"reset_code": "", "reset_code_expires": ""}
+        }
+    )
+    
+    # Push in-app alert
+    from src.domains.notifications.services.notification_service import notification_service
+    from src.domains.notifications.models.notification import NotificationType
+    await notification_service.create_notification(
+        user_id=str(user["_id"]),
+        title="Access Key Reset",
+        message="Your account access key was reset using a recovery code.",
+        type=NotificationType.WARNING
+    )
+    
+    # Log activity
+    from src.services.activity_service import activity_service
+    await activity_service.log_activity(
+        user_id=str(user["_id"]),
+        action="Access Reset",
+        metadata={"email": payload.email}
+    )
+    
+    return {"status": "success", "message": "Access key updated successfully."}
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh")
+async def refresh_token_endpoint(payload: RefreshTokenRequest):
+    """
+    Validate the refresh token and return a newly issued access token and rotated refresh token.
+    """
+    from jose import jwt, JWTError
+    from src.core.config import settings
+    
+    try:
+        decoded = jwt.decode(
+            payload.refresh_token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
+        if decoded.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+            
+        email = decoded.get("sub")
+        user_id = decoded.get("user_id")
+        role = decoded.get("role", "user")
+        full_name = decoded.get("full_name")
+        
+        if not email or not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token claims"
+            )
+            
+        # Verify the user still exists and is active in DB
+        from src.core.database import get_database
+        database = await get_database()
+        user = await database["users"].find_one({"email": email})
+        if not user or not user.get("is_active", True):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User inactive or not found"
+            )
+            
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        new_access_token = create_access_token(
+            data={
+                "sub": email,
+                "role": role,
+                "user_id": user_id,
+                "full_name": full_name,
+            },
+            expires_delta=access_token_expires,
+        )
+        
+        new_refresh_token = create_refresh_token(
+            data={
+                "sub": email,
+                "role": role,
+                "user_id": user_id,
+                "full_name": full_name,
+            }
+        )
+        
+        return {
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer"
+        }
+        
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
+
+

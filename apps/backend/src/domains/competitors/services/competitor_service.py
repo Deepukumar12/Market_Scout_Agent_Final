@@ -24,5 +24,5 @@ async def get_all_competitors():
         return result
 
     except Exception as e:
-        logger.error(f"❌ Error fetching competitors: {e}")
+        logger.error(f"[ERROR] Error fetching competitors: {e}")
         return []

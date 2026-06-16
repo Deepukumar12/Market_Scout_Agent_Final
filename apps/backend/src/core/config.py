@@ -116,6 +116,8 @@ class Settings(BaseSettings):
     EXA_API_KEY: str = ""
     CLEARBIT_API_KEY: str = ""
     FIRECRAWL_API_KEY: str = ""
+    FIRECRAWL_ENABLED: bool = False
+    CRAWL4AI_ENABLED: bool = False
     NEWSAPI_API_KEY: str = ""
     GNEWS_API_KEY: str = ""
 

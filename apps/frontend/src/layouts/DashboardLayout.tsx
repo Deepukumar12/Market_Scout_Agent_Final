@@ -16,7 +16,7 @@ import { analyzeCompany } from '@/services/api';
 import LogConsole from '@/components/dashboard/LogConsole';
 
 const DashboardLayout = () => {
-  const { user, initSync } = useAuthStore();
+  const { token, user, initSync } = useAuthStore();
   const { fetchCompetitors } = useCompetitorStore();
   const { fetchNotifications, initWebSocket, closeWebSocket } = useNotificationStore();
   const location = useLocation();
@@ -42,12 +42,19 @@ const DashboardLayout = () => {
     initWebSocket(); // Real-time notification uplink
     const cleanupSync = initSync(); // Real-time profile sync
     const interval = setInterval(fetchNotifications, 60000);
+
+    const handleOnline = () => {
+      initWebSocket();
+    };
+    window.addEventListener('online', handleOnline);
+
     return () => {
       clearInterval(interval);
       if (cleanupSync) cleanupSync();
       closeWebSocket();
+      window.removeEventListener('online', handleOnline);
     };
-  }, [fetchNotifications, initWebSocket, initSync, closeWebSocket]);
+  }, [token, fetchNotifications, initWebSocket, initSync, closeWebSocket]);
 
   useEffect(() => {
     fetchCompetitors();

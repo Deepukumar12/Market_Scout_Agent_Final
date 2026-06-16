@@ -31,9 +31,10 @@ import StatCard from '@/components/dashboard/StatCard';
 import FeatureChart from '@/components/dashboard/FeatureChart';
 import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
 import MissionBriefing from '@/components/dashboard/MissionBriefing';
-import SevenDayReleases from '@/components/dashboard/SevenDayReleases';
+
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/utils/utils';
+import { formatToIST, formatTimeToIST, formatShortDateToIST } from '@/utils/dateUtils';
 
 // --- Sub-components for Big Tech feel ---
 
@@ -71,7 +72,7 @@ const SystemStatusBar = ({ stats, latency, lastSync }: { stats: any, latency: nu
 );
 
 const DashboardPage = () => {
-  const { competitors, fetchCompetitors } = useCompetitorStore();
+  const { competitors, selectedCompetitorId, fetchCompetitors } = useCompetitorStore();
   const { 
     history, 
     signals, 
@@ -80,9 +81,7 @@ const DashboardPage = () => {
     globalMetrics,
     systemStats,
     comparisonMatrix,
-    lastSevenDays,
     missionBriefing,
-    scanReport,
     fetchHistory, 
     fetchSignals, 
     fetchActivityTimeline, 
@@ -90,43 +89,39 @@ const DashboardPage = () => {
     fetchGlobalMetrics,
     fetchSystemStats,
     fetchMarketComparison,
-    fetchLastSevenDays,
     fetchMissionBriefing,
-    fetchLatestReport
   } = useIntelStore();
   const navigate = useNavigate();
   const { searchQuery: globalSearchQuery } = useOutletContext<{ searchQuery: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState('Just now');
   const [isSending, setIsSending] = useState(false);
-  const [selected7DayComp, setSelected7DayComp] = useState<string>('');
-
   const { user } = useAuthStore();
+
+  const activeCompetitor = useMemo(() => {
+    return competitors.find(c => c.id === selectedCompetitorId || c._id === selectedCompetitorId);
+  }, [competitors, selectedCompetitorId]);
+
+  const activeCompetitorName = activeCompetitor?.name || '';
 
   useEffect(() => {
     setSearchQuery(globalSearchQuery);
   }, [globalSearchQuery]);
 
-  useEffect(() => {
-    if (competitors.length > 0 && !selected7DayComp) {
-      setSelected7DayComp(competitors[0].name);
-    }
-  }, [competitors, selected7DayComp]);
-
   const refreshAllData = useCallback(() => {
     fetchCompetitors(searchQuery);
-    fetchHistory(searchQuery);
-    fetchSignals(searchQuery);
-    fetchActivityTimeline(searchQuery);
-    fetchInnovationTrends();
-    fetchGlobalMetrics();
+    if (activeCompetitorName) {
+      fetchHistory(activeCompetitorName);
+      fetchSignals(activeCompetitorName);
+      fetchActivityTimeline(activeCompetitorName);
+      fetchInnovationTrends(activeCompetitorName);
+      fetchGlobalMetrics(activeCompetitorName);
+      fetchMarketComparison(activeCompetitorName);
+      fetchMissionBriefing(activeCompetitorName);
+    }
     fetchSystemStats();
-    fetchMarketComparison();
-    fetchLastSevenDays(selected7DayComp || undefined);
-    fetchMissionBriefing();
-    fetchLatestReport();
-    setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-  }, [fetchCompetitors, fetchHistory, fetchSignals, fetchActivityTimeline, fetchInnovationTrends, fetchGlobalMetrics, fetchMarketComparison, fetchLastSevenDays, fetchMissionBriefing, fetchLatestReport, searchQuery, selected7DayComp]);
+    setLastSyncTime(formatToIST(new Date()));
+  }, [fetchCompetitors, fetchHistory, fetchSignals, fetchActivityTimeline, fetchInnovationTrends, fetchGlobalMetrics, fetchMarketComparison, fetchMissionBriefing, fetchSystemStats, searchQuery, activeCompetitorName]);
 
   const handleExportIntel = () => {
     // Generate a comprehensive strategic briefing PDF report
@@ -136,7 +131,7 @@ const DashboardPage = () => {
     const html = `
       <html>
         <head>
-          <title>Global Market Intelligence Briefing - ${new Date().toLocaleDateString()}</title>
+          <title>Global Market Intelligence Briefing - ${formatShortDateToIST(new Date())}</title>
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #1d1d1f; line-height: 1.6; }
             .header { border-bottom: 2px solid #0071e3; padding-bottom: 20px; margin-bottom: 40px; }
@@ -162,7 +157,7 @@ const DashboardPage = () => {
           <div class="header">
             <div class="meta">Strategic Command | Operational Briefing</div>
             <h1>Global Market <span style="color: #0071e3;">Intelligence</span></h1>
-            <div class="meta">Generated: ${new Date().toLocaleString()} | Source: ScoutForge AI Node</div>
+            <div class="meta">Generated: ${formatToIST(new Date())} | Source: ScoutForge AI Node</div>
           </div>
 
           <div class="section">
@@ -184,7 +179,7 @@ const DashboardPage = () => {
             <div class="section-title">Latest Intelligence Signals</div>
             ${signals.slice(0, 10).map(s => `
               <div class="list-item">
-                <div class="item-meta">${new Date(s.timestamp).toLocaleDateString()} | ${s.source || 'Open Web'} | ${s.sentiment || 'Neutral'}</div>
+                <div class="item-meta">${formatToIST(s.timestamp)} | ${s.source || 'Open Web'} | ${s.sentiment || 'Neutral'}</div>
                 <div class="item-title">${s.summary.split(':')[0]}</div>
                 <div class="item-summary">${s.summary}</div>
               </div>
@@ -253,9 +248,47 @@ const DashboardPage = () => {
   const dashboardSources = useMemo(() => signals.slice(0, 9).map(s => ({
     title: s.summary,
     source: s.source,
-    date: new Date(s.timestamp).toLocaleDateString('en-IN'),
+    date: formatToIST(s.timestamp),
     url: s.url || "#"
   })), [signals]);
+
+  if (competitors.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFE] dark:bg-[#050505] p-6 lg:p-10 flex items-center justify-center">
+        <div className="max-w-md w-full glass-card rounded-[32px] p-8 border border-[#E5E5EA] dark:border-white/10 bg-white/80 dark:bg-[#0A0A0C]/80 shadow-2xl text-center space-y-6">
+          <div className="w-16 h-16 bg-blue-600/10 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Zap size={32} />
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter italic">No Surveillance Targets</h2>
+          <p className="text-sm text-[#86868B] leading-relaxed">
+            Initialize your surveillance network by adding a competitor. ScoutForge AI will automatically scan and track their technical releases.
+          </p>
+          <Button 
+            onClick={handleNewOperation}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl h-12 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all active:scale-95"
+          >
+            Add Competitor
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedCompetitorId) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFE] dark:bg-[#050505] p-6 lg:p-10 flex items-center justify-center">
+        <div className="max-w-md w-full glass-card rounded-[32px] p-8 border border-[#E5E5EA] dark:border-white/10 bg-white/80 dark:bg-[#0A0A0C]/80 shadow-2xl text-center space-y-4">
+          <div className="w-16 h-16 bg-blue-600/10 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Search size={32} />
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter italic">Select a Target</h2>
+          <p className="text-sm text-[#86868B] leading-relaxed">
+            Please select a surveillance target from the top navbar to display competitor intelligence.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FBFBFE] dark:bg-[#050505] -mx-4 md:-mx-10 -mt-4 md:-mt-10 selection:bg-blue-600 selection:text-white">
@@ -325,160 +358,6 @@ const DashboardPage = () => {
            <MissionBriefing data={missionBriefing} />
         </section>
 
-        {/* Latest Scan Dossier - Renders the latest live scan report */}
-        {scanReport && (
-           <section className="mb-12 glass-card rounded-[40px] border border-blue-500/20 bg-white dark:bg-[#0A0A0C] p-6 md:p-10 lg:p-12 shadow-apple-large space-y-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-[#F0F0F3] dark:border-white/5 pb-8 relative z-10">
-                 <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-3xl font-black text-blue-600 uppercase italic">
-                       {scanReport.competitor ? scanReport.competitor[0] : '?'}
-                    </div>
-                    <div>
-                       <span className="text-[9px] font-black text-blue-600 uppercase tracking-[0.25em] italic">Latest Scan Dossier</span>
-                       <h2 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter leading-none mt-1">
-                          {scanReport.competitor}
-                       </h2>
-                    </div>
-                 </div>
-                 <div className="flex flex-wrap items-center gap-3 text-[10px] font-black uppercase tracking-widest text-[#86868B]">
-                    <div className="px-4 py-2 rounded-xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[#1D1D1F] dark:text-white">
-                       Date: {new Date(scanReport.scan_date).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
-                    </div>
-                    <div className="px-4 py-2 rounded-xl bg-[#F5F5F7] dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 text-[#1D1D1F] dark:text-white">
-                       Scanned: {scanReport.total_sources_scanned || 0} Sources
-                    </div>
-                    <div className="px-4 py-2 rounded-xl bg-[#34C759]/10 border border-[#34C759]/20 text-[#34C759]">
-                       Verified: {scanReport.total_valid_updates || 0} Signals
-                    </div>
-                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-                 {/* Financial Summary */}
-                 <div className="p-6 rounded-3xl bg-[#F5F5F7]/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/5">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-[#86868B] mb-4">Financial Dossier</h4>
-                    <div className="space-y-3">
-                       <div className="flex justify-between text-xs">
-                          <span className="text-[#86868B]">Price</span>
-                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.financials?.current_price ? `$${scanReport.financials.current_price}` : 'N/A'}</span>
-                       </div>
-                       <div className="flex justify-between text-xs">
-                          <span className="text-[#86868B]">Change</span>
-                          <span className={cn("font-bold", (scanReport.financials?.percent_change ?? 0) >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                             {scanReport.financials?.percent_change ? `${scanReport.financials.percent_change >= 0 ? '+' : ''}${scanReport.financials.percent_change}%` : 'N/A'}
-                          </span>
-                       </div>
-                       <div className="flex justify-between text-xs">
-                          <span className="text-[#86868B]">Revenue</span>
-                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.financials?.revenue_ttm || 'N/A'}</span>
-                       </div>
-                    </div>
-                 </div>
-
-                 {/* GitHub Summary */}
-                 <div className="p-6 rounded-3xl bg-[#F5F5F7]/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/5">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-[#86868B] mb-4">Engineering Dossier</h4>
-                    <div className="space-y-3">
-                       <div className="flex justify-between text-xs">
-                          <span className="text-[#86868B]">Active Repos</span>
-                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.github?.repos?.length || 0}</span>
-                       </div>
-                       <div className="flex justify-between text-xs">
-                          <span className="text-[#86868B]">Total Stars</span>
-                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.github?.repos?.reduce((acc: number, r: any) => acc + (r.stargazers_count || 0), 0) || 0}</span>
-                       </div>
-                       <div className="flex justify-between text-xs">
-                          <span className="text-[#86868B]">Primary Tech</span>
-                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.github?.repos?.[0]?.language || 'N/A'}</span>
-                       </div>
-                    </div>
-                 </div>
-
-                 {/* Search Visibility Summary */}
-                 <div className="p-6 rounded-3xl bg-[#F5F5F7]/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/5">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-[#86868B] mb-4">Surveillance Dossier</h4>
-                    <div className="space-y-3">
-                       <div className="flex justify-between text-xs">
-                          <span className="text-[#86868B]">Search Hits</span>
-                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.search_visibility?.total_results || 'N/A'}</span>
-                       </div>
-                       <div className="flex justify-between text-xs">
-                          <span className="text-[#86868B]">Exa Discoveries</span>
-                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.search_visibility?.exa_discovery?.length || 0}</span>
-                       </div>
-                       <div className="flex justify-between text-xs">
-                          <span className="text-[#86868B]">Firmography Scale</span>
-                          <span className="font-bold text-[#1D1D1F] dark:text-white">{scanReport.company?.employees || 'Scaling'}</span>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="space-y-4 relative z-10">
-                 <h3 className="text-lg font-bold text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter border-b border-[#F0F0F3] dark:border-white/5 pb-2">Extracted Technical Features</h3>
-                 {scanReport.features && scanReport.features.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                       {scanReport.features.map((feature: any, i: number) => (
-                          <div key={i} className="p-5 rounded-2xl bg-white dark:bg-[#151518] border border-[#E5E5EA] dark:border-white/5 relative overflow-hidden flex flex-col justify-between">
-                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
-                             <div>
-                                <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-[#86868B] mb-2">
-                                   <span>{feature.category || 'Feature'}</span>
-                                   <span className="text-blue-600">Conf: {feature.confidence_score || feature.confidence || 80}%</span>
-                                </div>
-                                <h5 className="text-sm font-bold text-[#1D1D1F] dark:text-white mb-2 line-clamp-1">{feature.feature_title || feature.title}</h5>
-                                <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] leading-relaxed mb-4 line-clamp-3">{feature.technical_summary || feature.description}</p>
-                             </div>
-                             {(feature.source_url || feature.source_urls?.[0]) && (
-                                <a 
-                                   href={feature.source_url || feature.source_urls[0]} 
-                                   target="_blank" 
-                                   rel="noopener noreferrer" 
-                                   className="inline-flex items-center gap-1 text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
-                                >
-                                   View Source <ExternalLink size={10} />
-                                </a>
-                             )}
-                          </div>
-                       ))}
-                    </div>
-                 ) : (
-                    <div className="text-center py-8 text-xs text-[#86868B] italic">No new technical features verified during this scan.</div>
-                 )}
-              </div>
-           </section>
-        )}
-
-        {/* Global Telemetry - Real-Time Performance Gauges */}
-        <section className="mb-16">
-           <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">Global <span className="text-[#0071E3]">Intelligence</span></h2>
-                <p className="text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em] mt-1 italic">Real-time surveillance across 50+ technical endpoints</p>
-              </div>
-           </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <StatCard 
-                title="Entities Monitored" 
-                value={globalMetrics?.total_competitors || 0}
-                icon={Users}
-                trendValue={globalMetrics?.competitors_trend || 0}
-                internalLink="/dashboard/competitors"
-                className="border-blue-500/10"
-              />
-              <StatCard 
-                title="Signals Processed" 
-                value={globalMetrics?.features_found || 0}
-                icon={Zap}
-                trendValue={globalMetrics?.features_trend || 0}
-                internalLink="#live-surveillance"
-                className="border-emerald-500/10"
-              />
-           </div>
-        </section>
-
-
 
         {/* Intelligence Visualization Layer */}
         <div className="grid grid-cols-12 gap-8">
@@ -502,118 +381,8 @@ const DashboardPage = () => {
                  </div>
               </div>
            </div>
-
-           {/* Innovation Surface - Right Panel */}
-           <div className="col-span-12">
-              <div className="premium-card p-6 md:p-10 lg:p-12 h-full flex flex-col">
-                 <div className="mb-10">
-                    <h3 className="text-3xl font-black uppercase tracking-tighter italic">Sector <span className="text-purple-600">Pulse.</span></h3>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#86868B] mt-2 italic">Real-time Velocity Shifts</p>
-                 </div>
-                 
-                 <div className="flex-1 space-y-10">
-                    {innovationTrends?.sector_shift.slice(0, 5).map((shift: any, i: number) => (
-                       <div key={shift.sector || i} className="group relative">
-                          <div className="flex items-center justify-between mb-4">
-                             {shift.url ? (
-                                <a 
-                                   href={shift.url} 
-                                   target="_blank" 
-                                   rel="noopener noreferrer"
-                                   className="text-sm font-black uppercase tracking-tighter hover:text-blue-600 transition-colors italic flex items-center gap-2 group/link"
-                                >
-                                   {shift.sector}
-                                   <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
-                                </a>
-                             ) : (
-                                <div className="text-sm font-black uppercase tracking-tighter group-hover:text-blue-600 transition-colors italic">{shift.sector}</div>
-                             )}
-                             <div className="flex items-center gap-2">
-                                <span className={cn(
-                                   "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border",
-                                   shift.delta > 0 ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-rose-500/10 text-rose-500 border-rose-500/20"
-                                )}>
-                                   {shift.delta > 0 ? "+" : ""}{shift.delta}%
-                                </span>
-                             </div>
-                          </div>
-                          <div className="h-2 w-full bg-[#F5F5F7] dark:bg-white/5 rounded-full overflow-hidden shadow-inner-apple">
-                             <motion.div 
-                                initial={{ width: 0 }}
-                                whileInView={{ width: `${Math.min(100, 40 + shift.delta)}%` }}
-                                className={cn(
-                                   "h-full rounded-full shadow-lg transition-all",
-                                   shift.delta > 0 ? "bg-emerald-500 shadow-emerald-500/20" : "bg-rose-500 shadow-rose-500/20"
-                                )}
-                             />
-                          </div>
-                       </div>
-                    ))}
-                 </div>
-
-                 <div className="mt-12 pt-10 border-t border-[#F0F0F3] dark:border-white/5">
-                    {innovationTrends?.top_innovators[0]?.url ? (
-                       <a 
-                          href={innovationTrends.top_innovators[0].url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-8 rounded-[32px] bg-blue-600 text-white shadow-2xl shadow-blue-600/30 group hover:scale-[1.02] transition-all"
-                       >
-                          <div className="space-y-1">
-                             <div className="text-[9px] font-black uppercase tracking-[0.25em] opacity-70 italic">Lead Disruptor</div>
-                             <div className="text-2xl font-black uppercase italic tracking-tighter flex items-center gap-2">
-                                {innovationTrends.top_innovators[0].name}
-                                <ExternalLink className="w-4 h-4 opacity-50" />
-                             </div>
-                          </div>
-                          <TrendingUp size={32} />
-                       </a>
-                    ) : (
-                       <div className="flex items-center justify-between p-8 rounded-[32px] bg-blue-600 text-white shadow-2xl shadow-blue-600/30">
-                          <div className="space-y-1">
-                             <div className="text-[9px] font-black uppercase tracking-[0.25em] opacity-70 italic">Lead Disruptor</div>
-                             <div className="text-2xl font-black uppercase italic tracking-tighter">{innovationTrends?.top_innovators[0]?.name || "ANALYZING..."}</div>
-                          </div>
-                          <TrendingUp size={32} />
-                       </div>
-                    )}
-                 </div>
-              </div>
-           </div>
         </div>
 
-        {/* Last 7 Days Surveillance - Specific Competitor Pulse */}
-        <section className="glass-card rounded-[40px] border border-[#F0F0F3] dark:border-white/5 bg-white dark:bg-[#0A0A0C] p-6 md:p-10 lg:p-12 shadow-apple space-y-8">
-           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#F0F0F3] dark:border-white/5 pb-8">
-              <div>
-                 <h2 className="text-3xl font-black text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">
-                   7-Day <span className="text-[#AF52DE]">Surveillance</span>
-                 </h2>
-                 <p className="text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em] mt-1 italic">
-                   Historical telemetry scan for the selected target node
-                 </p>
-              </div>
-              <div className="flex items-center gap-4">
-                 <span className="text-[10px] font-black text-[#86868B] uppercase tracking-widest italic">Select Target:</span>
-                 <select
-                   value={selected7DayComp}
-                   onChange={(e) => setSelected7DayComp(e.target.value)}
-                   className="h-10 px-6 rounded-full border border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#1C1C1E] text-[10px] font-black uppercase tracking-widest text-[#1D1D1F] dark:text-white focus:outline-none shadow-apple-sm transition-all italic"
-                 >
-                   <option value="">ALL TARGETS</option>
-                   {competitors.map((c: any) => (
-                     <option key={c.id || c._id} value={c.name}>{c.name.toUpperCase()}</option>
-                   ))}
-                 </select>
-              </div>
-           </div>
-
-           <SevenDayReleases 
-             features={lastSevenDays} 
-             title="Innovation Releases" 
-             subtitle={`Technical developments logged in the last 7 days for ${selected7DayComp || 'monitored entities'}`} 
-           />
-        </section>
 
         {/* Live Surveillance Feed - Unified Operations Section */}
         <section id="live-surveillance" className="space-y-10">
@@ -669,7 +438,7 @@ const DashboardPage = () => {
                                <span className="text-[9px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest truncate">{domain}</span>
                              </div>
                              <span className="text-[9px] font-bold text-[#A1A1A6] shrink-0 tabular-nums">
-                               {new Date(signal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                               {formatToIST(signal.timestamp)}
                              </span>
                            </div>
                            <p className="text-[12px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">

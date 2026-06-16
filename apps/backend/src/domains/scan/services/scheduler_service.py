@@ -52,18 +52,16 @@ async def _run_scheduled_scans():
 
 
 def start_scheduler():
-    global _scheduler
-    if _scheduler is not None:
-        return
-    _scheduler = AsyncIOScheduler()
-    _scheduler.add_job(
-        _run_scheduled_scans,
-        trigger=IntervalTrigger(minutes=15),
-        id="competitor_scans",
-        replace_existing=True,
+    """
+    EVENT-DRIVEN: This scheduler is DISABLED.
+    Competitor scans only run when the user explicitly requests an analysis.
+    The 15-minute polling has been replaced by on-demand scanning.
+    """
+    logger.info(
+        "Competitor scan scheduler is DISABLED. "
+        "Scans run on-demand only (user-initiated via 'Analyze Company')."
     )
-    _scheduler.start()
-    logger.info("Scheduler started (competitor scans every 15 min)")
+    return  # Do NOT start the scheduler
 
 
 def stop_scheduler():

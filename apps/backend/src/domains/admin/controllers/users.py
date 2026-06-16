@@ -30,7 +30,7 @@ async def verify_admin(current_user: User = Depends(get_current_user)):
         from src.core.logger import agent_logger
         import logging
         logger = logging.getLogger(__name__)
-        logger.warning(f"⛔ ACCESS DENIED: Identity {user_email} (Role: {user_role}) blocked from administrative console.")
+        logger.warning(f"[BLOCKED] ACCESS DENIED: Identity {user_email} (Role: {user_role}) blocked from administrative console.")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrative privileges required")
     
     return current_user
@@ -101,5 +101,6 @@ async def delete_user_admin(user_id: str, admin: User = Depends(verify_admin)):
     await db.db["article_summaries"].delete_many({"user_id": uid_str})
     await db.db["activity_logs"].delete_many({"user_id": uid_str})
     await db.db["user_sessions"].delete_many({"user_id": uid_str})
+    await db.db["email_schedules"].delete_many({"user_id": uid_str})
     
     return {"status": "success", "message": f"User {user['email']} and all intelligence assets purged."}

@@ -14,18 +14,104 @@ import { useAuthStore } from '@/store/authStore';
 import {
   getUserActivity, getUserSessions, revokeSession,
   getSavedReports, updateProfile as apiUpdateProfile,
-  uploadAvatar, getSchedulerConfig, updateSchedulerConfig
+  uploadAvatar, getSchedulerConfig, updateSchedulerConfig,
+  getEmailSchedules, createEmailSchedule, updateEmailSchedule, deleteEmailSchedule
 } from '@/services/api';
 import { cn } from '@/utils/utils';
 
-// Native date formatter for locale-aware display
+import { formatToIST } from '@/utils/dateUtils';
+
+// Centralized date formatter for locale-aware display in IST
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return 'Never';
-  const date = new Date(dateStr);
-  return new Intl.DateTimeFormat('en-IN', {
-    month: 'short', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: false
-  }).format(date);
+  return formatToIST(dateStr);
+};
+
+const getAvatarSrc = (url: string | null | undefined) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  return `${baseUrl.replace(/\/$/, '')}${url}`;
+};
+
+// -- 12-HOUR FORMAT UTILITIES ----------------------------------------------
+
+/** Convert 24h "HH:MM" -> "hh:MM AM/PM" for display */
+const to12Hour = (time24: string): string => {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${String(hour12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+};
+
+const getLocalDateString = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/** Inline 12-hour time picker - state stays in 24h "HH:MM" format */
+const TimePicker12h = ({
+  value,
+  onChange,
+  className = ''
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+}) => {
+  const parts = (value || '09:00').split(':');
+  const h24 = parseInt(parts[0]) || 0;
+  const min = parseInt(parts[1]) || 0;
+  const period: 'AM' | 'PM' = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+
+  const emit = (newH12: number, newMin: number, newPeriod: 'AM' | 'PM') => {
+    let h = newH12;
+    if (newPeriod === 'AM' && newH12 === 12) h = 0;
+    else if (newPeriod === 'PM' && newH12 !== 12) h = newH12 + 12;
+    onChange(`${String(h).padStart(2, '0')}:${String(newMin).padStart(2, '0')}`);
+  };
+
+  const sel = "bg-white dark:bg-[#1D1D1F] border border-[#F0F0F3] dark:border-white/5 rounded-xl px-2 py-2.5 text-xs font-bold dark:text-white cursor-pointer outline-none focus:ring-2 focus:ring-blue-600/20";
+
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      {/* Hour */}
+      <select
+        value={h12}
+        onChange={(e) => emit(parseInt(e.target.value), min, period)}
+        className={sel}
+      >
+        {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+          <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
+        ))}
+      </select>
+      <span className="text-[#86868B] font-black text-sm select-none">:</span>
+      {/* Minute */}
+      <select
+        value={min}
+        onChange={(e) => emit(h12, parseInt(e.target.value), period)}
+        className={sel}
+      >
+        {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+          <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
+        ))}
+      </select>
+      {/* AM / PM */}
+      <select
+        value={period}
+        onChange={(e) => emit(h12, min, e.target.value as 'AM' | 'PM')}
+        className={`${sel} font-black text-blue-600`}
+      >
+        <option value="AM">AM</option>
+        <option value="PM">PM</option>
+      </select>
+    </div>
+  );
 };
 
 const SettingsPage = () => {
@@ -85,17 +171,169 @@ const SettingsPage = () => {
     autoScan: true
   });
 
-  // 4. Intelligence Sync Effects
+  // 4. Email Scheduler States & Handlers
+  const [emailSchedules, setEmailSchedules] = useState<any[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newSchedule, setNewSchedule] = useState({
+    frequency: 'daily' as 'daily' | 'weekly' | 'monthly' | 'once',
+    time_of_day: '09:00',
+    day_of_week: 0,
+    day_of_month: 1,
+    target_date: '',
+    is_enabled: true
+  });
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<any>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+
+  const handleCreateSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setScheduleError(null);
+    try {
+      if (newSchedule.frequency === 'once') {
+        if (!newSchedule.target_date) {
+          setScheduleError("Target date is required for once-off schedules.");
+          setLoading(false);
+          return;
+        }
+        const targetDateTimeStr = `${newSchedule.target_date}T${newSchedule.time_of_day}`;
+        const targetDate = new Date(targetDateTimeStr);
+        const now = new Date();
+        if (targetDate <= now) {
+          setScheduleError("Cannot schedule emails in the past. Please select a future date and time.");
+          setLoading(false);
+          return;
+        }
+      }
+      const payload: any = {
+        frequency: newSchedule.frequency,
+        time_of_day: newSchedule.time_of_day,
+        is_enabled: newSchedule.is_enabled,
+        time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'
+      };
+      if (newSchedule.frequency === 'weekly') {
+        payload.day_of_week = newSchedule.day_of_week;
+      } else if (newSchedule.frequency === 'monthly') {
+        payload.day_of_month = newSchedule.day_of_month;
+      } else if (newSchedule.frequency === 'once') {
+        payload.target_date = newSchedule.target_date;
+      }
+      const created = await createEmailSchedule(payload);
+      setEmailSchedules(prev => [...prev, created]);
+      setShowAddForm(false);
+      setNewSchedule({
+        frequency: 'daily',
+        time_of_day: '09:00',
+        day_of_week: 0,
+        day_of_month: 1,
+        target_date: '',
+        is_enabled: true
+      });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2000);
+    } catch (err: any) {
+      console.error('Failed to create email schedule', err);
+      const errMsg = err.response?.data?.detail || err.message || 'Failed to create schedule';
+      setScheduleError(errMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleSchedule = async (id: string, currentStatus: boolean) => {
+    try {
+      const updated = await updateEmailSchedule(id, { is_enabled: !currentStatus });
+      setEmailSchedules(prev => prev.map(s => s.id === id ? updated : s));
+    } catch (err) {
+      console.error('Failed to toggle schedule', err);
+    }
+  };
+
+  const handleUpdateSchedule = async (e: React.FormEvent, id: string) => {
+    e.preventDefault();
+    setLoading(true);
+    setScheduleError(null);
+    try {
+      if (editForm.frequency === 'once') {
+        if (!editForm.target_date) {
+          setScheduleError("Target date is required for once-off schedules.");
+          setLoading(false);
+          return;
+        }
+        const targetDateTimeStr = `${editForm.target_date}T${editForm.time_of_day}`;
+        const targetDate = new Date(targetDateTimeStr);
+        const now = new Date();
+        if (targetDate <= now) {
+          setScheduleError("Cannot schedule emails in the past. Please select a future date and time.");
+          setLoading(false);
+          return;
+        }
+      }
+      const payload: any = {
+        frequency: editForm.frequency,
+        time_of_day: editForm.time_of_day,
+        is_enabled: editForm.is_enabled,
+        time_zone: editForm.time_zone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'
+      };
+      if (editForm.frequency === 'weekly') {
+        payload.day_of_week = editForm.day_of_week;
+        payload.day_of_month = null;
+        payload.target_date = null;
+      } else if (editForm.frequency === 'monthly') {
+        payload.day_of_month = editForm.day_of_month;
+        payload.day_of_week = null;
+        payload.target_date = null;
+      } else if (editForm.frequency === 'once') {
+        payload.target_date = editForm.target_date;
+        payload.day_of_week = null;
+        payload.day_of_month = null;
+      } else {
+        payload.day_of_week = null;
+        payload.day_of_month = null;
+        payload.target_date = null;
+      }
+      const updated = await updateEmailSchedule(id, payload);
+      setEmailSchedules(prev => prev.map(s => s.id === id ? updated : s));
+      setEditingScheduleId(null);
+      setEditForm(null);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2000);
+    } catch (err: any) {
+      console.error('Failed to update email schedule', err);
+      const errMsg = err.response?.data?.detail || err.message || 'Failed to update schedule';
+      setScheduleError(errMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this email schedule?')) return;
+    setLoading(true);
+    try {
+      await deleteEmailSchedule(id);
+      setEmailSchedules(prev => prev.filter(s => s.id !== id));
+    } catch (err) {
+      console.error('Failed to delete email schedule', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 5. Intelligence Sync Effects
   const fetchTelemetry = useCallback(async () => {
     try {
-      const [act, sess, reports] = await Promise.all([
+      const [act, sess, reports, schedules] = await Promise.all([
         getUserActivity(),
         getUserSessions(),
-        getSavedReports()
+        getSavedReports(),
+        getEmailSchedules()
       ]);
       setActivities(act || []);
       setSessions(sess || []);
       setSavedReports(reports || []);
+      setEmailSchedules(schedules || []);
       
       if (user?.role === 'admin') {
         getSchedulerConfig()
@@ -304,7 +542,7 @@ const SettingsPage = () => {
             )}
           >
             {loading ? <RotateCw size={14} className="animate-spin" /> : 
-             success ? "✓ Protocols Updated" : 
+             success ? " Protocols Updated" : 
              "Commit Changes"}
           </Button>
 
@@ -408,7 +646,15 @@ const SettingsPage = () => {
                       <div className="relative group">
                          <div className="w-28 h-28 rounded-[36px] bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-1 shadow-2xl">
                             <div className="w-full h-full rounded-[32px] bg-white dark:bg-[#1D1D1F] flex items-center justify-center overflow-hidden">
-                                  <span className="text-4xl font-black text-blue-600 italic">{user?.full_name?.charAt(0) || 'A'}</span>
+                                {user?.avatar_url ? (
+                                   <img 
+                                     src={getAvatarSrc(user.avatar_url)} 
+                                     alt="Profile Avatar" 
+                                     className="w-full h-full object-cover"
+                                   />
+                                ) : (
+                                   <span className="text-4xl font-black text-blue-600 italic">{user?.full_name?.charAt(0) || 'A'}</span>
+                                )}
                             </div>
                          </div>
                          <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 rounded-[36px] cursor-pointer transition-opacity">
@@ -519,7 +765,324 @@ const SettingsPage = () => {
                         </div>
                      </div>
                    </SectionCard>
-                </motion.div>
+
+                    {/* Automated Email Scheduler Card */}
+                    <SectionCard title="Automated Email Scheduler" icon={<Settings size={20} className="text-[#0071E3]" />}>
+                      <div className="space-y-8">
+                        <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                          <div>
+                            <p className="text-sm font-black italic uppercase tracking-tighter dark:text-white">Active Surveillance Schedules</p>
+                            <p className="text-[10px] font-medium text-[#86868B] italic">Receive personalized briefings automatically.</p>
+                          </div>
+                          {!showAddForm && (
+                            <Button
+                              onClick={() => setShowAddForm(true)}
+                              className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest"
+                            >
+                              + Create Schedule
+                            </Button>
+                          )}
+                        </div>
+
+                        {showAddForm && (
+                          <form onSubmit={handleCreateSchedule} className="p-6 rounded-3xl bg-[#F5F5F7] dark:bg-white/5 border border-blue-500/20 space-y-6">
+                            <p className="text-xs font-black uppercase tracking-widest text-blue-600">New Schedule Configuration</p>
+                            <div className="space-y-4">
+                              {/* Row 1: Frequency + optional day picker */}
+                              <div className="flex flex-wrap items-end gap-4">
+                                <div className="space-y-2 min-w-[140px]">
+                                  <label className="text-[9px] font-black uppercase text-[#86868B]">Frequency</label>
+                                  <select
+                                    value={newSchedule.frequency}
+                                    onChange={(e) => {
+                                      setNewSchedule({ ...newSchedule, frequency: e.target.value as any });
+                                      setScheduleError(null);
+                                    }}
+                                    className="w-full bg-white dark:bg-[#1D1D1F] border border-[#F0F0F3] dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold dark:text-white"
+                                  >
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="once">Once</option>
+                                  </select>
+                                </div>
+
+                                {newSchedule.frequency === 'weekly' && (
+                                  <div className="space-y-2 min-w-[160px]">
+                                    <label className="text-[9px] font-black uppercase text-[#86868B]">Day of Week</label>
+                                    <select
+                                      value={newSchedule.day_of_week}
+                                      onChange={(e) => setNewSchedule({ ...newSchedule, day_of_week: parseInt(e.target.value) })}
+                                      className="w-full bg-white dark:bg-[#1D1D1F] border border-[#F0F0F3] dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold dark:text-white"
+                                    >
+                                      <option value={0}>Monday</option>
+                                      <option value={1}>Tuesday</option>
+                                      <option value={2}>Wednesday</option>
+                                      <option value={3}>Thursday</option>
+                                      <option value={4}>Friday</option>
+                                      <option value={5}>Saturday</option>
+                                      <option value={6}>Sunday</option>
+                                    </select>
+                                  </div>
+                                )}
+
+                                {newSchedule.frequency === 'monthly' && (
+                                  <div className="space-y-2 min-w-[120px]">
+                                    <label className="text-[9px] font-black uppercase text-[#86868B]">Day of Month</label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="31"
+                                      value={newSchedule.day_of_month}
+                                      onChange={(e) => setNewSchedule({ ...newSchedule, day_of_month: parseInt(e.target.value) })}
+                                      className="w-full bg-white dark:bg-[#1D1D1F] border border-[#F0F0F3] dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold dark:text-white"
+                                    />
+                                  </div>
+                                )}
+
+                                {newSchedule.frequency === 'once' && (
+                                  <div className="space-y-2 min-w-[160px]">
+                                    <label className="text-[9px] font-black uppercase text-[#86868B]">Target Date</label>
+                                    <input
+                                      type="date"
+                                      required
+                                      min={getLocalDateString()}
+                                      value={newSchedule.target_date || ''}
+                                      onChange={(e) => {
+                                        setNewSchedule({ ...newSchedule, target_date: e.target.value });
+                                        setScheduleError(null);
+                                      }}
+                                      className="w-full bg-white dark:bg-[#1D1D1F] border border-[#F0F0F3] dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold dark:text-white"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Row 2: Time of Day + Enabled toggle */}
+                              <div className="flex flex-wrap items-end gap-6">
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase text-[#86868B]">Time of Day</label>
+                                  <TimePicker12h
+                                    value={newSchedule.time_of_day}
+                                    onChange={(v) => {
+                                      setNewSchedule({ ...newSchedule, time_of_day: v });
+                                      setScheduleError(null);
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex flex-col justify-end pb-0.5">
+                                  <SettingRow
+                                    label="Enabled"
+                                    desc=""
+                                    checked={newSchedule.is_enabled}
+                                    onToggle={() => setNewSchedule({ ...newSchedule, is_enabled: !newSchedule.is_enabled })}
+                                  />
+                                </div>
+                              </div>
+                              {scheduleError && (
+                                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold">
+                                  {scheduleError}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowAddForm(false)}
+                                className="h-10 px-4 rounded-xl text-xs font-black uppercase tracking-widest"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="submit"
+                                className="h-10 px-4 rounded-xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest"
+                              >
+                                Save Schedule
+                              </Button>
+                            </div>
+                          </form>
+                        )}
+
+                        {/* List of Schedules */}
+                        <div className="space-y-4">
+                          {emailSchedules.length === 0 ? (
+                            <div className="text-center py-8 bg-[#F5F5F7] dark:bg-white/5 rounded-3xl border border-dashed border-[#F0F0F3] dark:border-white/5">
+                              <p className="text-xs text-[#86868B] font-bold italic">No email schedules configured. Click '+ Create Schedule' to start.</p>
+                            </div>
+                          ) : (
+                            emailSchedules.map(sched => (
+                              <div key={sched.id} className="p-6 rounded-3xl bg-[#F5F5F7] dark:bg-white/5 border border-[#F0F0F3] dark:border-white/5 flex flex-col space-y-4">
+                                {editingScheduleId === sched.id ? (
+                                  <form onSubmit={(e) => handleUpdateSchedule(e, sched.id)} className="space-y-4">
+                                    <div className="space-y-4">
+                                      {/* Row 1: Frequency + optional day picker */}
+                                      <div className="flex flex-wrap items-end gap-4">
+                                        <div className="space-y-2 min-w-[140px]">
+                                          <label className="text-[9px] font-black uppercase text-[#86868B]">Frequency</label>
+                                          <select
+                                            value={editForm.frequency}
+                                            onChange={(e) => {
+                                              setEditForm({ ...editForm, frequency: e.target.value as any });
+                                              setScheduleError(null);
+                                            }}
+                                            className="w-full bg-white dark:bg-[#1D1D1F] border border-[#F0F0F3] dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold dark:text-white"
+                                          >
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                            <option value="once">Once</option>
+                                          </select>
+                                        </div>
+
+                                        {editForm.frequency === 'weekly' && (
+                                          <div className="space-y-2 min-w-[160px]">
+                                            <label className="text-[9px] font-black uppercase text-[#86868B]">Day of Week</label>
+                                            <select
+                                              value={editForm.day_of_week !== null && editForm.day_of_week !== undefined ? editForm.day_of_week : 0}
+                                              onChange={(e) => setEditForm({ ...editForm, day_of_week: parseInt(e.target.value) })}
+                                              className="w-full bg-white dark:bg-[#1D1D1F] border border-[#F0F0F3] dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold dark:text-white"
+                                            >
+                                              <option value={0}>Monday</option>
+                                              <option value={1}>Tuesday</option>
+                                              <option value={2}>Wednesday</option>
+                                              <option value={3}>Thursday</option>
+                                              <option value={4}>Friday</option>
+                                              <option value={5}>Saturday</option>
+                                              <option value={6}>Sunday</option>
+                                            </select>
+                                          </div>
+                                        )}
+
+                                        {editForm.frequency === 'monthly' && (
+                                          <div className="space-y-2 min-w-[120px]">
+                                            <label className="text-[9px] font-black uppercase text-[#86868B]">Day of Month</label>
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              max="31"
+                                              value={editForm.day_of_month !== null && editForm.day_of_month !== undefined ? editForm.day_of_month : 1}
+                                              onChange={(e) => setEditForm({ ...editForm, day_of_month: parseInt(e.target.value) })}
+                                              className="w-full bg-white dark:bg-[#1D1D1F] border border-[#F0F0F3] dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold dark:text-white"
+                                            />
+                                          </div>
+                                        )}
+
+                                        {editForm.frequency === 'once' && (
+                                          <div className="space-y-2 min-w-[160px]">
+                                            <label className="text-[9px] font-black uppercase text-[#86868B]">Target Date</label>
+                                            <input
+                                              type="date"
+                                              required
+                                              min={getLocalDateString()}
+                                              value={editForm.target_date || ''}
+                                              onChange={(e) => {
+                                                setEditForm({ ...editForm, target_date: e.target.value });
+                                                setScheduleError(null);
+                                              }}
+                                              className="w-full bg-white dark:bg-[#1D1D1F] border border-[#F0F0F3] dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold dark:text-white"
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Row 2: Time of Day + Enabled toggle */}
+                                      <div className="flex flex-wrap items-end gap-6">
+                                        <div className="space-y-2">
+                                          <label className="text-[9px] font-black uppercase text-[#86868B]">Time of Day</label>
+                                          <TimePicker12h
+                                            value={editForm.time_of_day}
+                                            onChange={(v) => {
+                                              setEditForm({ ...editForm, time_of_day: v });
+                                              setScheduleError(null);
+                                            }}
+                                          />
+                                        </div>
+                                        <div className="flex flex-col justify-end pb-0.5">
+                                          <SettingRow
+                                            label="Enabled"
+                                            desc=""
+                                            checked={editForm.is_enabled}
+                                            onToggle={() => setEditForm({ ...editForm, is_enabled: !editForm.is_enabled })}
+                                          />
+                                        </div>
+                                      </div>
+                                      {scheduleError && (
+                                        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold">
+                                          {scheduleError}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => { setEditingScheduleId(null); setEditForm(null); setScheduleError(null); }}
+                                        className="h-10 px-4 rounded-xl text-xs font-black uppercase tracking-widest"
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        type="submit"
+                                        className="h-10 px-4 rounded-xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest"
+                                      >
+                                        Update
+                                      </Button>
+                                    </div>
+                                  </form>
+                                ) : (
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-6">
+                                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-black flex items-center justify-center shadow-md">
+                                        <Globe size={24} className="text-blue-600 animate-pulse" />
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="text-sm font-black italic uppercase tracking-tighter dark:text-white">
+                                            {sched.frequency === 'once' ? 'once-off' : sched.frequency} schedule ({to12Hour(sched.time_of_day)})
+                                          </span>
+                                          <span className={cn(
+                                            "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest",
+                                            sched.is_enabled ? "bg-emerald-500/10 text-emerald-500" : "bg-neutral-500/10 text-neutral-500"
+                                          )}>
+                                            {sched.is_enabled ? "Active" : "Inactive"}
+                                          </span>
+                                        </div>
+                                        <p className="text-[10px] text-[#86868B] italic">
+                                          {sched.frequency === 'weekly' && `Every ${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][sched.day_of_week] || 'Monday'}. `}
+                                          {sched.frequency === 'monthly' && `Day ${sched.day_of_month} of the month. `}
+                                          {sched.frequency === 'once' && `Once on ${sched.target_date}. `}
+                                          Next run: {formatDate(sched.next_run)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingScheduleId(sched.id);
+                                          setEditForm({ ...sched });
+                                        }}
+                                        className="h-9 px-3 rounded-lg text-xs font-black uppercase tracking-widest"
+                                      >
+                                        Edit
+                                      </Button>
+                                      <button
+                                        onClick={() => handleDeleteSchedule(sched.id)}
+                                        className="p-2.5 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
+                                      >
+                                        <Trash2 size={18} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </SectionCard>
+                 </motion.div>
               )}
 
               {activeTab === 'security' && (
@@ -538,10 +1101,10 @@ const SettingsPage = () => {
                    <SectionCard title="Secret Key Rotation" icon={<Lock size={20} className="text-rose-500" />}>
                       <form onSubmit={handlePasswordChange} className="space-y-10">
                          <div className="grid grid-cols-2 gap-10">
-                            <FormInput label="Current Secret" type="password" value={passwordForm.current_password} onChange={(v) => setPasswordForm({...passwordForm, current_password: v})} placeholder="••••••••" icon={<ShieldCheck size={14} />} />
+                            <FormInput label="Current Secret" type="password" value={passwordForm.current_password} onChange={(v) => setPasswordForm({...passwordForm, current_password: v})} placeholder="--------" icon={<ShieldCheck size={14} />} />
                             <div className="space-y-6">
-                              <FormInput label="New Secret" type="password" value={passwordForm.new_password} onChange={(v) => setPasswordForm({...passwordForm, new_password: v})} placeholder="••••••••" icon={<Lock size={14} />} />
-                              <FormInput label="Verify Secret" type="password" value={passwordForm.confirm_password} onChange={(v) => setPasswordForm({...passwordForm, confirm_password: v})} placeholder="••••••••" icon={<Check size={14} />} />
+                              <FormInput label="New Secret" type="password" value={passwordForm.new_password} onChange={(v) => setPasswordForm({...passwordForm, new_password: v})} placeholder="--------" icon={<Lock size={14} />} />
+                              <FormInput label="Verify Secret" type="password" value={passwordForm.confirm_password} onChange={(v) => setPasswordForm({...passwordForm, confirm_password: v})} placeholder="--------" icon={<Check size={14} />} />
                             </div>
                          </div>
                          <div className="flex justify-end">

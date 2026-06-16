@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { ScanReport } from '@/store/intelStore';
+import { formatShortDateToIST } from '@/utils/dateUtils';
 
 interface HubProps {
   report: ScanReport | null;
@@ -127,7 +128,7 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
                 className="block p-6 rounded-3xl bg-white/50 dark:bg-white/5 border border-[#E5E5EA] dark:border-white/10 hover:border-[#0071E3]/30 hover:shadow-apple-sm transition-all group"
               >
                 <div className="text-[9px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-[0.2em] mb-3 flex items-center gap-2 italic">
-                  {item.source} • {new Date(item.published_at).toLocaleDateString('en-IN')}
+                  {item.source} - {formatShortDateToIST(item.published_at)}
                 </div>
                 <h4 className="text-sm font-black text-[#1D1D1F] dark:text-white group-hover:text-[#0071E3] transition-colors line-clamp-3 uppercase italic tracking-tight min-h-[3rem]">
                   {item.title}
@@ -223,7 +224,7 @@ const IntelligenceHub: React.FC<HubProps> = ({ report }) => {
                    {s.video_id ? <Youtube className="text-rose-500 w-5 h-5 flex-shrink-0" /> : <MessageSquare className="text-orange-500 w-5 h-5 flex-shrink-0" />}
                    <div className="flex-1 min-w-0">
                       <div className="text-[11px] font-bold text-[#1D1D1F] dark:text-white truncate uppercase italic">{s.title}</div>
-                      <div className="text-[9px] text-[#86868B] uppercase tracking-widest">{s.subreddit || s.channel || 'Social'} • {s.score || s.published_at?.split('T')[0]}</div>
+                      <div className="text-[9px] text-[#86868B] uppercase tracking-widest">{s.subreddit || s.channel || 'Social'} - {s.score || s.published_at?.split('T')[0]}</div>
                    </div>
                    <a 
                     href={s.url} 

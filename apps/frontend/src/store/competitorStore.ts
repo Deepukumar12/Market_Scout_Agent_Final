@@ -40,7 +40,10 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
     selectedCompetitorId: null,
     loading: false,
     error: null,
-    setSelectedCompetitorId: (id) => set({ selectedCompetitorId: id }),
+    setSelectedCompetitorId: (id) => {
+        set({ selectedCompetitorId: id });
+        window.dispatchEvent(new CustomEvent('intelligence-refresh'));
+    },
     fetchCompetitors: async (query?: string) => {
         if (get().loading) return; // Prevent duplicate parallel requests that cause Axios to abort
         set({ loading: true, error: null });
@@ -50,7 +53,14 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
                 ...c,
                 id: c.id || c._id
             }));
-            set({ competitors: formattedData, loading: false });
+            
+            let currentSelected = get().selectedCompetitorId;
+            const exists = formattedData.some((c: any) => c.id === currentSelected);
+            if (!currentSelected || !exists) {
+                currentSelected = formattedData.length > 0 ? formattedData[0].id : null;
+            }
+            
+            set({ competitors: formattedData, selectedCompetitorId: currentSelected, loading: false });
         } catch (err) {
             set({ error: 'Failed to fetch competitors', loading: false });
         }
@@ -64,7 +74,16 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
                 monitoring_enabled: true,
                 scan_frequency: 'Daily',
             });
-            set((state) => ({ competitors: [...state.competitors, newOne] }));
+            const newOneFormatted = { ...newOne, id: newOne.id || newOne._id };
+            
+            set((state) => {
+                const updated = [...state.competitors, newOneFormatted];
+                const currentSelected = state.selectedCompetitorId || newOneFormatted.id;
+                return {
+                    competitors: updated,
+                    selectedCompetitorId: currentSelected
+                };
+            });
 
             addNotification({
                 title: 'Target Acquired',
@@ -75,7 +94,7 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
             // Broadcast real-time refresh to all listeners
             window.dispatchEvent(new CustomEvent('intelligence-refresh'));
 
-            return newOne;
+            return newOneFormatted;
         } catch (err) {
             console.error(err);
 
@@ -93,14 +112,26 @@ export const useCompetitorStore = create<CompetitorState>((set, get) => ({
         const { deleteCompetitor } = await import('../services/api');
         try {
             await deleteCompetitor(id);
-            set((state) => ({
-                competitors: state.competitors.filter((c) => (c.id || c._id) !== id)
-            }));
+            const remaining = get().competitors.filter((c) => (c.id || c._id) !== id);
+            
+            let currentSelected = get().selectedCompetitorId;
+            if (currentSelected === id) {
+                currentSelected = remaining.length > 0 ? (remaining[0].id || remaining[0]._id || null) : null;
+            }
+            
+            set({
+                competitors: remaining,
+                selectedCompetitorId: currentSelected
+            });
+            
             addNotification({
                 title: 'Competitor Terminated',
                 message: 'Target has been removed from the surveillance network.',
                 type: 'info'
             });
+            
+            // Broadcast refresh so all pages switch context immediately
+            window.dispatchEvent(new CustomEvent('intelligence-refresh'));
         } catch (err) {
             console.error(err);
             addNotification({

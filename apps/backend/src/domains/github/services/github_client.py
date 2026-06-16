@@ -14,7 +14,7 @@ from src.core.config import settings
 logger = logging.getLogger(__name__)
 
 GITHUB_API_BASE = "https://api.github.com"
-DEFAULT_TIMEOUT = 15.0
+DEFAULT_TIMEOUT = 5.0
 
 
 class GitHubClientError(Exception):
@@ -204,7 +204,7 @@ async def fetch_company_github_data(company_name: str, max_repos: int = 15) -> d
                             "updated_at": r.get("updated_at"),
                             "topics": r.get("topics", [])[:5],
                         })
-        # 🔒 Project-Wide Enforcement: strictly cap GitHub data to the last 7 days
+        # [SECURE] Project-Wide Enforcement: strictly cap GitHub data to the last 7 days
         cutoff = datetime.now(timezone.utc) - timedelta(days=7)
         
         # Dedupe, Filter by 7-day window, and sort by stars

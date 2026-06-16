@@ -18,6 +18,9 @@ from src.services.activity_service import activity_service
 
 router = APIRouter()
 
+from src.shared.rate_limiter import RateLimiter
+scan_limiter = RateLimiter(limit=5, window_seconds=600)
+
 
 # --- Helpers ---
 async def get_competitor_collection():
@@ -171,7 +174,7 @@ async def delete_competitor(
     return {"status": "success", "message": "Competitor and associated data deleted successfully"}
 
 
-@router.post("/competitors/{competitor_id}/scan")
+@router.post("/competitors/{competitor_id}/scan", dependencies=[Depends(scan_limiter)])
 async def run_competitor_scan_endpoint(
     competitor_id: str,
     background_tasks: BackgroundTasks,
@@ -201,9 +204,13 @@ async def run_competitor_scan_endpoint(
     
     from src.domains.scan.services.scan_pipeline import run_scan
     from src.domains.scan.models.scan import ScanRequest
+    from src.shared.sanitizer import validate_company_name
+    
+    # Normalize company name through identity validator
+    validated_name = validate_company_name(competitor["name"], raise_on_ambiguous=False)
     
     scan_req = ScanRequest(
-        company_name=competitor["name"],
+        company_name=validated_name,
         website=competitor.get("url"),
         time_window_days=7
     )

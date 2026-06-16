@@ -25,9 +25,9 @@ class RedisService:
                 )
                 self.client = redis.Redis(connection_pool=self._pool)
                 await self.client.ping()
-                logger.info("✅ Connected to Redis (with Connection Pool)")
+                logger.info("[OK] Connected to Redis (with Connection Pool)")
             except Exception as e:
-                logger.error(f"❌ Redis connection failed: {e}")
+                logger.error(f"[ERROR] Redis connection failed: {e}")
                 self.client = None
 
     async def get(self, key: str) -> Optional[Any]:

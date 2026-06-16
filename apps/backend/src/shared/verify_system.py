@@ -12,7 +12,7 @@ from src.domains.scan.models.scan import ScanRequest
 from src.core.database import db
 
 async def verify_analysis():
-    print("🕵️  [SYSTEM AUDIT] Initializing End-to-End Competitor Intelligence Verification...")
+    print("[AUDIT]  [SYSTEM AUDIT] Initializing End-to-End Competitor Intelligence Verification...")
     
     # 1. Connect to DB
     await db.connect()
@@ -22,7 +22,7 @@ async def verify_analysis():
     website = "https://openai.com"
     user_id = "test_verification_agent" # Mock user ID for tracing
     
-    print(f"📡 [MISSION] Deploying agent to analyze: {competitor_name}")
+    print(f"[SCAN] [MISSION] Deploying agent to analyze: {competitor_name}")
     
     # 3. Create Scan Request
     request = ScanRequest(
@@ -39,27 +39,29 @@ async def verify_analysis():
         response = await run_scan(request, user_id=user_id)
         duration = (datetime.now() - start_time).total_seconds()
         
-        if response.features:
-            print(f"\n✅ [SUCCESS] Intelligence synthesis complete in {duration:.1f}s.")
-            print(f"📊 [METRICS] Found {response.total_valid_updates} technical signals from the last 7 days.")
+        if response is not None:
+            print(f"\n[OK] [SUCCESS] Intelligence synthesis complete in {duration:.1f}s.")
+            print(f"[REPORT] [METRICS] Found {response.total_valid_updates} technical signals from the last 7 days.")
             
             # Verify data persistence
             features = await db.db["feature_updates"].find({"company_name": competitor_name}).to_list(length=10)
             if features:
-                print(f"🗄️ [PERSISTENCE] Verified {len(features)} records stored in MongoDB.")
+                print(f"[DB] [PERSISTENCE] Verified {len(features)} records stored in MongoDB.")
             else:
-                print("⚠️ [WARNING] No records found in DB. Check delta_engine.py logic.")
+                print("[WARNING] [WARNING] No records found in DB. Check delta_engine.py logic.")
                 
-            # Print a sample signal
+            # Print a sample signal if available
             if response.features:
                 sample = response.features[0]
-                print(f"🔥 [SIGNAL SAMPLE] {sample.feature_title} ({sample.publish_date})")
-                print(f"📝 [SUMMARY] {sample.technical_summary[:100]}...")
+                print(f"[CONVERT] [SIGNAL SAMPLE] {sample.feature_title} ({sample.publish_date})")
+                print(f"[NOTE] [SUMMARY] {sample.technical_summary[:100]}...")
+            else:
+                print("[INFO] [INFO] No new/novel technical signals detected (duplicates correctly filtered).")
         else:
-            print("❌ [FAILURE] Scan pipeline returned null response.")
+            print("[ERROR] [FAILURE] Scan pipeline returned null response.")
             
     except Exception as e:
-        print(f"🚨 [CRITICAL ERROR] Pipeline execution failed: {e}")
+        print(f"[ALERT] [CRITICAL ERROR] Pipeline execution failed: {e}")
         import traceback
         traceback.print_exc()
 

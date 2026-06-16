@@ -17,17 +17,17 @@ def send_email_report(to_email, subject, content, attachment_path=None, attachme
         password = os.getenv("EMAIL_PASS")
 
         if not sender or not password or sender == "your_email@gmail.com":
-            print("⚠️ [EMAIL] EMAIL_USER or EMAIL_PASS not configured in .env. Skipping.")
+            print("[WARNING] [EMAIL] EMAIL_USER or EMAIL_PASS not configured in .env. Skipping.")
             return
 
         # Sanitize and Validate recipient
         to_email = to_email.strip() if to_email else ""
         email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
         if not to_email or not re.match(email_regex, to_email):
-            print(f"❌ [EMAIL] Invalid recipient format: '{to_email}'")
+            print(f"[ERROR] [EMAIL] Invalid recipient format: '{to_email}'")
             return
 
-        print(f"📤 [EMAIL] Preparing dispatch to: {to_email}...")
+        print(f"[SEND] [EMAIL] Preparing dispatch to: {to_email}...")
 
         # Structure for mixed content
         msg = MIMEMultipart("mixed")
@@ -48,23 +48,23 @@ def send_email_report(to_email, subject, content, attachment_path=None, attachme
                     part = MIMEApplication(f.read(), Name=filename)
                 part['Content-Disposition'] = f'attachment; filename="{filename}"'
                 msg.attach(part)
-                print(f"📎 [EMAIL] Attached: {filename}")
+                print(f"[ATTACH] [EMAIL] Attached: {filename}")
             except Exception as e:
-                print(f"❌ [EMAIL] Attachment error: {e}")
+                print(f"[ERROR] [EMAIL] Attachment error: {e}")
 
         # Use Port 587 with STARTTLS for better compatibility
-        print("⚡ [EMAIL] Establishing secure SMTP connection (Port 587)...")
+        print("[SMTP] [EMAIL] Establishing secure SMTP connection (Port 587)...")
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.set_debuglevel(1) # Enable verbose output to catch exact error
             server.starttls() 
             server.login(sender, password)
             server.send_message(msg)
 
-        print(f"📧 [EMAIL] Protocol complete. Sent to {to_email}")
+        print(f"[EMAIL] [EMAIL] Protocol complete. Sent to {to_email}")
 
     except smtplib.SMTPRecipientsRefused as e:
-        print(f"❌ [EMAIL] Address Rejected: {to_email}. Error: {e}")
+        print(f"[ERROR] [EMAIL] Address Rejected: {to_email}. Error: {e}")
     except smtplib.SMTPAuthenticationError:
-        print("❌ [EMAIL] Auth failed. Verify Gmail App Password.")
+        print("[ERROR] [EMAIL] Auth failed. Verify Gmail App Password.")
     except Exception as e:
-        print(f"❌ [EMAIL] Critical Dispatch Error: {e}")
+        print(f"[ERROR] [EMAIL] Critical Dispatch Error: {e}")

@@ -20,56 +20,81 @@ async def async_run_auto_scan(target_user_id: str = None):
     """
     Async logic for competitor scans and PDF report generation.
     """
-    logger.info("🚀 Starting autonomous competitor scan (Async)...")
+    logger.info("[START] Starting autonomous competitor scan (Async)...")
 
-    # ✅ Ensure DB is connected
+    # [OK] Ensure DB is connected
     if db.db is None:
         await db.connect()
 
     try:
-        # ✅ Refactored to await async database call
+        # [OK] Refactored to await async database call
         competitors = await get_all_competitors()
         is_manual_trigger = target_user_id is not None
 
         if not competitors:
-            logger.warning("⚠️ No competitors found in database")
+            logger.warning("[WARNING] No competitors found in database")
             return
 
-        # 1️⃣ Group competitors by user_id
+        # 1. Group competitors by user_id
         user_competitor_map = defaultdict(list)
         for comp in competitors:
             user_id = comp.get("user_id")
             if user_id:
                 user_competitor_map[user_id].append(comp)
 
-        # 2️⃣ Loop per user
+        # 2. Loop per user
+        from bson import ObjectId
         for user_id, comps in user_competitor_map.items():
             if target_user_id and str(user_id) != str(target_user_id):
                 continue
                 
-            # ✅ Refactored to await async user lookup
+            # Validate user existence and clean up orphaned competitors
+            try:
+                user_oid = ObjectId(user_id)
+            except Exception:
+                logger.warning(f"[CLEANUP] Cleaning up orphaned competitors with invalid user_id: {user_id}")
+                await db.db["competitors"].delete_many({"user_id": user_id})
+                continue
+
+            user_exists = await db.db["users"].find_one({"_id": user_oid})
+            if not user_exists:
+                logger.warning(f"[CLEANUP] Cleaning up orphaned competitors for non-existent user {user_id}")
+                await db.db["competitors"].delete_many({"user_id": user_id})
+                continue
+
+            # If target_user_id is None (global run), skip users who have configured custom active schedules to avoid duplicate emails
+            if not target_user_id and db.db is not None:
+                has_active_custom_schedule = await db.db["email_schedules"].find_one({
+                    "user_id": str(user_id),
+                    "is_enabled": True
+                })
+                if has_active_custom_schedule:
+                    logger.info(f"[SKIP] Skipping user {user_id} during global run since they have active custom email schedules.")
+                    continue
+
+            # [OK] Refactored to await async user lookup
             email = await get_user_email(user_id)
             if not email:
-                logger.warning(f"⚠️ No email found for user_id: {user_id}, skipping")
+                logger.warning(f"[WARNING] No email found for user_id: {user_id}, skipping")
                 continue
 
             user_reports = []
             
-            # 3️⃣ Scan and Fetch 7-day data for each competitor
+            # 3. Scan and Fetch 7-day data for each competitor
             for comp in comps:
                 company = comp.get("name")
                 website = comp.get("website", "")
-                logger.info(f"🔍 Autonomous processing: {company} for {email}")
+                logger.info(f"[SEARCH] Autonomous processing: {company} for {email}")
 
                 try:
                     now = datetime.now(timezone.utc)
                     
-                    # ✅ 1. Check for fresh data (24h). If manual, force dynamic 100% fresh.
+                    # [OK] 1. Check for fresh data (24h). If manual, force dynamic 100% fresh.
                     fresh_features = await get_cached_features(company, limit=1, days=1) if not is_manual_trigger else None
                     scan_result = None
 
                     if not fresh_features:
-                        logger.info(f"🔄 Triggering dynamic surveillance for {company} (Manual: {is_manual_trigger})...")
+                        logger.info(f"[REFRESH] Triggering dynamic surveillance for {company} (Manual: {is_manual_trigger})...")
                         request = ScanRequest(
                             company_name=company, 
                             website=website, 
@@ -79,54 +104,60 @@ async def async_run_auto_scan(target_user_id: str = None):
                         scan_result = await run_scan(request)
                         
                         if scan_result:
-                            # ✅ A. Store Features
+                            # [OK] A. Store Features
                             if scan_result.features:
                                 from src.services.data.delta_engine import store_new_features
                                 await store_new_features(company, scan_result.features)
                             
-                            # ✅ B. Store Market Signals (Article Summaries)
+                            # [OK] B. Store Market Signals (Article Summaries)
                             all_signals = []
-                            from src.services.data.scraper_service import _parse_iso_date
+                            from src.core.datetime_utils import get_authoritative_publication_date
                             for n in (scan_result.news or []):
-                                best_created_at = now
-                                pub_date = n.get("publish_date")
-                                if pub_date:
-                                    parsed_dt = _parse_iso_date(pub_date)
-                                    if parsed_dt:
-                                        best_created_at = parsed_dt
+                                best_created_at = get_authoritative_publication_date(n)
+                                pub_date_str = best_created_at.strftime("%Y-%m-%d")
                                 all_signals.append({
                                     "query_tag": company,
+                                    "company_name": company,
                                     "url": n.get("url") or n.get("link"),
                                     "article_summary": n.get("snippet") or n.get("description") or "Market signal detected.",
-                                    "sentiment": "Neutral",
+                                    "sentiment": "Positive" if any(w in (n.get("title") or "").lower() for w in ["launch", "new", "growth", "partnership"]) else "Neutral",
                                     "scraped_at": now,
                                     "created_at": best_created_at,
+                                    "published_date": pub_date_str,
                                     "user_id": user_id
                                 })
                             
                             # Process Search Visibility (Exa discovery, etc.)
                             search_data = scan_result.search_visibility or {}
                             for s in (search_data.get("exa_discovery") or []):
+                                 best_created_at = get_authoritative_publication_date(s)
+                                 pub_date_str = best_created_at.strftime("%Y-%m-%d")
                                  all_signals.append({
                                     "query_tag": company,
+                                    "company_name": company,
                                     "url": s.get("url"),
                                     "article_summary": s.get("snippet") or "Strategic endpoint identified.",
                                     "sentiment": "Neutral",
                                     "scraped_at": now,
-                                    "created_at": now,
+                                    "created_at": best_created_at,
+                                    "published_date": pub_date_str,
                                     "user_id": user_id
-                                })
-
+                                 })
+ 
                             # Process GitHub Activity (New Signal Type)
                             github_data = scan_result.github or {}
                             for repo in (github_data.get("repos") or []):
+                                best_created_at = get_authoritative_publication_date(repo)
+                                pub_date_str = best_created_at.strftime("%Y-%m-%d")
                                 all_signals.append({
                                     "query_tag": company,
+                                    "company_name": company,
                                     "url": repo.get("html_url"),
                                     "article_summary": f"Active Repo: {repo.get('full_name')} - {repo.get('description') or 'No description'}",
                                     "sentiment": "Positive" if repo.get("stargazers_count", 0) > 100 else "Neutral",
                                     "scraped_at": now,
-                                    "created_at": now,
+                                    "created_at": best_created_at,
+                                    "published_date": pub_date_str,
                                     "user_id": user_id
                                 })
 
@@ -141,7 +172,7 @@ async def async_run_auto_scan(target_user_id: str = None):
                                 if unique_signals:
                                     await db.db["article_summaries"].insert_many(unique_signals)
 
-                            # ✅ C. Store Strategic Report
+                            # [OK] C. Store Strategic Report
                             report_doc = scan_result.model_dump()
                             report_doc.update({
                                 "user_id": user_id,
@@ -151,9 +182,9 @@ async def async_run_auto_scan(target_user_id: str = None):
                                 "source_url": website
                             })
                             await db.db["reports"].insert_one(report_doc)
-                            logger.info(f"📊 Stored background report for {company}")
+                            logger.info(f"[REPORT] Stored background report for {company}")
                     
-                    # ✅ 2. Collect 7-day data for the summary brief
+                    # [OK] 2. Collect 7-day data for the summary brief
                     historical_features = await get_cached_features(company, limit=20, days=7)
                     features = []
                     for h in historical_features:
@@ -173,7 +204,7 @@ async def async_run_auto_scan(target_user_id: str = None):
                     })
 
                 except Exception as e:
-                    logger.error(f"❌ Autonomous cycle error for {company}: {e}")
+                    logger.error(f"[ERROR] Autonomous cycle error for {company}: {e}")
                     user_reports.append({
                         "company": company,
                         "features": [],
@@ -181,10 +212,10 @@ async def async_run_auto_scan(target_user_id: str = None):
                     })
 
             if not user_reports:
-                logger.warning(f"⚠️ No intelligence nodes processed for user {email}, skipping brief.")
+                logger.warning(f"[WARNING] No intelligence nodes processed for user {email}, skipping brief.")
                 continue
 
-            # 4️⃣ Dispatch Intelligence Briefing (Email)
+            # 4. Dispatch Intelligence Briefing (Email)
             scheduler_settings = await db.db.system_settings.find_one({"_id": "scheduler"})
             # Default to True to ensure "auto mail send" is active by default
             should_send = is_manual_trigger or (scheduler_settings.get("email_enabled", True) if scheduler_settings else True)
@@ -192,13 +223,15 @@ async def async_run_auto_scan(target_user_id: str = None):
             if should_send:
                 prefs = await get_user_preferences(user_id)
                 if prefs and not prefs.get("emailAlerts", True):
-                    logger.info(f"⏭️ User {email} alerts disabled.")
+                    logger.info(f"[SKIP] User {email} alerts disabled.")
                 else:
-                    logger.info(f"📧 Dispatching briefed intelligence to {email}...")
+                    logger.info(f"[EMAIL] Dispatching briefed intelligence to {email}...")
                     
+                    from src.core.datetime_utils import get_now_ist
+                    now_ist = get_now_ist()
                     report_content = f"ScoutForge AI: Autonomous Intelligence Briefing\n"
-                    report_content += f"Tactical Date: {datetime.now().strftime('%A, %B %d, %Y')}\n"
-                    report_content += f"Operational Time: {datetime.now().strftime('%H:%M:%S')} IST\n\n"
+                    report_content += f"Tactical Date: {now_ist.strftime('%A, %B %d, %Y')}\n"
+                    report_content += f"Operational Time: {now_ist.strftime('%I:%M:%S %p')} IST\n\n"
                     report_content += f"Surveillance cycle completed for {len(user_reports)} targets.\n\n"
                     
                     for report in user_reports:
@@ -207,7 +240,7 @@ async def async_run_auto_scan(target_user_id: str = None):
                             report_content += "No new technical signals detected in this cycle.\n"
                         else:
                             for f in report['features'][:5]:
-                                report_content += f"• {f.feature_title}: {f.technical_summary[:150]}...\n"
+                                report_content += f"- {f.feature_title}: {f.technical_summary[:150]}...\n"
                                 report_content += f"  Source: {f.source_url}\n"
                         report_content += "\n"
                     
@@ -237,6 +270,7 @@ async def async_run_auto_scan(target_user_id: str = None):
                                     # Extract the raw URL for the clickable link
                                     url = clean_line.replace("Source:", "").strip()
                                     pdf.cell(w=0, h=8, text=w_line, new_x="LMARGIN", new_y="NEXT", link=url)
+                                
                                 else:
                                     pdf.cell(w=0, h=8, text=w_line, new_x="LMARGIN", new_y="NEXT")
                                     
@@ -253,7 +287,7 @@ async def async_run_auto_scan(target_user_id: str = None):
                     
                     
                     trigger_type = "on-demand" if is_manual_trigger else "daily"
-                    email_body_summary = f"""ScoutForge AI: Autonomous Intelligence Briefing - {datetime.now().strftime('%Y-%m-%d')}
+                    email_body_summary = f"""ScoutForge AI: Autonomous Intelligence Briefing - {now_ist.strftime('%d %b %Y, %I:%M %p')}
 
 Your {trigger_type} competitor surveillance cycle has completed successfully for {len(user_reports)} targets.
 
@@ -279,7 +313,7 @@ Secure Mission Briefing: Command Center Updated.
                             except:
                                 pass
 
-            # 5️⃣ System Notification
+            # 5. System Notification
             from src.domains.notifications.services.notification_service import notification_service
             from src.domains.notifications.models.notification import NotificationType
             
@@ -290,10 +324,10 @@ Secure Mission Briefing: Command Center Updated.
                 type=NotificationType.INFO
             )
             
-            logger.info(f"✅ Mission successful: Global heartbeat synchronized for user {email}")
+            logger.info(f"[OK] Mission successful: Global heartbeat synchronized for user {email}")
 
     except Exception as e:
-        logger.critical(f"❌ Background intelligence mission failure: {e}", exc_info=True)
+        logger.critical(f"[ERROR] Background intelligence mission failure: {e}", exc_info=True)
 
 
 async def run_auto_scan():
@@ -303,4 +337,92 @@ async def run_auto_scan():
     try:
         await async_run_auto_scan()
     except Exception as e:
-        logger.error(f"❌ Critical error in auto scan: {e}")
+        logger.error(f"[ERROR] Critical error in auto scan: {e}")
+
+
+async def check_user_email_schedules():
+    """
+    Called every 60 seconds (silent unless a schedule is due).
+    Checks the email_schedules collection for any active schedules that are due.
+    Only logs at INFO when it actually finds and processes schedules.
+    """
+    # Silent check - only logs when something is actually due
+    if db.db is None:
+        await db.connect()
+
+    now = datetime.now(timezone.utc)
+
+    # Query all active schedules that are due
+    cursor = db.db["email_schedules"].find({
+        "is_enabled": True,
+        "next_run": {"$lte": now}
+    })
+
+    due_schedules = await cursor.to_list(length=100)
+    if not due_schedules:
+        logger.debug("[email-scheduler] No schedules due at this time.")
+        return
+
+    logger.info(f"[email-scheduler] {len(due_schedules)} schedule(s) due - processing...")
+    
+    from src.domains.settings.controllers.settings import calculate_next_run
+    
+    from bson import ObjectId
+    for sched in due_schedules:
+        user_id = sched["user_id"]
+        sched_id = sched["_id"]
+        
+        # Validate user existence
+        try:
+            user_oid = ObjectId(user_id)
+        except Exception:
+            logger.warning(f"[CLEANUP] Cleaning up orphaned schedule {sched_id} with invalid user_id: {user_id}")
+            await db.db["email_schedules"].delete_one({"_id": sched_id})
+            continue
+            
+        user_exists = await db.db["users"].find_one({"_id": user_oid})
+        if not user_exists:
+            logger.warning(f"[CLEANUP] Cleaning up orphaned schedule {sched_id} for non-existent user {user_id}")
+            await db.db["email_schedules"].delete_one({"_id": sched_id})
+            continue
+            
+        logger.info(f"[EMAIL] Running email briefing for user {user_id} based on schedule {sched_id}")
+        
+        # 1. Update last run / next run or disable if it's a one-off run to prevent multiple execution
+        if sched.get("frequency") == "once":
+            await db.db["email_schedules"].update_one(
+                {"_id": sched_id},
+                {
+                    "$set": {
+                        "last_run": now,
+                        "is_enabled": False,
+                        "updated_at": now
+                    }
+                }
+            )
+        else:
+            new_next_run = calculate_next_run(
+                frequency=sched["frequency"],
+                time_of_day=sched["time_of_day"],
+                day_of_week=sched.get("day_of_week"),
+                day_of_month=sched.get("day_of_month"),
+                start_from=now,
+                time_zone=sched.get("time_zone", "Asia/Kolkata"),
+                target_date=sched.get("target_date")
+            )
+            await db.db["email_schedules"].update_one(
+                {"_id": sched_id},
+                {
+                    "$set": {
+                        "last_run": now,
+                        "next_run": new_next_run,
+                        "updated_at": now
+                    }
+                }
+            )
+        
+        # 2. Run the auto scan for this user
+        try:
+            await async_run_auto_scan(target_user_id=user_id)
+        except Exception as e:
+            logger.error(f"Error running scheduled auto scan for user {user_id}: {e}", exc_info=True)

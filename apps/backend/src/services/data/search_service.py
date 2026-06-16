@@ -41,7 +41,7 @@ def _normalize_url(url: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
-# 1. NewsAPI — Free tier covers 100 req/day, returns last 30 days
+# 1. NewsAPI - Free tier covers 100 req/day, returns last 30 days
 # ---------------------------------------------------------------------------
 async def _search_newsapi(query: str, num_results: int = 10) -> List[Dict[str, Any]]:
     """Search via NewsAPI.org (free tier works, covers developer blogs and tech news)."""
@@ -57,7 +57,7 @@ async def _search_newsapi(query: str, num_results: int = 10) -> List[Dict[str, A
             "sortBy": "publishedAt",
             "pageSize": min(num_results, 20),
         }
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get("https://newsapi.org/v2/everything", params=params)
             if resp.status_code == 200:
                 articles = resp.json().get("articles", [])
@@ -72,7 +72,7 @@ async def _search_newsapi(query: str, num_results: int = 10) -> List[Dict[str, A
                             "published_date": a.get("publishedAt"),
                             "source": "newsapi",
                         })
-                logger.info(f"[NewsAPI] '{query}' → {len(results)} results")
+                logger.info(f"[NewsAPI] '{query}' -> {len(results)} results")
                 return results
             else:
                 logger.warning(f"[NewsAPI] Status {resp.status_code}: {resp.text[:150]}")
@@ -82,13 +82,22 @@ async def _search_newsapi(query: str, num_results: int = 10) -> List[Dict[str, A
 
 
 # ---------------------------------------------------------------------------
-# 2. Newsdataio API — 200 req/day free tier (uses pub_ prefix keys)
+# 2. Newsdataio API - 200 req/day free tier (uses pub_ prefix keys)
 # ---------------------------------------------------------------------------
 async def _search_gnews(query: str, num_results: int = 10) -> List[Dict[str, Any]]:
     """Search via Newsdataio (uses GNEWS_API_KEY which is actually a pub_ Newsdataio key)."""
     api_key = getattr(settings, "GNEWS_API_KEY", "")
     if not api_key or len(api_key) < 10:
         return []
+
+    # Check circuit breaker
+    from src.shared.redis_service import redis_service
+    try:
+        if await redis_service.get("circuit_breaker:gnews"):
+            logger.debug("[Newsdataio] Circuit breaker active - skipping")
+            return []
+    except Exception:
+        pass
 
     try:
         params = {
@@ -97,7 +106,7 @@ async def _search_gnews(query: str, num_results: int = 10) -> List[Dict[str, Any
             "language": "en",
             "size": min(num_results, 10),
         }
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get("https://newsdata.io/api/1/news", params=params)
             if resp.status_code == 200:
                 articles = resp.json().get("results", [])
@@ -112,17 +121,23 @@ async def _search_gnews(query: str, num_results: int = 10) -> List[Dict[str, Any
                             "published_date": a.get("pubDate"),
                             "source": "newsdataio",
                         })
-                logger.info(f"[Newsdataio] '{query}' → {len(results)} results")
+                logger.info(f"[Newsdataio] '{query}' -> {len(results)} results")
                 return results
             else:
                 logger.warning(f"[Newsdataio] Status {resp.status_code}: {resp.text[:150]}")
+                if resp.status_code == 401:
+                    logger.warning("[Newsdataio] Unauthorized - Tripping circuit breaker for 1 hour")
+                    try:
+                        await redis_service.set("circuit_breaker:gnews", "true", expire=3600)
+                    except Exception:
+                        pass
     except Exception as e:
         logger.error(f"[Newsdataio] Error: {e}")
     return []
 
 
 # ---------------------------------------------------------------------------
-# 3. DuckDuckGo — via duckduckgo-search library (no API key needed)
+# 3. DuckDuckGo - via duckduckgo-search library (no API key needed)
 # ---------------------------------------------------------------------------
 async def _search_duckduckgo(query: str, num_results: int = 10) -> List[Dict[str, Any]]:
     """Search via DuckDuckGo using the ddgs library."""
@@ -157,7 +172,7 @@ async def _search_duckduckgo(query: str, num_results: int = 10) -> List[Dict[str
                     "published_date": None,
                     "source": "duckduckgo",
                 })
-        logger.info(f"[DuckDuckGo] '{query}' → {len(results)} results")
+        logger.info(f"[DuckDuckGo] '{query}' -> {len(results)} results")
         return results
     except Exception as e:
         logger.warning(f"[DuckDuckGo] Error for '{query}': {e}")
@@ -165,7 +180,7 @@ async def _search_duckduckgo(query: str, num_results: int = 10) -> List[Dict[str
 
 
 # ---------------------------------------------------------------------------
-# 3.5 Exa API — Neural Search with Highlights
+# 3.5 Exa API - Neural Search with Highlights
 # ---------------------------------------------------------------------------
 async def _search_exa(query: str, num_results: int = 10) -> List[Dict[str, Any]]:
     """Search via Exa API."""
@@ -200,7 +215,7 @@ async def _search_exa(query: str, num_results: int = 10) -> List[Dict[str, Any]]
                         "published_date": getattr(r, "published_date", None),
                         "source": "exa",
                     })
-            logger.info(f"[Exa] '{query}' → {len(results)} results")
+            logger.info(f"[Exa] '{query}' -> {len(results)} results")
             return results
     except Exception as e:
         logger.warning(f"[Exa] Error for '{query}': {e}")
@@ -209,10 +224,14 @@ async def _search_exa(query: str, num_results: int = 10) -> List[Dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
-# 4. GitHub Releases API — direct technical data
+# 4. GitHub Releases API - direct technical data
 # ---------------------------------------------------------------------------
 async def _search_github_releases(company_name: str, num_results: int = 5) -> List[Dict[str, Any]]:
-    """Search GitHub for releases from the past 7 days."""
+    """Search GitHub for releases from the exact company's repositories only.
+    
+    Uses org: and user: qualifiers to ensure we only get repos that BELONG to
+    the company, not repos that merely mention the company name in descriptions.
+    """
     token = getattr(settings, "GITHUB_TOKEN", "")
     headers = {
         "Accept": "application/vnd.github+json",
@@ -221,26 +240,49 @@ async def _search_github_releases(company_name: str, num_results: int = 5) -> Li
     if token and not token.startswith("ghp_Yy5"):  # skip obviously invalid tokens
         headers["Authorization"] = f"Bearer {token}"
 
+    # Build canonical slug - lowercase, strip spaces for org/user matching
+    company_slug = company_name.lower().replace(" ", "").replace(".", "").replace(",", "")
+    company_lower = company_name.lower()
+
+    # Check cache first
+    from src.shared.redis_service import redis_service
+    cache_key = f"github_releases_cache:{company_slug}"
+    try:
+        cached = await redis_service.get(cache_key)
+        if cached:
+            logger.info(f"[GitHub] Cache hit for company: {company_name}")
+            return json.loads(cached)
+    except Exception as e:
+        logger.warning(f"[GitHub] Redis cache fetch failed: {e}")
+
     results = []
     try:
-        # Search for recent repos matching the company name
-        search_url = f"https://api.github.com/search/repositories"
+        # Search using org: and user: qualifiers for EXACT ownership matching.
+        # This prevents returning repos from unrelated orgs that happen to
+        # mention the company name in their description.
+        search_url = "https://api.github.com/search/repositories"
         params = {
-            "q": f"{company_name} in:name,description",
+            "q": f"org:{company_slug} OR user:{company_slug}",
             "sort": "updated",
             "order": "desc",
             "per_page": 5,
         }
-        async with httpx.AsyncClient(timeout=10, headers=headers) as client:
+        async with httpx.AsyncClient(timeout=5, headers=headers) as client:
             resp = await client.get(search_url, params=params)
             if resp.status_code == 200:
                 repos = resp.json().get("items", [])[:5]
                 cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-                
+
                 for repo in repos:
                     full_name = repo.get("full_name", "")
+                    repo_owner = full_name.split("/")[0].lower() if "/" in full_name else ""
+
+                    # STRICT: only include repos owned by the exact company
+                    if company_slug not in repo_owner and company_lower.split()[0].lower() not in repo_owner:
+                        logger.debug(f"[GitHub] SKIPPED repo '{full_name}' - owner '{repo_owner}' != '{company_slug}'")
+                        continue
+
                     releases_url = f"https://api.github.com/repos/{full_name}/releases"
-                    
                     rel_resp = await client.get(releases_url, params={"per_page": 3})
                     if rel_resp.status_code == 200:
                         for rel in rel_resp.json()[:3]:
@@ -266,13 +308,18 @@ async def _search_github_releases(company_name: str, num_results: int = 5) -> Li
                 logger.warning(f"[GitHub] Search failed: {resp.status_code}")
     except Exception as e:
         logger.warning(f"[GitHub] Error: {e}")
-    
-    logger.info(f"[GitHub] '{company_name}' → {len(results)} releases")
-    return results[:num_results]
+
+    logger.info(f"[GitHub] '{company_name}' (org:{company_slug}) -> {len(results)} releases")
+    final_res = results[:num_results]
+    try:
+        await redis_service.set(cache_key, json.dumps(final_res), expire=3600)
+    except Exception as e:
+        logger.warning(f"[GitHub] Redis cache save failed: {e}")
+    return final_res
 
 
 # ---------------------------------------------------------------------------
-# 5. RSS Feed Fetcher — directly reads changelogs/blogs
+# 5. RSS Feed Fetcher - directly reads changelogs/blogs
 # ---------------------------------------------------------------------------
 KNOWN_RSS_FEEDS: Dict[str, List[str]] = {
     "vercel": [
@@ -328,25 +375,36 @@ KNOWN_RSS_FEEDS: Dict[str, List[str]] = {
 
 
 async def _search_rss_feeds(company_name: str, num_results: int = 10) -> List[Dict[str, Any]]:
-    """Fetch recent articles from known RSS feeds for the company (using httpx + feedparser)."""
+    """Fetch recent articles from known RSS feeds for the exact company only."""
     company_lower = company_name.lower().strip()
     feeds = KNOWN_RSS_FEEDS.get(company_lower, [])
     if not feeds:
         return []
 
+    from src.shared.redis_service import redis_service
+    cache_key = f"rss_feeds_cache:{company_lower}"
+    try:
+        cached = await redis_service.get(cache_key)
+        if cached:
+            logger.info(f"[RSS] Cache hit for company: {company_name}")
+            return json.loads(cached)
+    except Exception as e:
+        logger.warning(f"[RSS] Redis cache fetch failed: {e}")
+
     results = []
-    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    # 7-day cutoff to match the rest of the pipeline
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
     fetch_headers = {
         "User-Agent": "Mozilla/5.0 (compatible; MarketScout/1.0) AppleWebKit/537.36",
         "Accept": "application/rss+xml, application/xml, text/xml, */*",
     }
 
-    async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers=fetch_headers) as client:
+    async with httpx.AsyncClient(timeout=5, follow_redirects=True, headers=fetch_headers) as client:
         for feed_url in feeds:
             try:
                 resp = await client.get(feed_url)
                 if resp.status_code != 200:
-                    logger.warning(f"[RSS] {feed_url} → HTTP {resp.status_code}")
+                    logger.warning(f"[RSS] {feed_url} -> HTTP {resp.status_code}")
                     continue
 
                 feed = feedparser.parse(resp.text)
@@ -387,11 +445,16 @@ async def _search_rss_feeds(company_name: str, num_results: int = 10) -> List[Di
                     if count >= num_results:
                         break
 
-                logger.info(f"[RSS] {feed_url} → {count} recent items (feed total: {len(feed.entries)})")
+                logger.info(f"[RSS] {feed_url} -> {count} recent items (feed total: {len(feed.entries)})")
             except Exception as e:
                 logger.warning(f"[RSS] Error fetching {feed_url}: {e}")
 
-    return results[:num_results]
+    final_res = results[:num_results]
+    try:
+        await redis_service.set(cache_key, json.dumps(final_res), expire=3600)
+    except Exception as e:
+        logger.warning(f"[RSS] Redis cache save failed: {e}")
+    return final_res
 
 
 # ---------------------------------------------------------------------------
@@ -411,7 +474,7 @@ async def _search_tavily(query: str, num_results: int = 10) -> List[Dict[str, An
             "max_results": num_results,
             "days": 7,
         }
-        async with httpx.AsyncClient(timeout=12) as client:
+        async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.post("https://api.tavily.com/search", json=payload)
             if resp.status_code == 200:
                 data = resp.json().get("results", [])
@@ -426,10 +489,10 @@ async def _search_tavily(query: str, num_results: int = 10) -> List[Dict[str, An
                             "published_date": r.get("published_date"),
                             "source": "tavily",
                         })
-                logger.info(f"[Tavily] '{query}' → {len(results)} results")
+                logger.info(f"[Tavily] '{query}' -> {len(results)} results")
                 return results
             else:
-                logger.warning(f"[Tavily] Status {resp.status_code} — skipping")
+                logger.warning(f"[Tavily] Status {resp.status_code} - skipping")
     except Exception as e:
         logger.warning(f"[Tavily] Error: {e}")
     return []
@@ -451,7 +514,7 @@ async def _search_serpapi(query: str, num_results: int = 10) -> List[Dict[str, A
             "num": num_results,
             "tbs": "qdr:w",  # last week
         }
-        async with httpx.AsyncClient(timeout=12) as client:
+        async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get("https://serpapi.com/search.json", params=params)
             if resp.status_code == 200:
                 data = resp.json().get("organic_results", [])
@@ -466,10 +529,10 @@ async def _search_serpapi(query: str, num_results: int = 10) -> List[Dict[str, A
                             "published_date": None,
                             "source": "serpapi",
                         })
-                logger.info(f"[SerpApi] '{query}' → {len(results)} results")
+                logger.info(f"[SerpApi] '{query}' -> {len(results)} results")
                 return results
             else:
-                logger.warning(f"[SerpApi] Status {resp.status_code} — skipping")
+                logger.warning(f"[SerpApi] Status {resp.status_code} - skipping")
     except Exception as e:
         logger.warning(f"[SerpApi] Error: {e}")
     return []
@@ -487,7 +550,7 @@ async def search_web_multi(
     """
     Run a search using all available providers.
     Provider chain (in order of reliability):
-      1. NewsAPI → 2. GNews → 3. DuckDuckGo → 4. GitHub → 5. RSS → 6. Tavily → 7. SerpApi
+      1. NewsAPI -> 2. GNews -> 3. DuckDuckGo -> 4. GitHub -> 5. RSS -> 6. Tavily -> 7. SerpApi
     """
     # Safety guardrail
     blocked_keywords = ["illegal", "hacking", "exploit", "malware", "crack", "bypass"]
@@ -501,6 +564,19 @@ async def search_web_multi(
     if site_filter:
         query = f"site:{site_filter} {query}"
 
+    # Check cache first
+    import hashlib
+    h = hashlib.md5(f"{query}:{company_name}:{num_results}".encode("utf-8")).hexdigest()
+    cache_key = f"search_cache:{h}"
+    from src.shared.redis_service import redis_service
+    try:
+        cached = await redis_service.get(cache_key)
+        if cached:
+            logger.info(f"[Search] Cache hit for query: '{query}'")
+            return json.loads(cached)
+    except Exception as e:
+        logger.warning(f"[Search] Redis cache fetch failed: {e}")
+
     all_results: List[Dict[str, Any]] = []
     seen_urls: set = set()
 
@@ -512,19 +588,25 @@ async def search_web_multi(
                 all_results.append(r)
 
     # Run all providers in parallel for speed
-    tasks = [
-        _search_newsapi(query, num_results),
-        _search_gnews(query, num_results),
-        _search_duckduckgo(query, num_results),
-        _search_exa(query, num_results),
-        _search_tavily(query, num_results),
-        _search_serpapi(query, num_results),
-    ]
-
-    # RSS and GitHub are company-specific
-    if company_name:
-        tasks.append(_search_rss_feeds(company_name, num_results))
-        tasks.append(_search_github_releases(company_name, 5))
+    is_social_query = "site:reddit.com" in query.lower() or "site:youtube.com" in query.lower()
+    if is_social_query:
+        tasks = [
+            _search_duckduckgo(query, num_results),
+            _search_serpapi(query, num_results),
+        ]
+    else:
+        tasks = [
+            _search_newsapi(query, num_results),
+            _search_gnews(query, num_results),
+            _search_duckduckgo(query, num_results),
+            _search_exa(query, num_results),
+            _search_tavily(query, num_results),
+            _search_serpapi(query, num_results),
+        ]
+        # RSS and GitHub are company-specific
+        if company_name:
+            tasks.append(_search_rss_feeds(company_name, num_results))
+            tasks.append(_search_github_releases(company_name, 5))
 
     results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -536,7 +618,46 @@ async def search_web_multi(
             _dedupe_add(res)
 
     logger.info(f"[Search] Total results for '{query}': {len(all_results)}")
-    return all_results[:num_results]
+
+    # -- STRICT COMPANY IDENTITY POST-FILTER ------------------------------------
+    # If a company_name was supplied, drop any result whose title and snippet
+    # do not mention the target company. This prevents cross-company contamination
+    # from news APIs that return industry-wide articles matching a search keyword.
+    if company_name:
+        company_lower = company_name.lower()
+        identity_filtered = []
+        for r in all_results:
+            title_lower = (r.get("title") or "").lower()
+            snippet_lower = (r.get("snippet") or "").lower()
+            # Accept if the company name appears in title OR snippet OR source is RSS/GitHub
+            # (RSS/GitHub are already company-scoped by the dedicated fetchers above)
+            if (
+                company_lower in title_lower
+                or company_lower in snippet_lower
+                or r.get("source") in ("rss", "github")
+            ):
+                identity_filtered.append(r)
+            else:
+                logger.debug(
+                    f"[Search] DROPPED '{r.get('url')}' - company name '{company_name}' "
+                    f"not found in title or snippet (identity mismatch)."
+                )
+        before = len(all_results)
+        all_results = identity_filtered
+        logger.info(
+            f"[Search] Company identity filter: {before} -> {len(all_results)} results kept "
+            f"(dropped {before - len(all_results)} non-'{company_name}' results)."
+        )
+
+    final_results = all_results[:num_results]
+    
+    # Save cache
+    try:
+        await redis_service.set(cache_key, json.dumps(final_results), expire=3600) # Cache for 1 hour
+    except Exception as e:
+        logger.warning(f"[Search] Redis cache save failed: {e}")
+
+    return final_results
 
 
 async def search_specialized(

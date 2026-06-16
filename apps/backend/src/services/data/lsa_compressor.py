@@ -1,5 +1,5 @@
 """
-LSA Compression Layer: compress remaining body with LSA (sumy) to 8–12 sentences.
+LSA Compression Layer: compress remaining body with LSA (sumy) to 8-12 sentences.
 """
 import logging
 from typing import List
@@ -26,7 +26,7 @@ def _ensure_nltk_data() -> None:
 
 def compress_with_lsa(text: str, num_sentences: int = LSA_SENTENCES) -> str:
     """
-    Summarize text using LSA (sumy). Returns compressed string (8–12 sentences).
+    Summarize text using LSA (sumy). Returns compressed string (8-12 sentences).
     If sumy fails, returns truncated text to stay safe.
     """
     if not text or not text.strip():

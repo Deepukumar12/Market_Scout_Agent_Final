@@ -25,14 +25,14 @@ async def get_user_email(user_id: str):
     """
     try:
         if not user_id:
-            logger.warning("⚠️ user_id is None or empty")
+            logger.warning("[WARNING] user_id is None or empty")
             return None
 
-        # 🔥 Convert string → ObjectId safely
+        # [CONVERT] Convert string -> ObjectId safely
         try:
             user_object_id = ObjectId(user_id)
         except (InvalidId, TypeError):
-            logger.error(f"❌ Invalid ObjectId format: {user_id}")
+            logger.error(f"[ERROR] Invalid ObjectId format: {user_id}")
             return None
 
         # Use global async database connection
@@ -42,18 +42,18 @@ async def get_user_email(user_id: str):
         user = await db.db.users.find_one({"_id": user_object_id})
 
         if not user:
-            logger.warning(f"❌ No user found for ObjectId: {user_object_id}")
+            logger.warning(f"[ERROR] No user found for ObjectId: {user_object_id}")
             return None
 
         email = user.get("email")
         if not email:
-            logger.warning(f"⚠️ Email field missing for user: {user_object_id}")
+            logger.warning(f"[WARNING] Email field missing for user: {user_object_id}")
             return None
 
         return email
 
     except Exception as e:
-        logger.exception(f"❌ Unexpected error in get_user_email: {e}")
+        logger.exception(f"[ERROR] Unexpected error in get_user_email: {e}")
         return None
 
 async def get_user_preferences(user_id: str):

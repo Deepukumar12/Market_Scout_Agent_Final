@@ -54,8 +54,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     initialize: () => {
         const token = localStorage.getItem('scoutiq_token');
+        const refreshToken = localStorage.getItem('scoutiq_refresh_token');
         if (token) {
-            if (isTokenExpired(token)) {
+            if (isTokenExpired(token) && !refreshToken) {
                 localStorage.removeItem('scoutiq_token');
                 set({ token: null, user: null });
                 return;
@@ -63,17 +64,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             try {
                 const decoded = parseJwt(token);
-                // Set initial state from token
                 set({ user: decoded, token });
                 api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-                // Fetch fresh user data from backend
                 get().fetchUser();
             } catch (e) {
                 localStorage.removeItem('scoutiq_token');
+                localStorage.removeItem('scoutiq_refresh_token');
                 set({ token: null, user: null });
             }
         }
+
+        // Set up global logout listener
+        const handleLogout = () => {
+            get().logout();
+        };
+        window.removeEventListener('auth-logout', handleLogout);
+        window.addEventListener('auth-logout', handleLogout);
     },
 
     fetchUser: async () => {
@@ -82,7 +89,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({ user: userData });
         } catch (error) {
             console.error("Failed to fetch user profile", error);
-            // Optionally logout if 401?
         }
     },
 
@@ -91,12 +97,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             const response = await login(email, password);
             const token = response.access_token;
+            const refreshToken = response.refresh_token;
 
-            if (!token || isTokenExpired(token)) {
-                throw new Error('Received invalid or expired token');
+            if (!token) {
+                throw new Error('Received invalid token');
             }
 
             localStorage.setItem('scoutiq_token', token);
+            if (refreshToken) {
+                localStorage.setItem('scoutiq_refresh_token', refreshToken);
+            }
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
             const decoded = parseJwt(token);
@@ -108,7 +118,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 if (typeof err.response.data.detail === 'string') {
                     errorMessage = err.response.data.detail;
                 } else if (Array.isArray(err.response.data.detail)) {
-                    // Pydantic validation errors often return an array of objects
                     errorMessage = err.response.data.detail.map((e: any) => e.msg).join(', ');
                 } else {
                     errorMessage = JSON.stringify(err.response.data.detail);
@@ -126,12 +135,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             const response = await register(data);
             const token = response.access_token;
+            const refreshToken = response.refresh_token;
 
-            if (!token || isTokenExpired(token)) {
-                throw new Error('Received invalid or expired token');
+            if (!token) {
+                throw new Error('Received invalid token');
             }
 
             localStorage.setItem('scoutiq_token', token);
+            if (refreshToken) {
+                localStorage.setItem('scoutiq_refresh_token', refreshToken);
+            }
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
             const decoded = parseJwt(token);
@@ -143,7 +156,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 if (typeof err.response.data.detail === 'string') {
                     errorMessage = err.response.data.detail;
                 } else if (Array.isArray(err.response.data.detail)) {
-                    // Pydantic validation errors often return an array of objects
                     errorMessage = err.response.data.detail.map((e: any) => e.msg).join(', ');
                 } else {
                     errorMessage = JSON.stringify(err.response.data.detail);
@@ -158,6 +170,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     logout: () => {
         localStorage.removeItem('scoutiq_token');
+        localStorage.removeItem('scoutiq_refresh_token');
         delete api.defaults.headers.common['Authorization'];
         set({ user: null, token: null });
     },
@@ -198,7 +211,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     initSync: () => {
         const handler = (e: any) => {
             if (e.detail) {
-                console.log('🔄 Real-time Identity Sync:', e.detail.full_name);
+                console.log(' Real-time Identity Sync:', e.detail.full_name);
                 set({ user: e.detail });
             }
         };

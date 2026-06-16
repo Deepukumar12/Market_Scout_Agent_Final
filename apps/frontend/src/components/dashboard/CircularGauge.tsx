@@ -24,7 +24,7 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* ── Ring + centred percentage ── */}
+      {/* -- Ring + centred percentage -- */}
       <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
           {/* Track */}
@@ -53,7 +53,7 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
           />
         </svg>
 
-        {/* Percentage — absolutely centred inside ring */}
+        {/* Percentage - absolutely centred inside ring */}
         {label && (
           <span
             className="absolute font-black text-[#1D1D1F] dark:text-white leading-none italic tracking-tighter select-none"
@@ -64,7 +64,7 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
         )}
       </div>
 
-      {/* ── Sublabel — always BELOW the ring, never inside ── */}
+      {/* -- Sublabel - always BELOW the ring, never inside -- */}
       {sublabel && (
         <span
           className="font-black text-[#86868B] uppercase tracking-[0.18em] opacity-75 whitespace-nowrap select-none"

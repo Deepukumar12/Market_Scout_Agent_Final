@@ -82,7 +82,12 @@ export function LoginForm() {
                     />
                   </div>
                 </FormControl>
-                <FormMessage className="text-[10px] font-bold text-rose-500 mt-2 ml-2" />
+                <div className="flex justify-between items-center mt-2 px-2">
+                  <FormMessage className="text-[10px] font-bold text-rose-500" />
+                  <Link to="/forgot-password" className="text-[10px] font-bold text-[#6E6E73] hover:text-[#0071E3] transition-colors uppercase tracking-widest italic ml-auto">
+                    Forgot Key?
+                  </Link>
+                </div>
               </FormItem>
             )}
           />

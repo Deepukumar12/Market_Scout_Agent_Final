@@ -191,12 +191,12 @@ async def get_vault_entries(current_user: User = Depends(get_current_user)):
         is_configured = bool(val and val != "" and "change-me" not in val.lower())
         
         # Mask the value for security
-        masked_val = "••••••••••••••••••••"
+        masked_val = "********************"
         if val and len(val) > 8:
             prefix = val[:4]
             if "://" in val: # Handle URLs
                 prefix = val.split("://")[0] + "://"
-            masked_val = f"{prefix}••••••••••••"
+            masked_val = f"{prefix}************"
             
         entries.append(VaultEntry(
             name=key,

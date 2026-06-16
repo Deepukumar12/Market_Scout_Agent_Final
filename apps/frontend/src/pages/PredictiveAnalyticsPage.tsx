@@ -1,19 +1,21 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   LineChart, Line, XAxis, Tooltip, ResponsiveContainer, 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, 
   BarChart, Bar, CartesianGrid
 } from 'recharts';
 import { 
-  Activity, Zap, BrainCircuit, Target, ArrowUpRight, Loader2, Trophy, BarChart3, TrendingUp, RotateCw
+  Activity, Zap, BrainCircuit, Target, ArrowUpRight, Loader2, Trophy, BarChart3, TrendingUp, RotateCw, Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCompetitorStore } from '@/store/competitorStore';
 import { useAuthStore } from '@/store/authStore';
 import { getPredictivePipeline } from '@/services/api';
 import { cn } from '@/utils/utils';
+import { formatTimeToIST } from '@/utils/dateUtils';
 
 interface PerformerMetric {
     competitor_id: string;
@@ -34,34 +36,28 @@ interface PredictiveAnalysisResult {
 }
 
 const PredictiveAnalyticsPage = () => {
-  const { competitors, fetchCompetitors } = useCompetitorStore();
+  const navigate = useNavigate();
+  const { competitors, selectedCompetitorId, fetchCompetitors } = useCompetitorStore();
   const { token } = useAuthStore();
   
   const [loading, setLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<PredictiveAnalysisResult | null>(null);
 
-  useEffect(() => {
-    fetchCompetitors();
-  }, [fetchCompetitors]);
+  const activeCompetitor = useMemo(() => {
+    return competitors.find(c => c.id === selectedCompetitorId || c._id === selectedCompetitorId);
+  }, [competitors, selectedCompetitorId]);
 
-  useEffect(() => {
-    handleInitializePipeline();
-    
-    // Listen for manual refreshes from the modal completion or websocket
-    window.addEventListener('intelligence-refresh', handleInitializePipeline);
-    
-    const interval = setInterval(handleInitializePipeline, 60000); // Predictive is heavy, 60s
-    return () => {
-      window.removeEventListener('intelligence-refresh', handleInitializePipeline);
-      clearInterval(interval);
-    };
-  }, []);
+  const activeCompetitorName = activeCompetitor?.name || '';
 
-  const handleInitializePipeline = async () => {
+  const handleInitializePipeline = useCallback(async () => {
+      if (!activeCompetitorName) {
+          setAnalysisResult(null);
+          return;
+      }
       setLoading(true);
       setAnalysisResult(null);
       try {
-          const data = await getPredictivePipeline();
+          const data = await getPredictivePipeline(activeCompetitorName);
           
           if (!data || (data.top_performers?.length === 0 && data.stable_performers?.length === 0 && data.trending_predictions?.length === 0)) {
               setAnalysisResult(null);
@@ -75,7 +71,26 @@ const PredictiveAnalyticsPage = () => {
           console.error(e);
           setLoading(false);
       }
-  };
+  }, [activeCompetitorName]);
+
+  useEffect(() => {
+    fetchCompetitors();
+  }, [fetchCompetitors]);
+
+  useEffect(() => {
+    if (activeCompetitorName) {
+      handleInitializePipeline();
+    }
+    
+    // Listen for manual refreshes from the modal completion or websocket
+    window.addEventListener('intelligence-refresh', handleInitializePipeline);
+    
+    const interval = setInterval(handleInitializePipeline, 60000); // Predictive is heavy, 60s
+    return () => {
+      window.removeEventListener('intelligence-refresh', handleInitializePipeline);
+      clearInterval(interval);
+    };
+  }, [handleInitializePipeline, activeCompetitorName]);
   
 
   // Deduplicate combined array by competitor_id to prevent redundant UI traces
@@ -110,6 +125,44 @@ const PredictiveAnalyticsPage = () => {
             gap: p.innovation_index
           }))
   ) : [];
+
+  if (competitors.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFE] dark:bg-[#050505] p-6 lg:p-10 flex items-center justify-center">
+        <div className="max-w-md w-full glass-card rounded-[32px] p-8 border border-[#E5E5EA] dark:border-white/10 bg-white/80 dark:bg-[#0A0A0C]/80 shadow-2xl text-center space-y-6">
+          <div className="w-16 h-16 bg-blue-600/10 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Zap size={32} />
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter italic">No Surveillance Targets</h2>
+          <p className="text-sm text-[#86868B] leading-relaxed">
+            Please add a competitor to monitor technical releases and build predictive models.
+          </p>
+          <Button 
+            onClick={() => navigate('/dashboard/add-competitor')}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl h-12 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-600/20"
+          >
+            Add Competitor
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedCompetitorId) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFE] dark:bg-[#050505] p-6 lg:p-10 flex items-center justify-center">
+        <div className="max-w-md w-full glass-card rounded-[32px] p-8 border border-[#E5E5EA] dark:border-white/10 bg-white/80 dark:bg-[#0A0A0C]/80 shadow-2xl text-center space-y-4">
+          <div className="w-16 h-16 bg-blue-600/10 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Search size={32} />
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter italic">Select a Target</h2>
+          <p className="text-sm text-[#86868B] leading-relaxed">
+            Please select a surveillance target from the top navbar to display predictive modeling.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative max-w-7xl mx-auto space-y-12 pb-20">
@@ -196,7 +249,7 @@ const PredictiveAnalyticsPage = () => {
                             Pipeline Output
                         </h2>
                         <span className="text-[10px] font-mono text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest">
-                            Generated: {new Date(analysisResult.analysis_timestamp).toLocaleTimeString('en-IN')}
+                            Generated: {formatTimeToIST(analysisResult.analysis_timestamp)}
                         </span>
                     </div>
 
@@ -390,7 +443,7 @@ const PredictiveAnalyticsPage = () => {
                 </ResponsiveContainer>
             </div>
             <p className="text-[10px] text-[#86868B] font-mono mt-6 uppercase tracking-widest leading-relaxed">
-                Aggregated projection across {competitors.length} active units • <span className="text-blue-600 font-black italic">Click to verify vectors</span>
+                Aggregated projection across {competitors.length} active units - <span className="text-blue-600 font-black italic">Click to verify vectors</span>
             </p>
         </motion.div>
 
@@ -449,7 +502,7 @@ const PredictiveAnalyticsPage = () => {
                 </ResponsiveContainer>
             </div>
              <p className="text-[10px] text-[#86868B] font-mono mt-6 uppercase tracking-widest leading-relaxed">
-                Neural vector mapping of technical debt shifts • <span className="text-blue-600 font-black italic">Verify Pivot Signals</span>
+                Neural vector mapping of technical debt shifts - <span className="text-blue-600 font-black italic">Verify Pivot Signals</span>
             </p>
         </motion.div>
 
@@ -500,7 +553,7 @@ const PredictiveAnalyticsPage = () => {
                 </ResponsiveContainer>
             </div>
              <p className="text-[10px] text-[#86868B] font-mono mt-6 uppercase tracking-widest leading-relaxed">
-                Economic opportunity delta in Q4 timeline • <span className="text-blue-600 font-black italic">Audit Opportunity Gap</span>
+                Economic opportunity delta in Q4 timeline - <span className="text-blue-600 font-black italic">Audit Opportunity Gap</span>
             </p>
         </motion.div>
 

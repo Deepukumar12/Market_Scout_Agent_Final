@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, BrainCircuit, RotateCw,
@@ -8,8 +8,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useIntelStore } from '@/store/intelStore';
+import { useCompetitorStore } from '@/store/competitorStore';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/utils/utils';
+import { formatToIST } from '@/utils/dateUtils';
 
 type FocusArea = 'Revenue' | 'Efficiency' | 'Innovation' | 'MarketShare';
 type RiskLevel = 'Low' | 'Medium' | 'High';
@@ -59,31 +61,46 @@ const MetricCard = ({ icon: Icon, label, value, sub }: { icon: any, label: strin
 
 const AiSuggestionPage = () => {
   const location = useLocation();
-  const { fetchStrategicPlan, strategicPlan: idea, loading, competitors, fetchCompetitors } = useIntelStore();
+  const navigate = useNavigate();
+  const { fetchStrategicPlan, strategicPlan: idea, loading } = useIntelStore();
+  const { competitors, selectedCompetitorId, setSelectedCompetitorId, fetchCompetitors } = useCompetitorStore();
   
   // Config State
   const [focusArea, setFocusArea] = useState<FocusArea>('Innovation');
   const [riskLevel, setRiskLevel] = useState<RiskLevel>('Medium');
-  const [selectedComp, setSelectedComp] = useState<string>(location.state?.competitor || '');
+
+  const activeCompetitor = useMemo(() => {
+    return competitors.find(c => c.id === selectedCompetitorId || c._id === selectedCompetitorId);
+  }, [competitors, selectedCompetitorId]);
+
+  const activeCompetitorName = activeCompetitor?.name || '';
 
   useEffect(() => {
     fetchCompetitors();
   }, [fetchCompetitors]);
 
+  const handleGenerate = useCallback(async () => {
+    if (!activeCompetitorName) return;
+    await fetchStrategicPlan(activeCompetitorName, focusArea, riskLevel);
+  }, [activeCompetitorName, focusArea, riskLevel, fetchStrategicPlan]);
+
   useEffect(() => {
-    if (competitors.length > 0 && !selectedComp) {
-      setSelectedComp(competitors[0].name);
+    if (activeCompetitorName) {
+      handleGenerate();
     }
-  }, [competitors, selectedComp]);
+  }, [activeCompetitorName, focusArea, riskLevel, handleGenerate]);
 
   useEffect(() => {
     // Automatically trigger generation if coming from RiskPage with a specific competitor
     if (location.state?.competitor && competitors.length > 0) {
-      handleGenerate();
+      const targetComp = competitors.find(c => c.name === location.state.competitor);
+      if (targetComp) {
+        setSelectedCompetitorId(targetComp.id || targetComp._id || null);
+      }
       // Clear state to prevent re-trigger on refresh
       window.history.replaceState({}, document.title);
     }
-  }, [competitors]);
+  }, [competitors, location.state, setSelectedCompetitorId]);
 
   useEffect(() => {
     const onRefresh = () => { handleGenerate(); };
@@ -93,12 +110,45 @@ const AiSuggestionPage = () => {
     return () => {
       window.removeEventListener('intelligence-refresh', onRefresh);
     };
-  }, [selectedComp, focusArea, riskLevel]);
+  }, [handleGenerate]);
 
-  const handleGenerate = async () => {
-    const cid = selectedComp || (competitors.length > 0 ? competitors[0].name : 'Market');
-    await fetchStrategicPlan(cid, focusArea, riskLevel);
-  };
+  if (competitors.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFE] dark:bg-[#050505] p-6 lg:p-10 flex items-center justify-center">
+        <div className="max-w-md w-full glass-card rounded-[32px] p-8 border border-[#E5E5EA] dark:border-white/10 bg-white/80 dark:bg-[#0A0A0C]/80 shadow-2xl text-center space-y-6">
+          <div className="w-16 h-16 bg-blue-600/10 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Target size={32} />
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter italic">No Surveillance Targets</h2>
+          <p className="text-sm text-[#86868B] leading-relaxed">
+            Initialize your surveillance network by adding a competitor. ScoutForge AI will automatically scan and track their technical releases.
+          </p>
+          <Button 
+            onClick={() => navigate('/dashboard/add-competitor')}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl h-12 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all active:scale-95"
+          >
+            Add Competitor
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedCompetitorId || !activeCompetitor) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFE] dark:bg-[#050505] p-6 lg:p-10 flex items-center justify-center">
+        <div className="max-w-md w-full glass-card rounded-[32px] p-8 border border-[#E5E5EA] dark:border-white/10 bg-white/80 dark:bg-[#0A0A0C]/80 shadow-2xl text-center space-y-4">
+          <div className="w-16 h-16 bg-blue-600/10 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Target size={32} />
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter italic">Select a Target</h2>
+          <p className="text-sm text-[#86868B] leading-relaxed">
+            Please select a surveillance target from the top navbar to display competitor intelligence.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
 
   return (
@@ -137,7 +187,7 @@ const AiSuggestionPage = () => {
                 const html = `
                   <html>
                     <head>
-                      <title>Strategic Intelligence Report - ${selectedComp}</title>
+                       <title>Strategic Intelligence Report - ${activeCompetitorName}</title>
                       <style>
                         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #1d1d1f; line-height: 1.6; }
                         .header { border-bottom: 2px solid #0071e3; padding-bottom: 20px; margin-bottom: 40px; }
@@ -160,7 +210,7 @@ const AiSuggestionPage = () => {
                       </div>
                       <div class="header">
                         <h1>STRATEGIC INITIATIVE REPORT</h1>
-                        <div class="meta">Target: ${selectedComp} | Confidence: ${idea.confidence}% | Generated: ${new Date().toLocaleString()}</div>
+                        <div class="meta">Target: ${activeCompetitorName} | Confidence: ${idea.confidence}% | Generated: ${formatToIST(new Date())}</div>
                       </div>
                       <div class="section">
                         <div class="section-title">Initiative Overview</div>
@@ -207,13 +257,13 @@ const AiSuggestionPage = () => {
             <div className="space-y-6">
               <h2 className="text-xl font-black text-[#1D1D1F] dark:text-white uppercase tracking-tighter italic">Target Competitor</h2>
               <select 
-                value={selectedComp}
-                onChange={(e) => setSelectedComp(e.target.value)}
+                value={selectedCompetitorId || ''}
+                onChange={(e) => setSelectedCompetitorId(e.target.value || null)}
                 className="w-full p-5 rounded-[24px] border border-[#E5E5EA] dark:border-white/10 bg-white dark:bg-[#1C1C1E] font-bold text-[#1D1D1F] dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-apple uppercase tracking-widest text-xs italic"
               >
-                <option value="">Select Competitor (Default: Market)</option>
+                <option value="">Select Competitor</option>
                 {competitors.map((c: any) => (
-                  <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                  <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>
                 ))}
               </select>
             </div>
@@ -492,7 +542,7 @@ const AiSuggestionPage = () => {
                         className="p-5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-white/10 flex gap-4 italic text-sm font-medium text-[#6E6E73] dark:text-[#86868B] hover:border-amber-500/30 transition-all group cursor-pointer"
                         onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(risk)}+market+impact`, '_blank')}
                       >
-                        <span className="text-amber-500 font-black">•</span>
+                        <span className="text-amber-500 font-black">-</span>
                         {risk}
                       </div>
                     ))}

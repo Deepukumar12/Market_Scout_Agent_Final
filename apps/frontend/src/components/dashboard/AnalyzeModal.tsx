@@ -234,19 +234,19 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                                   </span>
                                   {suggestion.industry && (
                                     <>
-                                      <span className="text-[#E5E5EA] dark:text-white/10">•</span>
+                                      <span className="text-[#E5E5EA] dark:text-white/10">-</span>
                                       <span className="text-[10px] font-bold text-[#0071E3] uppercase tracking-tighter italic">{suggestion.industry}</span>
                                     </>
                                   )}
                                   {suggestion.country && (
                                     <>
-                                      <span className="text-[#E5E5EA] dark:text-white/10">•</span>
+                                      <span className="text-[#E5E5EA] dark:text-white/10">-</span>
                                       <span className="text-[10px] font-black text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-widest">{suggestion.country}</span>
                                     </>
                                   )}
                                   {suggestion.employee_count && (
                                     <>
-                                      <span className="text-[#E5E5EA] dark:text-white/10">•</span>
+                                      <span className="text-[#E5E5EA] dark:text-white/10">-</span>
                                       <span className="text-[10px] font-bold text-[#34C759] uppercase tracking-widest">{suggestion.employee_count.toLocaleString()}+ Staff</span>
                                     </>
                                   )}

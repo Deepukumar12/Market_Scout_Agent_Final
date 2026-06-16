@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Terminal, Minimize2 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { Button } from '@/components/ui/Button';
+import { formatTimeToIST } from '@/utils/dateUtils';
 import { useAuthStore } from '@/store/authStore';
 import { useExecutionStore } from '@/store/executionStore';
 
@@ -14,8 +15,16 @@ interface LogEntry {
 // WebSocket must connect to the backend. In dev, Vite proxies /ws to backend; fallback to direct backend URL.
 const getWsBase = () => {
   const env = (import.meta as any).env.VITE_WS_URL;
-  if (env) return env.replace(/^http/, 'ws');
+  if (env) {
+    const stripped = env.replace(/\/ws\/logs\/?$/, '').replace(/\/ws\/notifications\/?$/, '');
+    return stripped.replace(/^http/, 'ws');
+  }
   if ((import.meta as any).env.DEV) return 'ws://localhost:8000';
+  
+  const apiUrl = (import.meta as any).env.VITE_API_URL;
+  if (apiUrl) {
+    return apiUrl.replace(/^http/, 'ws');
+  }
   const { protocol, host } = window.location;
   return protocol === 'https:' ? `wss://${host}` : `ws://${host}`;
 };
@@ -28,71 +37,115 @@ export default function LogConsole() {
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    const wsBase = getWsBase();
-    const url = token 
-      ? `${wsBase}/ws/logs?token=${encodeURIComponent(token)}`
-      : `${wsBase}/ws/logs`;
-    const socket = new WebSocket(url);
+    let active = true;
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: any = null;
 
-    socket.onopen = () => {
-      const entry: LogEntry = {
-        message: "Connected to ScoutForge AI Agent Network...",
-        category: "SYSTEM",
-        timestamp: new Date().toISOString()
-      };
-      setLogs((prev) => [...prev, entry]);
-    };
+    const connect = () => {
+      if (!active) return;
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const entry: LogEntry = data;
-        setLogs((prev) => [...prev.slice(-100), entry]);
-        
-        // Sync with execution store
-        const { addLog, setStep } = useExecutionStore.getState();
-        addLog(entry);
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
 
-        // Detect Phase from message: "Phase X: ..."
-        const phaseMatch = entry.message.match(/Phase (\d+)/);
-        if (phaseMatch) {
-          const phase = parseInt(phaseMatch[1]);
-          setStep(phase - 1);
-        }
-      } catch (e) {
-        // Fallback for plain text messages
+      if (socket) {
+        socket.onclose = null;
+        socket.close();
+      }
+
+      const wsBase = getWsBase();
+      const url = token 
+        ? `${wsBase}/ws/logs?token=${encodeURIComponent(token)}`
+        : `${wsBase}/ws/logs`;
+      
+      socket = new WebSocket(url);
+      ws.current = socket;
+
+      socket.onopen = () => {
+        if (!active) return;
         const entry: LogEntry = {
-          message: event.data,
+          message: "Connected to ScoutForge AI Agent Network...",
           category: "SYSTEM",
           timestamp: new Date().toISOString()
         };
-        setLogs((prev) => [...prev.slice(-100), entry]);
-        useExecutionStore.getState().addLog(entry);
+        setLogs((prev) => [...prev, entry]);
+      };
+
+      socket.onmessage = (event) => {
+        if (!active) return;
+        try {
+          const data = JSON.parse(event.data);
+          const entry: LogEntry = data;
+          setLogs((prev) => [...prev.slice(-100), entry]);
+          
+          const { addLog, setStep } = useExecutionStore.getState();
+          addLog(entry);
+
+          const phaseMatch = entry.message.match(/Phase (\d+)/);
+          if (phaseMatch) {
+            const phase = parseInt(phaseMatch[1]);
+            setStep(phase - 1);
+          }
+        } catch (e) {
+          const entry: LogEntry = {
+            message: event.data,
+            category: "SYSTEM",
+            timestamp: new Date().toISOString()
+          };
+          setLogs((prev) => [...prev.slice(-100), entry]);
+          useExecutionStore.getState().addLog(entry);
+        }
+      };
+
+      socket.onclose = () => {
+        if (!active) return;
+        const entry: LogEntry = {
+          message: "Connection closed.",
+          category: "SYSTEM",
+          timestamp: new Date().toISOString()
+        };
+        setLogs((prev) => [...prev, entry]);
+
+        reconnectTimeout = setTimeout(connect, 5000);
+      };
+
+      socket.onerror = () => {
+        if (!active) return;
+        const entry: LogEntry = {
+          message: "WebSocket error.",
+          category: "SYSTEM",
+          timestamp: new Date().toISOString()
+        };
+        setLogs((prev) => [...prev, entry]);
+      };
+    };
+
+    connect();
+
+    const handleOnline = () => {
+      if (!socket || socket.readyState === WebSocket.CLOSED) {
+        connect();
       }
     };
+    window.addEventListener('online', handleOnline);
 
-    socket.onclose = () => {
-      const entry: LogEntry = {
-        message: "Connection closed.",
-        category: "SYSTEM",
-        timestamp: new Date().toISOString()
-      };
-      setLogs((prev) => [...prev, entry]);
-    };
-
-    socket.onerror = () => {
-      const entry: LogEntry = {
-        message: "WebSocket error.",
-        category: "SYSTEM",
-        timestamp: new Date().toISOString()
-      };
-      setLogs((prev) => [...prev, entry]);
-    };
-
-    ws.current = socket;
     return () => {
+      active = false;
+      window.removeEventListener('online', handleOnline);
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      if (socket) {
+        socket.onclose = null;
+        if (socket.readyState === WebSocket.CONNECTING) {
+          const s = socket;
+          s.onopen = () => s.close();
+        } else if (socket.readyState === WebSocket.OPEN) {
+          socket.close();
+        }
+      }
       if (ws.current === socket) {
-        socket.close();
         ws.current = null;
       }
     };
@@ -144,7 +197,7 @@ export default function LogConsole() {
             log.category === "AGENT" ? "border-green-500 text-green-400" :
             "border-gray-700 text-gray-500"
           )}>
-            <span className="opacity-50 mr-2">[{new Date(log.timestamp).toLocaleTimeString('en-IN')}]</span>
+            <span className="opacity-50 mr-2">[{formatTimeToIST(log.timestamp)}]</span>
             <span className="font-bold mr-2">{log.category}:</span>
             {log.message}
           </div>

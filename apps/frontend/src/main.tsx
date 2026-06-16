@@ -24,6 +24,7 @@ const PredictiveAnalyticsPage = lazy(() => import('./pages/PredictiveAnalyticsPa
 const SentimentAnalysisPage = lazy(() => import('./pages/SentimentAnalysisPage'));
 const AiSuggestionPage = lazy(() => import('./pages/AiSuggestionPage'));
 const ErrorPage = lazy(() => import('./pages/ErrorPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 
 // Components
 const LoginForm = lazy(() => import('@/components/auth/LoginForm').then(m => ({ default: m.LoginForm })));
@@ -79,6 +80,11 @@ const router = createBrowserRouter([
         path: "/register",
         element: <AuthLayout />,
         children: [{ index: true, element: <RegisterForm /> }]
+      },
+      {
+        path: "/forgot-password",
+        element: <AuthLayout />,
+        children: [{ index: true, element: <ForgotPasswordPage /> }]
       },
       {
         path: "/dashboard",

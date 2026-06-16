@@ -163,7 +163,7 @@ export function Footer() {
         <div className="pt-16 border-t border-[#F0F0F3] dark:border-white/5 flex flex-col lg:flex-row justify-between items-center gap-12">
           <div className="flex flex-col md:flex-row items-center gap-8 text-[11px] font-black uppercase tracking-[0.2em] text-[#86868B]">
             <div className="flex items-center gap-6">
-              <span>© 2026 ScoutForge AI Intelligence Protocol.</span>
+              <span>(c) 2026 ScoutForge AI Intelligence Protocol.</span>
               <div className="hidden md:block w-1.5 h-1.5 rounded-full bg-[#E5E5EA] dark:bg-white/10" />
               <div className="flex items-center gap-3">
                 <span className="text-[#1D1D1F] dark:text-white">Built by Deepu Kumar</span>

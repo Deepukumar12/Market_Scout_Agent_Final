@@ -1,5 +1,6 @@
 import { Zap, ExternalLink, Calendar, Tag, ChevronRight } from 'lucide-react';
 import { SevenDaySignal } from '@/store/intelStore';
+import { formatShortDateToIST } from '@/utils/dateUtils';
 
 interface SevenDayReleasesProps {
   features: SevenDaySignal[];
@@ -28,8 +29,7 @@ const SevenDayReleases = ({
           {title.split(' ')[0]} <span className="text-[#AF52DE]">{title.split(' ').slice(1).join(' ')}</span>
         </h2>
         <div className="p-10 rounded-3xl bg-[#F5F5F7] dark:bg-white/5 border border-dashed border-[#E5E5EA] dark:border-white/10">
-          <p className="text-[10px] font-black text-[#86868B] uppercase tracking-widest italic mb-2">No innovation signals detected</p>
-          <p className="text-xs font-medium text-[#6E6E73] italic">Technical releases within the 7-day window will appear here automatically.</p>
+          <p className="text-sm font-medium text-[#6E6E73] italic">No updates found within the last 7 days.</p>
         </div>
       </div>
     );
@@ -89,7 +89,7 @@ const SevenDayReleases = ({
                         </div>
                       </div>
                       <span className="text-[10px] font-black text-[#86868B] bg-[#F5F5F7] dark:bg-white/5 px-3 py-1 rounded-full uppercase tracking-widest border border-[#E5E5EA] dark:border-white/10">
-                        {feature.release_date && feature.release_date !== 'YYYY-MM-DD' ? feature.release_date : new Date().toLocaleDateString('en-IN')}
+                        {formatShortDateToIST(feature.release_date && feature.release_date !== 'YYYY-MM-DD' ? feature.release_date : new Date())}
                       </span>
                     </div>
 
@@ -98,11 +98,25 @@ const SevenDayReleases = ({
                     </h4>
 
                     <div className="max-h-[160px] overflow-y-auto custom-scrollbar pr-2 mb-8 flex-1">
-                      <p className="text-[12px] text-[#6E6E73] dark:text-[#86868B] font-medium italic leading-relaxed">
+                      <p className="text-[12px] text-[#6E6E73] dark:text-[#86868B] font-medium italic leading-relaxed mb-4">
                         {feature.summary 
                           ? feature.summary.replace(/Google Cloud Logo News|Skip to content|Home Search|Contact Sales|Try for free/gi, '').trim() 
                           : "Technical innovation detected within the surveillance window. Analyzing impact on market trajectory."}
                       </p>
+                      {(feature.rice_score !== undefined && feature.rice_score !== null || feature.curd_score !== undefined && feature.curd_score !== null) && (
+                        <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest">
+                          {feature.rice_score !== undefined && feature.rice_score !== null && (
+                            <div className="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/25">
+                              RICE: {feature.rice_score}
+                            </div>
+                          )}
+                          {feature.curd_score !== undefined && feature.curd_score !== null && (
+                            <div className="px-2.5 py-1 rounded-lg bg-pink-500/10 text-pink-500 border border-pink-500/25">
+                              CURD: {feature.curd_score}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between pt-6 border-t border-[#E5E5EA] dark:border-white/5 mt-auto">

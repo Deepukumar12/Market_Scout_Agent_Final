@@ -28,7 +28,7 @@ DATE_PATTERNS = [
     ('time', {'datetime': True}),  # <time datetime="...">
 ]
 
-# Step 4 – Keep: article must contain at least ONE signal that makes it
+# Step 4 - Keep: article must contain at least ONE signal that makes it
 # relevant to competitive intelligence: product, feature, API, release,
 # news about the company, blog, etc.  We are intentionally broad here
 # so that news articles, press releases, product announcements, and blog
@@ -44,7 +44,7 @@ REQUIRED_TECHNICAL_KEYWORDS = re.compile(
     re.I,
 )
 
-# Step 4 – Exclude ONLY pages that are purely about jobs/spam/marketing opt-ins
+# Step 4 - Exclude ONLY pages that are purely about jobs/spam/marketing opt-ins
 # (require MANY matches so that normal pages with a footer job link still pass)
 NON_TECHNICAL_BLOCK = re.compile(
     r'\b(apply\s*now|job\s*opening|we\'?re\s*hiring|send\s*your\s*resume|'
@@ -206,7 +206,7 @@ async def firecrawl_scrape(url: str) -> Optional[Dict[str, Any]]:
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.9",
             }
-            async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers=headers) as client:
+            async with httpx.AsyncClient(timeout=5, follow_redirects=True, headers=headers) as client:
                 resp = await client.get(url)
                 if resp.status_code >= 400:
                     logger.warning(f"Direct fetch failed for {url} with status {resp.status_code}")
@@ -233,7 +233,7 @@ async def firecrawl_scrape(url: str) -> Optional[Dict[str, Any]]:
         try:
             import asyncio
             for attempt in range(2):
-                async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+                async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
                     resp = await client.post(
                         "https://api.firecrawl.dev/v1/scrape",
                         headers={
@@ -333,66 +333,118 @@ async def scrape_url(url: str) -> Optional[Dict[str, Any]]:
     """
     Main entry point for scraping.
     Tiered Fallback: Firecrawl -> Crawl4AI -> Direct Fetch (httpx/bs4)
+    Supports dynamic circuit breakers and cache storage in Redis.
     """
+    from src.shared.redis_service import redis_service
+    import hashlib
+    import json
+    
+    # 0. Check cache first
+    h = hashlib.md5(url.encode("utf-8")).hexdigest()
+    cache_key = f"scrape_cache:{h}"
+    try:
+        cached = await redis_service.get(cache_key)
+        if cached:
+            logger.info(f"[Scraper] Cache hit for URL: {url}")
+            return json.loads(cached)
+    except Exception as e:
+        logger.warning(f"[Scraper] Redis cache fetch failed: {e}")
+
+    result = None
+
     # 1. Primary: Firecrawl (optional)
     try:
-        # Allow disabling Firecrawl via settings (useful when credits are exhausted)
-        firecrawl_enabled = getattr(settings, "FIRECRAWL_ENABLED", True)
+        firecrawl_enabled = getattr(settings, "FIRECRAWL_ENABLED", False)
         firecrawl_key = getattr(settings, "FIRECRAWL_API_KEY", "")
-        if firecrawl_enabled and firecrawl_key:
-            result = await firecrawl_scrape(url)
-            if result and result.get("content") and len(result["content"].strip()) > 300:
+        
+        is_firecrawl_broken = False
+        try:
+            is_firecrawl_broken = await redis_service.get("circuit_breaker:firecrawl")
+        except: pass
+
+        if firecrawl_enabled and firecrawl_key and not is_firecrawl_broken:
+            res = await firecrawl_scrape(url)
+            if res:
                 logger.info(f"Firecrawl success for {url}")
-                return result
-        elif not firecrawl_enabled:
-            logger.info("Firecrawl disabled via settings; skipping.")
+                result = res
+            else:
+                logger.warning(f"Firecrawl failed to scrape {url}. Activating circuit breaker.")
+                try:
+                    await redis_service.set("circuit_breaker:firecrawl", "true", expire=3600)
+                except: pass
+        else:
+            logger.info("Firecrawl skipped (disabled, empty key, or circuit broken).")
     except Exception as e:
         logger.error(f"Firecrawl failed for {url}: {e}")
+        try:
+            await redis_service.set("circuit_breaker:firecrawl", "true", expire=3600)
+        except: pass
+
     # 2. Secondary: Crawl4AI (optional)
-    try:
-        # Respect toggle to avoid errors when Crawl4AI is unavailable or disabled
-        crawl4ai_enabled = getattr(settings, "CRAWL4AI_ENABLED", True)
-        if crawl4ai_enabled:
-            logger.info(f"Switching to Crawl4AI for {url}")
-            result = await crawl4ai_scrape(url)
-            if result and result.get("content") and len(result["content"].strip()) > 300:
-                logger.info(f"Crawl4AI success for {url}")
-                return result
-        else:
-            logger.info("Crawl4AI disabled via settings; skipping.")
-    except Exception as e:
-        logger.error(f"Crawl4AI failed for {url}: {e}")
+    if not result:
+        try:
+            crawl4ai_enabled = getattr(settings, "CRAWL4AI_ENABLED", False)
+            is_crawl4ai_broken = False
+            try:
+                is_crawl4ai_broken = await redis_service.get("circuit_breaker:crawl4ai")
+            except: pass
+
+            if crawl4ai_enabled and not is_crawl4ai_broken:
+                logger.info(f"Switching to Crawl4AI for {url}")
+                res = await crawl4ai_scrape(url)
+                if res and res.get("content") and len(res["content"].strip()) > 300:
+                    logger.info(f"Crawl4AI success for {url}")
+                    result = res
+                else:
+                    logger.warning(f"Crawl4AI failed to scrape {url}. Activating circuit breaker.")
+                    try:
+                        await redis_service.set("circuit_breaker:crawl4ai", "true", expire=3600)
+                    except: pass
+            else:
+                logger.info("Crawl4AI skipped (disabled or circuit broken).")
+        except Exception as e:
+            logger.error(f"Crawl4AI failed for {url}: {e}")
+            try:
+                await redis_service.set("circuit_breaker:crawl4ai", "true", expire=3600)
+            except: pass
 
     # 3. Tertiary: Direct Fetch (httpx + BeautifulSoup)
-    try:
-        logger.info(f"Triggering Direct Fetch fallback for {url}")
-        # Re-using the logic from firecrawl_scrape (no key branch) but making it explicit here
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        }
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers=headers) as client:
-            resp = await client.get(url)
-            if resp.status_code == 200:
-                soup = BeautifulSoup(resp.text, "html.parser")
-                pub_dt = _extract_date_from_soup(soup, url)
-                content = _extract_text(soup)
-                title = (soup.title.string or "").strip() if soup.title else ""
-                
-                if len(content.strip()) > 200:
-                    logger.info(f"Direct Fetch success for {url}")
-                    return {
-                        "url": url,
-                        "domain": urlparse(url).netloc or "",
-                        "publish_date": pub_dt.isoformat() if pub_dt else None,
-                        "content": content,
-                        "title": title,
-                        "source": "direct_fetch"
-                    }
-    except Exception as e:
-        logger.error(f"Direct Fetch failed for {url}: {e}")
+    if not result:
+        try:
+            logger.info(f"Triggering Direct Fetch fallback for {url}")
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, Gecko) Chrome/122.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            }
+            async with httpx.AsyncClient(timeout=5, follow_redirects=True, headers=headers) as client:
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    pub_dt = _extract_date_from_soup(soup, url)
+                    content = _extract_text(soup)
+                    title = (soup.title.string or "").strip() if soup.title else ""
+                    
+                    if len(content.strip()) > 200:
+                        logger.info(f"Direct Fetch success for {url}")
+                        result = {
+                            "url": url,
+                            "domain": urlparse(url).netloc or "",
+                            "publish_date": pub_dt.isoformat() if pub_dt else None,
+                            "content": content,
+                            "title": title,
+                            "source": "direct_fetch"
+                        }
+        except Exception as e:
+            logger.error(f"Direct Fetch failed for {url}: {e}")
 
-    return None
+    # 4. Save cache and return
+    if result:
+        try:
+            await redis_service.set(cache_key, json.dumps(result), expire=86400) # Cache for 24 hours
+        except Exception as e:
+            logger.warning(f"[Scraper] Redis cache save failed: {e}")
+            
+    return result
 
 
 def filter_by_time_and_technical(
@@ -400,7 +452,7 @@ def filter_by_time_and_technical(
     time_window_days: int,
 ) -> list[dict[str, Any]]:
     """
-    Step 3 – Date filtering. Strictly discard if publish_date is missing or older than time_window_days.
+    Step 3 - Date filtering. Strictly discard if publish_date is missing or older than time_window_days.
     Official website updates must preserve their exact date and not shift.
     """
     now = datetime.now(timezone.utc)
@@ -433,7 +485,7 @@ def filter_content_technical_only(
     items: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """
-    Step 4 – Content filtering. Keep only articles that:
+    Step 4 - Content filtering. Keep only articles that:
     - Contain at least one required technical keyword (API, Feature, Release, Update, etc.)
     - Are not dominated by non-technical content (hiring, funding, events, marketing).
     """

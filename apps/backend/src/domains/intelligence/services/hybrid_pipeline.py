@@ -35,7 +35,7 @@ def _empty_7day_report(company_name: str) -> str:
     date_list = [((today - timedelta(days=i)).strftime("%d-%m-%Y")) for i in range(7)]
     
     lines: list[str] = [f"# {company_name} - Technical Intelligence (Past 7 Days)", ""]
-    lines.append("⚙️ Key Features & Endpoints if available for the given competitor last 7 days")
+    lines.append("[CONFIG] Key Features & Endpoints if available for the given competitor last 7 days")
     lines.append("")
 
     for i in range(7):
@@ -43,16 +43,16 @@ def _empty_7day_report(company_name: str) -> str:
         date_str = date_list[i]
         lines.append(f"### Day {day_num} : ({date_str})")
         lines.append("")
-        lines.append("**📸 1. Image Search**")
+        lines.append("**[SNAPSHOT] 1. Image Search**")
         lines.append("None found.")
         lines.append("")
-        lines.append("**📍 2. Maps / Local Search**")
+        lines.append("**[LOCATION] 2. Maps / Local Search**")
         lines.append("None found.")
         lines.append("")
-        lines.append("**🎥 3. YouTube Search**")
+        lines.append("**[VIDEO] 3. YouTube Search**")
         lines.append("None found.")
         lines.append("")
-        lines.append("**🛍️ 4. Shopping Data**")
+        lines.append("**[SHOP] 4. Shopping Data**")
         lines.append("None found.")
         lines.append("")
         lines.append("---")
@@ -122,7 +122,7 @@ async def run_hybrid_pipeline(company_name: str, urls: List[str], cached_article
                 logger.warning(f"Failed to process {url}: {e}")
 
     if not article_inputs:
-        # Don't fail hard — still return a well-formed past-7-days report.
+        # Don't fail hard - still return a well-formed past-7-days report.
         return _empty_7day_report(company_name)
 
     # 2) Batch LLM summarization (grouped + parallel for speed)

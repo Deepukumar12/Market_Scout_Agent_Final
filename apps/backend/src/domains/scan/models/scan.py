@@ -30,6 +30,8 @@ class ScanFeature(BaseModel):
     confidence_score: float = Field(default=70.0, ge=0, le=100)
     reasoning_path: str = Field(default="", description="Explainable AI reasoning path for this feature extraction.")
     guardrail_flags: List[str] = Field(default_factory=list, description="AI Guardrail triggers/checks.")
+    rice_score: Optional[float] = None
+    curd_score: Optional[float] = None
 
 
 class GitHubRepoSummary(BaseModel):

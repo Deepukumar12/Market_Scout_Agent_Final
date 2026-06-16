@@ -15,13 +15,13 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
   return (
     <section className="space-y-6">
 
-      {/* ── Row 1: Wide horizontal summary banner ── */}
+      {/* -- Row 1: Wide horizontal summary banner -- */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full flex flex-col lg:flex-row items-stretch gap-0 rounded-[36px] overflow-hidden border border-[#E5E5EA] dark:border-white/10 shadow-apple bg-white dark:bg-[#0A0A0C]"
       >
-        {/* Left – summary text */}
+        {/* Left - summary text */}
         <div className="flex-1 px-10 py-8 flex flex-col justify-center gap-4 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent pointer-events-none" />
 
@@ -68,7 +68,7 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
         {/* Divider */}
         <div className="hidden lg:block w-[1px] bg-[#E5E5EA] dark:bg-white/10 self-stretch" />
 
-        {/* Right – gauges panel (wide, short) */}
+        {/* Right - gauges panel (wide, short) */}
         <div className="flex items-center justify-center gap-12 px-14 py-8 bg-[#FAFAFA] dark:bg-[#111] shrink-0">
           <CircularGauge value={data.confidence_score} size={80} strokeWidth={9} color="#0071E3" label={data.confidence_score.toString()} sublabel="Confidence" />
           <div className="self-stretch w-[1px] bg-[#E5E5EA] dark:bg-white/10 rounded-full" />
@@ -76,7 +76,7 @@ const MissionBriefing = ({ data }: MissionBriefingProps) => {
         </div>
       </motion.div>
 
-      {/* ── Row 2: Risks + Opportunities side-by-side ── */}
+      {/* -- Row 2: Risks + Opportunities side-by-side -- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* Technical Risks */}

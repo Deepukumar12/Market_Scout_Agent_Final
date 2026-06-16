@@ -61,6 +61,7 @@ async def run_scan(request: ScanRequest, user_id: str = None) -> Optional[ScanRe
         focus_area="technical updates",
         time_window_days=time_window_days,
         current_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        user_id=user_id,
         intent_analysis={},
         search_queries=[],
         search_results=[],
@@ -152,12 +153,12 @@ async def run_scan(request: ScanRequest, user_id: str = None) -> Optional[ScanRe
     
     try:
         results = await asyncio.gather(
-            langgraph_task,
-            github_task,
-            company_task,
-            financials_task,
-            social_task,
-            visibility_task,
+            asyncio.wait_for(langgraph_task, timeout=30.0),
+            asyncio.wait_for(github_task, timeout=8.0),
+            asyncio.wait_for(company_task, timeout=8.0),
+            asyncio.wait_for(financials_task, timeout=8.0),
+            asyncio.wait_for(social_task, timeout=8.0),
+            asyncio.wait_for(visibility_task, timeout=8.0),
             return_exceptions=True
         )
     finally:
@@ -202,6 +203,22 @@ async def run_scan(request: ScanRequest, user_id: str = None) -> Optional[ScanRe
         except Exception as ex:
             logger.error(f"Failed to parse threat-analyzed feature: {ex}")
 
+    # -- STRICT COMPANY IDENTITY: Filter news before returning -----------------
+    # Only include search results that explicitly mention the target company.
+    # This prevents cross-company data from appearing in the news feed.
+    company_lower = company.lower()
+    raw_news = final_state.get("search_results", [])
+    filtered_news = [
+        n for n in raw_news
+        if company_lower in (n.get("title") or "").lower()
+        or company_lower in (n.get("snippet") or "").lower()
+        or n.get("source") in ("rss", "github")  # already company-scoped
+    ]
+    logger.info(
+        f"[scan_pipeline] News identity filter: {len(raw_news)} raw -> "
+        f"{len(filtered_news)} company-verified results for '{company}'"
+    )
+
     result = ScanResponse(
         competitor=company,
         scan_date=scan_date_iso,
@@ -212,7 +229,7 @@ async def run_scan(request: ScanRequest, user_id: str = None) -> Optional[ScanRe
         github=github_data,
         company=company_data,
         financials=FinancialData(**financials_data) if financials_data else None,
-        news=final_state.get("search_results", [])[:15],
+        news=filtered_news[:15],
         search_visibility=visibility_data,
         social=social_data,
         executive_summary=final_state.get("briefing_markdown", "Analysis Complete. Check dashboard."),

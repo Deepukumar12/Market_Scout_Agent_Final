@@ -64,7 +64,7 @@ class GeminiClient:
     async def validate_organization_guardrail(self, company_name: str, max_retries: int = 2) -> bool:
         """
         Enterprise Guardrail: Verify if the input is a real-world organization.
-        Utilizes AGENT 1 — GUARDRAIL AGENT.
+        Utilizes AGENT 1 - GUARDRAIL AGENT.
         """
         import asyncio
 
@@ -97,7 +97,7 @@ class GeminiClient:
 
         # === LAYER 2: LLM Verification (AGENT 1) ===
         prompt_1_template = """<guardrail_check>
-You are AGENT 1 — GUARDRAIL AGENT for MarketScout Pro. Evaluate the user's request against the boundaries below.
+You are AGENT 1 - GUARDRAIL AGENT for MarketScout Pro. Evaluate the user's request against the boundaries below.
 
 USER REQUEST:
 \"\"\"
@@ -190,7 +190,7 @@ RETURN FORMAT (strict JSON, no markdown, no extra keys):
         focus_area: str = "all new technical features and product updates"
     ) -> list[str]:
         """
-        Step 1 – Query Planning (LLM). Returns exactly 8 precise, diverse search queries.
+        Step 1 - Query Planning (LLM). Returns exactly 8 precise, diverse search queries.
         Utilizes Prompt 2 from market_scout_agent_production_prompts.md.
         """
         from datetime import datetime, timezone
@@ -219,10 +219,10 @@ You must generate exactly 8 queries, one for each of the following templates:
 
 QUERY DESIGN RULES:
 1. Each query must target the corresponding strategy template.
-2. Every query MUST include a date signal — use the current year ({current_year}) and/or month ({current_month}) or "latest" to maximize recency.
-3. Queries must be 4–8 words, specific, and search-engine optimized.
+2. Every query MUST include a date signal - use the current year ({current_year}) and/or month ({current_month}) or "latest" to maximize recency.
+3. Queries must be 4-8 words, specific, and search-engine optimized.
 4. Do NOT use quotes, dashes, or boolean operators unless critical.
-5. Avoid vague terms like "news" alone — always pair with the company name and a feature/product keyword.
+5. Avoid vague terms like "news" alone - always pair with the company name and a feature/product keyword.
 
 RETURN FORMAT (strict JSON array of 8 objects, no markdown, no prose):
 [
@@ -348,7 +348,7 @@ RETURN FORMAT (strict JSON array of 8 objects, no markdown, no prose):
         max_retries: int = 2
     ) -> List[Dict[str, Any]]:
         """
-        Step 3 – Fact Verification (LLM).
+        Step 3 - Fact Verification (LLM).
         Utilizes Prompt 4 from market_scout_agent_production_prompts.md.
         """
         from datetime import datetime, timezone, timedelta
@@ -366,22 +366,22 @@ COMPETITOR: {company_name}
 SCRAPED DATA BATCH:
 {scraped_json}
 
-VERIFICATION RULES — apply to each feature entry:
+VERIFICATION RULES - apply to each feature entry:
 
-RULE 1 — DATE VALIDATION (MOST IMPORTANT):
-- If `detected_date` or `date_mentioned` is clearly BEFORE {cutoff_date} → DISCARD
-- If `detected_date` is null AND no date signal anywhere on the page → DISCARD (cannot verify recency)
-- If `detected_date` is within the last 7 days → KEEP (tentatively)
+RULE 1 - DATE VALIDATION (MOST IMPORTANT):
+- If `detected_date` or `date_mentioned` is clearly BEFORE {cutoff_date} -> DISCARD
+- If `detected_date` is null AND no date signal anywhere on the page -> DISCARD (cannot verify recency)
+- If `detected_date` is within the last 7 days -> KEEP (tentatively)
 - Accepted date formats: ISO 8601, "June 3, 2026", "3 days ago", "last week" (relative to {current_date})
 - "Last week" is acceptable ONLY if today minus 7 days still falls within the window
-- A copyright year alone (e.g., "© 2022") is NOT a publication date — do not use it for verification
+- A copyright year alone (e.g., "(c) 2022") is NOT a publication date - do not use it for verification
 
-RULE 2 — CONTENT LEGITIMACY:
+RULE 2 - CONTENT LEGITIMACY:
 - Feature must describe a genuinely NEW technical capability, not a price change, rebrand, or job posting
 - Feature must be attributable to the target company ({company_name}), not a third party
-- Feature must have a source URL — anonymous, undated claims without a URL are DISCARDED
+- Feature must have a source URL - anonymous, undated claims without a URL are DISCARDED
 
-RULE 3 — DUPLICATE DETECTION:
+RULE 3 - DUPLICATE DETECTION:
 - If two entries describe the same feature (even from different sources), merge them and keep the one with the most specific excerpt and earliest reliable source date
 
 RETURN FORMAT (strict JSON array of objects):
@@ -504,7 +504,7 @@ CONFIDENCE SCORING:
         raw_scraped_count: int = 0
     ) -> str:
         """
-        Step 4 – Synthesis (LLM).
+        Step 4 - Synthesis (LLM).
         Utilizes Prompt 5 from market_scout_agent_production_prompts.md.
         """
         from datetime import datetime, timezone, timedelta
@@ -558,7 +558,7 @@ Analysis Window: {cutoff_date} to {current_date}
 ---
 
 ## Executive Summary
-<Write 2–3 sentences summarizing the strategic theme of this week's releases. What is this competitor clearly investing in? What does this signal about their product direction?>
+<Write 2-3 sentences summarizing the strategic theme of this week's releases. What is this competitor clearly investing in? What does this signal about their product direction?>
 
 ---
 
@@ -636,11 +636,11 @@ List all unique source URLs with dates. Format: 1. [Page Title](URL) - Published
 
 ---
 IMPORTANT SYNTHESIS RULES:
-- Write for a technical product manager or engineer audience — no marketing language.
+- Write for a technical product manager or engineer audience - no marketing language.
 - Every claim MUST be backed by a citation from the verified data.
-- If ZERO features passed verification → replace the entire output with exactly: "No verified technical feature releases found within the last 7 days."
+- If ZERO features passed verification -> replace the entire output with exactly: "No verified technical feature releases found within the last 7 days."
 - Do NOT invent features or fill gaps with speculation.
-- Confidence: LOW items must include a disclaimer: "⚠️ Low confidence — verify manually before acting on this."
+- Confidence: LOW items must include a disclaimer: "[WARNING] Low confidence - verify manually before acting on this."
 </synthesizer>"""
 
         verified_json = json.dumps(keep_items, indent=2)
@@ -861,7 +861,7 @@ IMPORTANT:
         instructions = """
 You are the ScoutForge AI analysis step, operating under Virtusa Enterprise Engineering Standards. You MUST return ONLY valid JSON matching the given schema.
 
-CRITICAL – NO HALLUCINATION & STRICT RAG DATA BINDING:
+CRITICAL - NO HALLUCINATION & STRICT RAG DATA BINDING:
 - RAG Summarization: Summaries MUST be strictly source-grounded. Prevent hallucinations and unsupported claims. Every generated insight, competitor analysis, and technical summary must be factual and strictly based on the provided verified source documents (Official company websites, Product documentation, API documentation, Technical blogs, Research papers, Open-source repositories, Product release notes, Regulatory documents, Investor reports, Compliance documents).
 - features: Extract ONLY technical product changes (API releases, infrastructure, UI/UX, SDK updates) from scraped_sources. Ignore marketing/funding PR.
 - company: Use 'intel_context.company' if available. If missing, synthesize a professional description from 'scraped_sources'.
@@ -1022,7 +1022,7 @@ Return only the JSON object.
         max_retries: int = 2
     ) -> Dict[str, Any]:
         """
-        Prompt 3 — URL Scraper Instruction.
+        Prompt 3 - URL Scraper Instruction.
         Extracts raw page content necessary for competitive feature analysis.
         """
         from datetime import datetime, timezone
@@ -1046,7 +1046,7 @@ EXTRACTION RULES:
    - All date references within the page body
    - All relevant paragraphs describing new functionality (verbatim, max 3 sentences per feature)
    - All outbound links that appear to lead to further documentation or release notes
-2. DO NOT summarize or paraphrase at this stage — extract raw data only
+2. DO NOT summarize or paraphrase at this stage - extract raw data only
 3. If the page requires login or returns an error, output: {{ "status": "INACCESSIBLE", "reason": "<error type>" }}
 4. If the page is clearly irrelevant (e.g., a homepage with no feature content), output: {{ "status": "IRRELEVANT", "reason": "no feature content detected" }}
 
@@ -1135,7 +1135,7 @@ RETURN FORMAT (strict JSON):
         max_retries: int = 2
     ) -> Dict[str, Any]:
         """
-        Prompt 6 — Error & Edge Case Handler.
+        Prompt 6 - Error & Edge Case Handler.
         Assess the pipeline failure and return a structured recovery recommendation.
         """
         import json
@@ -1225,7 +1225,7 @@ RETURN FORMAT (strict JSON):
         max_retries: int = 2
     ) -> Dict[str, Any]:
         """
-        Prompt 7 — Multi-Competitor Batch Mode.
+        Prompt 7 - Multi-Competitor Batch Mode.
         Rank companies, plan execution, and returns search plans for each.
         """
         from datetime import datetime, timezone
@@ -1240,10 +1240,10 @@ TODAY'S DATE: {current_date}
 COMPANIES REQUESTED: {companies_json}
 USER'S FOCUS: {user_focus_area}
 
-STEP 1 — PRIORITIZATION:
+STEP 1 - PRIORITIZATION:
 Rank the companies in order of expected competitive relevance to a startup in the {user_focus_area} space. Highest priority = most likely to have released new features this week based on their known release cadence.
 
-STEP 2 — EXECUTION PLAN:
+STEP 2 - EXECUTION PLAN:
 For each company (in priority order), return the inputs for Prompt 2 (Search Planner). Each company gets its own independent 4-query search plan.
 
 RETURN FORMAT (strict JSON):

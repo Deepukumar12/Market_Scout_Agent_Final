@@ -43,7 +43,7 @@ async def run_agent(company_name: str) -> str:
     else:
         await agent_logger.log(f"Infrastructure: Discovered {len(urls)} relevant technical intelligence nodes.", "AGENT")
 
-    # 3–5. Hybrid pipeline: scrape -> clean -> extract -> LSA -> per-article summary -> store -> final report
+    # 3-5. Hybrid pipeline: scrape -> clean -> extract -> LSA -> per-article summary -> store -> final report
     await agent_logger.log("Data Gathering: Running token-safe pipeline (scrape, cache, summarize)...", "AGENT")
     report = await run_hybrid_pipeline(company_name, urls, cached_articles=cached_articles)
     await agent_logger.log("Final Report Compiled. Ready for transmission.", "SYSTEM")

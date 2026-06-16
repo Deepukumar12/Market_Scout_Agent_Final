@@ -10,7 +10,8 @@ from src.domains.intelligence.controllers.intel_data import (
 from src.domains.users.models.user import User
 
 async def main():
-    os.environ["MONGODB_URL"] = "mongodb://localhost:27017"
+    if "MONGODB_URL" not in os.environ:
+        os.environ["MONGODB_URL"] = "mongodb://localhost:27017"
     try:
         from src.core.database import db
         await db.connect()
@@ -31,8 +32,11 @@ async def main():
 
     print("\n--- Testing Endpoints ---")
     try:
+        from fastapi import Response
+        mock_response = Response()
+        
         print("\n1. Global Metrics:")
-        metrics = await get_global_metrics(test_user)
+        metrics = await get_global_metrics(competitor="all", current_user=test_user)
         print(metrics.model_dump_json(indent=2))
         
         print("\n2. Analytics:")
@@ -40,7 +44,7 @@ async def main():
         print(analytics.model_dump_json(indent=2))
         
         print("\n3. Market Comparison:")
-        comparison = await get_market_comparison(test_user)
+        comparison = await get_market_comparison(competitor="all", current_user=test_user)
         print([c.model_dump_json() for c in comparison])
         
         print("\n4. Sentiment Matrix:")
@@ -52,8 +56,17 @@ async def main():
         print(risk.model_dump_json(indent=2))
         
         print("\n6. Mission Briefing:")
-        briefing = await get_mission_briefing(test_user)
+        briefing = await get_mission_briefing(competitor="all", current_user=test_user)
         print(briefing.model_dump_json(indent=2))
+        
+        print("\n7. Activity Timeline:")
+        timeline = await get_activity_timeline(response=mock_response, competitor="all", current_user=test_user)
+        print(timeline.model_dump_json(indent=2))
+        
+        from src.domains.intelligence.controllers.intel_data import get_last_seven_days_releases
+        print("\n8. Last Seven Days Releases:")
+        last_7_days = await get_last_seven_days_releases(response=mock_response, competitor="all", current_user=test_user)
+        print([s.model_dump_json() for s in last_7_days])
         
         print("\n--- VERIFICATION SUCCESS ---")
         print("All endpoints resolved successfully with DB-driven data and returned strict Pydantic models.")

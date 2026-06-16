@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/utils';
 import { getCompetitors } from '@/services/api';
+import { useCompetitorStore } from '@/store/competitorStore';
 
 const ThemeToggle = () => {
   const { theme, toggleTheme } = useTheme();
@@ -57,6 +58,13 @@ const ThemeToggle = () => {
   );
 };
 
+const getAvatarSrc = (url: string | null | undefined) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  return `${baseUrl.replace(/\/$/, '')}${url}`;
+};
+
 interface NavbarProps {
   onAnalyzeClick: () => void;
   onNotificationClick: () => void;
@@ -77,6 +85,12 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
   const [searchQuery, setLocalSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  
+  const { competitors, selectedCompetitorId, setSelectedCompetitorId, fetchCompetitors } = useCompetitorStore();
+  
+  useEffect(() => {
+    fetchCompetitors();
+  }, []);
   useEffect(() => {
     const fetchResults = async () => {
       if (!searchQuery.trim()) {
@@ -132,7 +146,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 cursor-pointer"
+          className="flex items-center gap-2 cursor-pointer font-sans"
           onClick={() => navigate('/dashboard')}
         >
           <div className="w-10 h-10 bg-[#0071E3] rounded-xl flex items-center justify-center shadow-lg shadow-[#0071E3]/20 overflow-hidden text-white">
@@ -140,6 +154,25 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
           </div>
           <span className="text-2xl font-black text-[#1D1D1F] dark:text-white tracking-tighter uppercase italic leading-none">SCOUTFORGE<span className="text-blue-600">AI</span></span>
         </motion.div>
+
+        {competitors.length > 0 && (
+          <div className="relative group/target hidden lg:block">
+            <select
+              value={selectedCompetitorId || ''}
+              onChange={(e) => setSelectedCompetitorId(e.target.value || null)}
+              className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:border-[#0071E3]/30 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#1D1D1F] dark:text-white outline-none cursor-pointer appearance-none pr-8 select-none transition-all shadow-sm"
+            >
+              {competitors.map((c) => (
+                <option key={c.id || c._id} value={c.id || c._id} className="bg-white dark:bg-[#1D1D1F] text-[#1D1D1F] dark:text-white">
+                  TARGET: {c.name.toUpperCase()}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#86868B]">
+              <ChevronDown size={12} />
+            </div>
+          </div>
+        )}
 
         <div className="relative max-w-md w-full group hidden md:block" ref={searchRef}>
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none z-10">
@@ -257,7 +290,15 @@ const Navbar: React.FC<NavbarProps> = ({ onAnalyzeClick, onNotificationClick, on
               className="flex items-center gap-2 p-1 pl-1 pr-3 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] border border-transparent hover:border-[#E5E5EA] dark:hover:border-white/10 transition-all"
             >
               <div className="w-8 h-8 bg-gradient-to-br from-[#0071E3] to-[#00c6ff] rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
-                <User size={16} />
+                {user?.avatar_url ? (
+                  <img 
+                    src={getAvatarSrc(user.avatar_url)} 
+                    alt="User Avatar" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={16} />
+                )}
               </div>
               <div className="hidden sm:flex flex-col items-start leading-tight">
                 <span className="text-sm font-bold text-[#1D1D1F] dark:text-white">
