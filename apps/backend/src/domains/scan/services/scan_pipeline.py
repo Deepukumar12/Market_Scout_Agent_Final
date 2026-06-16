@@ -153,7 +153,7 @@ async def run_scan(request: ScanRequest, user_id: str = None) -> Optional[ScanRe
     
     try:
         results = await asyncio.gather(
-            asyncio.wait_for(langgraph_task, timeout=30.0),
+            asyncio.wait_for(langgraph_task, timeout=300.0),
             asyncio.wait_for(github_task, timeout=8.0),
             asyncio.wait_for(company_task, timeout=8.0),
             asyncio.wait_for(financials_task, timeout=8.0),
@@ -168,7 +168,10 @@ async def run_scan(request: ScanRequest, user_id: str = None) -> Optional[ScanRe
 
     final_state = results[0]
     if isinstance(final_state, Exception):
-        logger.error(f"LangGraph pipeline failed: {final_state}")
+        import traceback
+        logger.error(f"LangGraph pipeline failed: {type(final_state)} - {final_state}")
+        tb = traceback.format_exception(type(final_state), final_state, final_state.__traceback__)
+        logger.error("".join(tb))
         return None
         
     if final_state.get("errors"):
