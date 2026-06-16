@@ -5,6 +5,7 @@ const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : '/api/v1',
     headers: {
         'Content-Type': 'application/json',
+        'Bypass-Tunnel-Reminder': 'true',
     },
 });
 
@@ -64,7 +65,8 @@ api.interceptors.response.use(
                     try {
                         const response = await axios.post(
                             import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/refresh` : '/api/v1/auth/refresh',
-                            { refresh_token: refreshToken }
+                            { refresh_token: refreshToken },
+                            { headers: { 'Bypass-Tunnel-Reminder': 'true' } }
                         );
 
                         const { access_token, refresh_token } = response.data;

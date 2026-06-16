@@ -28,7 +28,11 @@ export class PlatformClient {
   }
 
   private getHeaders() {
-    return this.token ? { Authorization: `Bearer ${this.token}` } : {};
+    const baseHeaders = this.token ? { Authorization: `Bearer ${this.token}` } : {};
+    return {
+      ...baseHeaders,
+      'Bypass-Tunnel-Reminder': 'true'
+    };
   }
 
   async login(username: string, password: string) {
@@ -38,7 +42,10 @@ export class PlatformClient {
 
     try {
       const response = await axios.post(`${this.config.backendUrl}/api/v1/auth/login`, formData, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Bypass-Tunnel-Reminder': 'true'
+        }
       });
       this.setToken(response.data.access_token);
       return response.data;
@@ -50,7 +57,9 @@ export class PlatformClient {
 
   async register(data: any) {
     try {
-      const response = await axios.post(`${this.config.backendUrl}/api/v1/auth/register`, data);
+      const response = await axios.post(`${this.config.backendUrl}/api/v1/auth/register`, data, {
+        headers: { 'Bypass-Tunnel-Reminder': 'true' }
+      });
       this.setToken(response.data.access_token);
       return response.data;
     } catch (error) {
