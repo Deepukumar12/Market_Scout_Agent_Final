@@ -18,7 +18,8 @@ async def get_all_competitors():
         for comp in competitors:
             result.append({
                 "name": comp.get("name"),
-                "user_id": str(comp.get("user_id")) if comp.get("user_id") else None
+                "user_id": str(comp.get("user_id")) if comp.get("user_id") else None,
+                "website": comp.get("url") or comp.get("website") or ""
             })
 
         return result

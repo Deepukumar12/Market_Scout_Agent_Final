@@ -16,7 +16,7 @@ from src.core.database import db
 logger = logging.getLogger(__name__)
 
 
-async def async_run_auto_scan(target_user_id: str = None):
+async def async_run_auto_scan(target_user_id: str = None, is_manual_trigger: bool = False):
     """
     Async logic for competitor scans and PDF report generation.
     """
@@ -29,7 +29,6 @@ async def async_run_auto_scan(target_user_id: str = None):
     try:
         # [OK] Refactored to await async database call
         competitors = await get_all_competitors()
-        is_manual_trigger = target_user_id is not None
 
         if not competitors:
             logger.warning("[WARNING] No competitors found in database")
@@ -89,11 +88,23 @@ async def async_run_auto_scan(target_user_id: str = None):
                 try:
                     now = datetime.now(timezone.utc)
                     
-                    # [OK] 1. Check for fresh data (24h). If manual, force dynamic 100% fresh.
-                    fresh_features = await get_cached_features(company, limit=1, days=1) if not is_manual_trigger else None
+                    # [OK] 1. Check for fresh scan (24h). If manual, force dynamic 100% fresh.
+                    has_fresh_scan = False
+                    if not is_manual_trigger:
+                        competitor_doc = await db.db["competitors"].find_one({
+                            "name": {"$regex": f"^{company}$", "$options": "i"},
+                            "user_id": str(user_id)
+                        })
+                        if competitor_doc and competitor_doc.get("last_scan"):
+                            last_scan_time = competitor_doc["last_scan"]
+                            if last_scan_time.tzinfo is None:
+                                last_scan_time = last_scan_time.replace(tzinfo=timezone.utc)
+                            if datetime.now(timezone.utc) - last_scan_time < timedelta(hours=24):
+                                has_fresh_scan = True
+
                     scan_result = None
 
-                    if not fresh_features:
+                    if not has_fresh_scan:
                         logger.info(f"[REFRESH] Triggering dynamic surveillance for {company} (Manual: {is_manual_trigger})...")
                         request = ScanRequest(
                             company_name=company, 
@@ -183,6 +194,43 @@ async def async_run_auto_scan(target_user_id: str = None):
                             })
                             await db.db["reports"].insert_one(report_doc)
                             logger.info(f"[REPORT] Stored background report for {company}")
+
+                            # Update the competitor's last scan time and metrics in the universe
+                            firmographics = {}
+                            if scan_result.company:
+                                firmographics = {
+                                    "logo": scan_result.company.get("logo"),
+                                    "industry": scan_result.company.get("industry"),
+                                    "location": scan_result.company.get("location"),
+                                    "employees": scan_result.company.get("metrics", {}).get("employees"),
+                                    "description": scan_result.company.get("description"),
+                                }
+                            github_summary = {
+                                "repo_count": len(scan_result.github.get("repos", [])) if scan_result.github else 0,
+                                "total_stars": sum(r.get("stargazers_count", 0) for r in scan_result.github.get("repos", [])) if scan_result.github else 0,
+                                "primary_language": scan_result.github.get("repos", [{}])[0].get("language") if scan_result.github and scan_result.github.get("repos") else "N/A"
+                            }
+                            financial_summary = scan_result.financials.model_dump() if scan_result.financials else {}
+                            
+                            update_data = {
+                                "last_scan": now,
+                                "status": "Active",
+                                "firmographics": firmographics,
+                                "financials": financial_summary,
+                                "github_metrics": github_summary,
+                                "search_metrics": {
+                                    "discovery_count": len(scan_result.search_visibility.get("exa_discovery", [])) if scan_result.search_visibility else 0,
+                                    "sources_scanned": scan_result.total_sources_scanned
+                                },
+                                "innovation_score": min(100, (scan_result.total_valid_updates * 15) + (github_summary["repo_count"] * 2) + 20),
+                                "risk_level": "High" if scan_result.total_valid_updates > 8 or (scan_result.financials and scan_result.financials.percent_change and scan_result.financials.percent_change < -5) else "Medium",
+                                "velocity": "Accelerating" if scan_result.total_valid_updates > 4 else "Steady"
+                            }
+                            await db.db["competitors"].update_one(
+                                {"name": {"$regex": f"^{company}$", "$options": "i"}, "user_id": str(user_id)},
+                                {"$set": update_data}
+                            )
+                            logger.info(f"[COMPETITOR] Updated last scan for {company}")
                     
                     # [OK] 2. Collect 7-day data for the summary brief
                     historical_features = await get_cached_features(company, limit=20, days=7)
@@ -423,6 +471,6 @@ async def check_user_email_schedules():
         
         # 2. Run the auto scan for this user
         try:
-            await async_run_auto_scan(target_user_id=user_id)
+            await async_run_auto_scan(target_user_id=user_id, is_manual_trigger=False)
         except Exception as e:
             logger.error(f"Error running scheduled auto scan for user {user_id}: {e}", exc_info=True)

@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     # The email schedule checker (user-configured schedules) is started
     # separately and only fires for users who have explicitly configured it.
     from src.domains.scan.services.scheduler import init_email_schedule_checker
-    asyncio.create_task(init_email_schedule_checker())
+    app.state.email_scheduler_task = asyncio.create_task(init_email_schedule_checker())
     yield
     # Shutdown: disconnect DB and Redis
     from src.shared.redis_service import redis_service

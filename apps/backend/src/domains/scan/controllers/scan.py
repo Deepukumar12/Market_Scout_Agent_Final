@@ -52,7 +52,7 @@ async def trigger_email_report(
     Manually trigger the PDF intelligence report to be sent to the user's email.
     """
     from src.services.ai.auto_scan_agent import async_run_auto_scan
-    background_tasks.add_task(async_run_auto_scan, str(current_user.id))
+    background_tasks.add_task(async_run_auto_scan, str(current_user.id), True)
     return {"message": "Report generation triggered successfully. It will arrive in your inbox shortly."}
 
 @router.post("/scan", response_model=None, dependencies=[Depends(scan_limiter)])
