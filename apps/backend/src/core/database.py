@@ -16,24 +16,34 @@ class Database:
         self.db = self.client[settings.DATABASE_NAME]
         print(f"Connected to DB: {settings.DATABASE_NAME}")
         
-        # Ensure database indexes are created
-        try:
-            # 1. users: unique index on email
-            await self.db["users"].create_index("email", unique=True)
-            # 2. competitors: compound index on user_id & name (unique), plus single index on name
-            await self.db["competitors"].create_index([("user_id", 1), ("name", 1)], unique=True)
-            await self.db["competitors"].create_index("name")
-            # 3. feature_updates: unique index on hash_id, compound on company_name & release_date
-            await self.db["feature_updates"].create_index("hash_id", unique=True)
-            await self.db["feature_updates"].create_index([("company_name", 1), ("release_date", -1)])
-            # 4. article_summaries: unique index on url, single index on query_tag
-            await self.db["article_summaries"].create_index("url", unique=True)
-            await self.db["article_summaries"].create_index("query_tag")
-            # 5. user_sessions: index on user_id & is_active
-            await self.db["user_sessions"].create_index([("user_id", 1), ("is_active", 1)])
+        # Ensure database indexes are created — each index is handled independently
+        # so one failure doesn't block the others.
+        index_specs = [
+            ("users",           [("email", 1)],                                      {"unique": True}),
+            ("competitors",     [("user_id", 1), ("name", 1)],                       {"unique": True}),
+            ("competitors",     [("name", 1)],                                        {}),
+            ("feature_updates", [("hash_id", 1)],                                     {"unique": True}),
+            ("feature_updates", [("company_name", 1), ("release_date", -1)],          {}),
+            ("article_summaries",[("url", 1)],                                         {"unique": True}),
+            ("article_summaries",[("query_tag", 1)],                                   {}),
+            ("user_sessions",   [("user_id", 1), ("is_active", 1)],                  {}),
+        ]
+        all_ok = True
+        for collection, keys, opts in index_specs:
+            try:
+                await self.db[collection].create_index(keys, **opts)
+            except Exception as idx_err:
+                # Code 85 = IndexOptionsConflict (already exists, OK to ignore)
+                # Code 86 = IndexKeySpecsConflict
+                # Code 11000 = DuplicateKey (existing docs violate unique — already cleaned)
+                err_code = getattr(idx_err, "code", None)
+                if err_code in (85, 86, 11000):
+                    logger.debug(f"Index on {collection}{keys} already exists or data cleaned — skipping.")
+                else:
+                    logger.warning(f"Index creation failed for {collection}{keys}: {idx_err}")
+                    all_ok = False
+        if all_ok:
             logger.info("Database indexes synchronized successfully.")
-        except Exception as e:
-            logger.warning(f"Database indexing skipped/failed: {e}")
 
     def disconnect(self):
         if self.client:

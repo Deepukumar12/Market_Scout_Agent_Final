@@ -135,7 +135,8 @@ export const runScan = async (payload: {
     force_refresh?: boolean;
 }) => {
     // The backend expects ScanRequest: { company_name, website, time_window_days, force_refresh }
-    const response = await api.post('/scan', payload);
+    // Use a dedicated 180s timeout — the LangGraph pipeline can take 60-120s for new companies.
+    const response = await api.post('/scan', payload, { timeout: 180000 });
     return response.data;
 };
 

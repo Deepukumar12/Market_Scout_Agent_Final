@@ -104,28 +104,33 @@ else
     echo -e "  - ${RED}✗ Error: React Frontend failed to start. Check logs/frontend.log${NC}"
 fi
 
-# 6. Start React Admin Dashboard
-echo -e "\n${BOLD}${BLUE}[5/5] Starting React Admin Console...${NC}"
-cd apps/admin
-nohup npm run dev -- --port 5174 > ../../logs/admin.log 2>&1 &
-ADMIN_PID=$!
-echo $ADMIN_PID > ../../logs/admin.pid
-cd ../..
-
-sleep 2
-if ps -p $ADMIN_PID > /dev/null; then
-    echo -e "  - ${GREEN}✓ React Admin Console started (PID: $ADMIN_PID, Port: 5174)${NC}"
+# 6. Start Localtunnel (exposes backend API to Vercel frontend)
+echo -e "\n${BOLD}${BLUE}[6/6] Starting Localtunnel (API Tunnel → marketscoutagent.loca.lt)...${NC}"
+pkill -f "localtunnel\|lt --port" 2>/dev/null
+sleep 1
+nohup npx localtunnel --port 8000 --subdomain marketscoutagent > logs/tunnel.log 2>&1 &
+TUNNEL_PID=$!
+echo $TUNNEL_PID > logs/tunnel.pid
+sleep 5
+if grep -q "your url is" logs/tunnel.log 2>/dev/null; then
+    TUNNEL_URL=$(grep "your url is" logs/tunnel.log | awk '{print $NF}')
+    echo -e "  - ${GREEN}✓ Localtunnel active: ${BLUE}${TUNNEL_URL}${NC}"
 else
-    echo -e "  - ${RED}✗ Error: React Admin Console failed to start. Check logs/admin.log${NC}"
+    echo -e "  - ${YELLOW}⚠ Tunnel starting... check logs/tunnel.log${NC}"
 fi
 
 # 7. Summary
 echo -e "\n${BOLD}${GREEN}======================================================${NC}"
 echo -e "${BOLD}${GREEN}   ALL SCOUTFORGE AI SERVICES ARE ONLINE & RUNNING    ${NC}"
 echo -e "${BOLD}${GREEN}======================================================${NC}"
-echo -e "  🚀 ${BOLD}Frontend Dashboard:${NC}  ${BLUE}http://localhost:5173${NC}"
-echo -e "  ⚙️  ${BOLD}Admin Command:${NC}      ${BLUE}http://localhost:5174${NC}"
-echo -e "  🌐 ${BOLD}API documentation:${NC}  ${BLUE}http://localhost:8000/docs${NC}"
+echo -e "  🚀 ${BOLD}Live URL (Vercel):${NC}   ${BLUE}https://marketscoutagent.vercel.app${NC}"
+echo -e "  🌐 ${BOLD}API Tunnel:${NC}          ${BLUE}https://marketscoutagent.loca.lt${NC}"
+echo -e "  💻 ${BOLD}Local Dashboard:${NC}     ${BLUE}http://localhost:8000${NC}"
+echo -e "  ⚙️  ${BOLD}Admin Console:${NC}       ${BLUE}http://localhost:5174${NC}"
+echo -e "  📖 ${BOLD}API Docs:${NC}            ${BLUE}http://localhost:8000/docs${NC}"
 echo -e "  📂 ${BOLD}Runtime Logs:${NC}        ${BOLD}./logs/${NC}"
-echo -e "\nTo stop the platform at any time, run: ${BOLD}./stop_platform.sh${NC}"
+echo -e "\n  ${BOLD}Commands:${NC}"
+echo -e "  Stop:        ${YELLOW}./stop_platform.sh${NC}"
+echo -e "  Deploy:      ${YELLOW}cd apps/frontend && npm run build && npx vercel --prod${NC}"
+echo -e "  Git Push:    ${YELLOW}git add -A && git commit -m 'update' && git push${NC}"
 echo -e "${BOLD}${GREEN}======================================================${NC}\n"

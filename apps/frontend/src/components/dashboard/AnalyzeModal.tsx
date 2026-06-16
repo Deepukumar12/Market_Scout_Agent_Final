@@ -41,16 +41,15 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
 
   const isPromptInjection = (input: string) => {
     const patterns = [
-      /ignore previous/i,
-      /you are/i,
-      /which model/i,
+      /ignore previous instructions/i,
+      /you are now/i,
+      /which (llm|model|ai) (are you|is this)/i,
       /who are you/i,
-      /list files/i,
-      /delete/i,
+      /list (all )?files/i,
       /drop table/i,
       /<script/i,
-      /system/i,
-      /admin/i
+      /\bsystem prompt\b/i,
+      /\badmin panel\b/i
     ];
     return patterns.some(p => p.test(input));
   };
@@ -304,17 +303,28 @@ const AnalyzeModal: React.FC<AnalyzeModalProps> = ({
                       <div className="space-y-2">
                         <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-white uppercase italic tracking-tighter">System Error</h3>
                         <p className="text-sm text-[#86868B] font-medium leading-relaxed">
-                          The intelligence pipeline encountered an anomaly while synthesizing data. Please verify your connection or try a different company.
+                          The intelligence pipeline encountered an anomaly while synthesizing data. This is usually a temporary network or rate-limit issue.
+                        </p>
+                        <p className="text-xs text-[#0071E3] font-semibold mt-2">
+                          💡 Try again in a few seconds, or try a different company name.
                         </p>
                       </div>
-                      <Button 
-                        onClick={() => {
-                          onAnalyze({ name: company, domain: '', logo: '' });
-                        }}
-                        className="w-full h-14 rounded-2xl bg-[#0071E3] text-white font-bold"
-                      >
-                        Retry Mission
-                      </Button>
+                      <div className="flex flex-col gap-3">
+                        <Button 
+                          onClick={() => {
+                            onAnalyze({ name: company, domain: '', logo: '' });
+                          }}
+                          className="w-full h-14 rounded-2xl bg-[#0071E3] text-white font-bold"
+                        >
+                          Retry Mission
+                        </Button>
+                        <button
+                          onClick={onClose}
+                          className="text-sm text-[#6E6E73] hover:text-[#1D1D1F] dark:hover:text-white transition-colors font-medium"
+                        >
+                          Try a Different Company
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">

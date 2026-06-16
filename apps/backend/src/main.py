@@ -2,8 +2,10 @@ import os
 import logging
 import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -70,6 +72,7 @@ if cors_origins_env == "*" or not cors_origins_env:
     allowed_origins = [
         "https://marketscoutagent.vercel.app",
         "https://marketscoutagent-admin.vercel.app",
+        "https://marketscoutagent.loca.lt",
         "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost:8000",
@@ -83,7 +86,7 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"^(https://.*\.vercel\.app|http://(localhost|127\.0\.0\.1)(:\d+)?)$",
+    allow_origin_regex=r"^(https://.*\.(vercel\.app|loca\.lt)|http://(localhost|127\.0\.0\.1)(:\d+)?)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -101,13 +104,32 @@ app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-@app.get("/")
-def read_root():
-    return {"message": "MarketScout Agent API is running."}
-
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+# ─── Serve React SPA ─────────────────────────────────────────────────────────
+# The frontend is built into apps/frontend/dist and served from the same origin
+# as the API, eliminating CORS issues and the localtunnel warning bypass.
+_FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+if _FRONTEND_DIST.exists():
+    _assets_dir = _FRONTEND_DIST / "assets"
+    if _assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(_assets_dir)), name="frontend-assets")
+
+    @app.get("/", include_in_schema=False)
+    @app.get("/{catchall:path}", include_in_schema=False)
+    async def serve_react_spa(catchall: str = ""):
+        """Serve the React SPA index.html for all unmatched routes (client-side routing)."""
+        index = _FRONTEND_DIST / "index.html"
+        if index.exists():
+            return FileResponse(str(index), media_type="text/html")
+        return JSONResponse({"status": "healthy", "message": "MarketScout Agent API is running."})
+else:
+    @app.get("/")
+    def read_root():
+        return {"message": "MarketScout Agent API is running. Build the frontend to enable the UI."}
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))

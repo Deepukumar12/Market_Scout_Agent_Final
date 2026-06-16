@@ -67,10 +67,32 @@ const DashboardLayout = () => {
     // NOTE: Simulated progress is removed. 
     // The LogConsole now receives real-time "Phase X" signals via WebSockets
     // which automatically updates the executionStore steps.
+
+    const attemptScan = async (attempt: number): Promise<any> => {
+      try {
+        console.log(`Starting mission for ${company.name} (Attempt ${attempt}, Force Refresh: ${forceRefresh})...`);
+        return await analyzeCompany(company, forceRefresh);
+      } catch (error: any) {
+        const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
+        const isNetworkError = !error.response;
+        const status = error.response?.status;
+        console.error(`Mission attempt ${attempt} failed:`, {
+          type: isTimeout ? 'TIMEOUT' : isNetworkError ? 'NETWORK_ERROR' : `HTTP_${status}`,
+          message: error.message,
+          status,
+        });
+        // Auto-retry once for network errors and timeouts (not for auth/client errors)
+        if (attempt === 1 && (isTimeout || isNetworkError || status === 503 || status === 502)) {
+          console.warn('Retrying scan in 2 seconds...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return attemptScan(2);
+        }
+        throw error;
+      }
+    };
     
     try {
-      console.log(`Starting mission for ${company.name} (Force Refresh: ${forceRefresh})...`);
-      const scanResult = await analyzeCompany(company, forceRefresh);
+      const scanResult = await attemptScan(1);
       
       // Critical Path Success
       setStep(progressSteps.length - 1);
@@ -90,9 +112,7 @@ const DashboardLayout = () => {
         console.warn('Dashboard sync delayed:', refreshErr);
       }
     } catch (error: any) {
-      console.error('Mission failed:', error);
-      
-      // Categorize error for better UX
+      console.error('Mission failed after all retries:', error);
       setAnalyzeStatus('error');
       setStep(0);
       stopExecution();
