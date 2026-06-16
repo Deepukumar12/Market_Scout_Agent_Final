@@ -94,7 +94,7 @@ async def test_once_schedule_deactivation_integration(monkeypatch):
         assert updated_sched["last_run"] is not None
         
         # Verify scan was triggered for the user
-        mock_scan.assert_called_once_with(target_user_id=user_id_str)
+        mock_scan.assert_called_once_with(target_user_id=user_id_str, is_manual_trigger=False)
         
     finally:
         # Cleanup
