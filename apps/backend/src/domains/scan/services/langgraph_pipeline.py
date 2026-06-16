@@ -550,39 +550,37 @@ async def feature_extraction_node(state: PipelineState):
     return state
 
 async def fact_verification_node(state: PipelineState):
-    """Fact Verification Agent: 7 day rule & false-positive filtering (zero LLM, pure Python)."""
+    """Fact Verification Agent: 8-day IST rule & false-positive filtering (zero LLM, pure Python)."""
     if state["errors"] or not state["extracted_features"]:
         return state
         
     features = state["extracted_features"]
     company = state["company_name"]
-    await agent_logger.log(f"Phase 4: Verifying release facts and enforcing strict 7-day date filters...", "AGENT", user_id=state.get("user_id"))
+    await agent_logger.log(f"Phase 4: Verifying release facts and enforcing strict 8-day IST date filters...", "AGENT", user_id=state.get("user_id"))
 
-    now = datetime.now(timezone.utc)
-    lookback_days = 7
-    cutoff = now - timedelta(days=lookback_days)
-
-    from src.services.data.scraper_service import _parse_iso_date
+    from src.core.datetime_utils import get_now_ist, parse_datetime_to_ist
+    now_ist = get_now_ist()
+    today = now_ist.date()
+    cutoff_date = today - timedelta(days=7)
 
     # First pass: date-based filtering (no LLM needed — fast)
     date_filtered = []
     for f in features:
         title = f.get("feature_title", "")
         pub_date_str = f.get("publish_date")
-        dt = None
-        if pub_date_str and pub_date_str not in ("UNKNOWN", "YYYY-MM-DD", "", None):
-            dt = _parse_iso_date(str(pub_date_str))
+        dt = parse_datetime_to_ist(pub_date_str)
         if not dt:
-            dt = now
-            f["publish_date"] = now.strftime("%Y-%m-%d")
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        if dt < cutoff:
+            dt = now_ist
+            
+        feature_date = dt.date()
+        if feature_date < cutoff_date:
             logger.info(f"Discarded feature '{title}' - too old: {pub_date_str}")
             continue
-        if dt > now + timedelta(days=2):
+        if feature_date > today + timedelta(days=1):
             logger.info(f"Discarded feature '{title}' - future date: {pub_date_str}")
             continue
+            
+        f["publish_date"] = feature_date.strftime("%Y-%m-%d")
         date_filtered.append(f)
 
     # Second pass: check pre-extracted verification flag (zero LLM calls!)
@@ -667,31 +665,19 @@ async def feature_classification_node(state: PipelineState):
     return state
 
 async def evidence_scoring_node(state: PipelineState):
-    """Evidence Scoring Agent: 100/90/80/70/60/40/20."""
+    """Evidence Scoring Agent: Calculates dynamically using the modular Confidence Engine."""
     if state["errors"] or not state["classified_features"]:
         return state
         
     classified = state["classified_features"]
     scored = []
     
+    from src.services.ai.confidence_engine import calculate_confidence_score
     for f in classified:
-        url = f.get("source_url", "").lower()
-        title = f.get("feature_title", "").lower()
-        pub_date = f.get("publish_date", "")
-        
-        is_official = any(w in url or w in title for w in ["docs.", "/docs", "changelog", "release-notes", "release", "/blog/engineering", "/blog/developer", "developer."])
-        is_community = any(w in url for w in ["reddit.com", "news.ycombinator.com", "medium.com"])
-        
-        score = 60
-        if is_official:
-            if pub_date and pub_date != "UNKNOWN":
-                score = 100
-            else:
-                score = 80
-        elif is_community:
-            score = 40
-            
-        f["confidence_score"] = float(score)
+        f_copy = f.copy()
+        f_copy["competitor"] = state["company_name"]
+        score = calculate_confidence_score(f_copy)
+        f["confidence_score"] = score
         scored.append(f)
         
     state["scored_features"] = scored
@@ -879,12 +865,13 @@ async def continuous_monitoring_node(state: PipelineState):
         logger.error(f"Failed to insert snapshot: {e}")
         
     if features:
+        from src.core.datetime_utils import get_authoritative_publication_date
         feature_docs = []
         for f in features:
             f_doc = f.copy()
             f_doc["competitor"] = company
             f_doc["detected_at"] = now
-            f_doc["created_at"] = now
+            f_doc["created_at"] = get_authoritative_publication_date(f_doc)
             feature_docs.append(f_doc)
             
         try:

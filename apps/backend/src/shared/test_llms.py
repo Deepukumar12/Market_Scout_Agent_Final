@@ -2,10 +2,12 @@ import asyncio
 import os
 import sys
 import httpx
+import pytest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from src.core.config import settings
 
+@pytest.mark.anyio
 async def test_gemini():
     print("Testing Gemini...")
     key = settings.GEMINI_API_KEY
@@ -26,7 +28,9 @@ async def test_gemini():
     except Exception as e:
         print(f"Gemini Failed: {e}")
 
+@pytest.mark.anyio
 async def test_groq():
+
     print("Testing Groq...")
     key = settings.GROQ_API_KEY
     model = settings.GROQ_MODEL

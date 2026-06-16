@@ -177,7 +177,6 @@ async def delete_competitor(
 @router.post("/competitors/{competitor_id}/scan", dependencies=[Depends(scan_limiter)])
 async def run_competitor_scan_endpoint(
     competitor_id: str,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user)
 ):
     from bson import ObjectId
@@ -202,43 +201,19 @@ async def run_competitor_scan_endpoint(
         {"$set": {"status": "Scanning"}}
     )
     
-    from src.domains.scan.services.scan_pipeline import run_scan
-    from src.domains.scan.models.scan import ScanRequest
     from src.shared.sanitizer import validate_company_name
+    from src.core.celery_client import trigger_background_scan
     
     # Normalize company name through identity validator
     validated_name = validate_company_name(competitor["name"], raise_on_ambiguous=False)
     
-    scan_req = ScanRequest(
+    # Trigger Celery background scan
+    trigger_background_scan(
+        competitor_id=competitor_id,
         company_name=validated_name,
-        website=competitor.get("url"),
-        time_window_days=7
+        url=competitor.get("url"),
+        user_id=str(current_user.id)
     )
     
-    try:
-        result = await run_scan(scan_req, user_id=str(current_user.id))
-    except Exception as e:
-        await collection.update_one(
-            {"_id": ObjectId(competitor_id)},
-            {"$set": {"status": "Failed"}}
-        )
-        raise HTTPException(status_code=500, detail=f"Scan failed: {e}")
-        
-    if result is None:
-        await collection.update_one(
-            {"_id": ObjectId(competitor_id)},
-            {"$set": {"status": "Failed"}}
-        )
-        raise HTTPException(status_code=500, detail="Scan failed: LLM returned empty results.")
-        
-    # Queue database persistence
-    from src.domains.scan.controllers.scan import _persist_scan_data
-    background_tasks.add_task(
-        _persist_scan_data,
-        scan_req,
-        result,
-        current_user
-    )
-    
-    return result
+    return {"status": "queued", "message": "Competitor scan queued in background."}
 

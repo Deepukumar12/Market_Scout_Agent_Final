@@ -19,72 +19,7 @@ from bson import ObjectId
 
 router = APIRouter()
 
-def merge_and_deduplicate(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Deduplicate and merge signals / updates in-memory.
-    """
-    merged = {}
-    for item in items:
-        url = (item.get("url") or item.get("source_url") or "").strip()
-        title = (item.get("title") or item.get("feature_name") or "").strip().lower()
-        company = (item.get("company_name") or item.get("query_tag") or item.get("organization") or "").strip().lower()
-        
-        match_key = None
-        if url:
-            for k, val in merged.items():
-                v_url = (val.get("url") or val.get("source_url") or "").strip()
-                if v_url == url:
-                    match_key = k
-                    break
-        if not match_key and title and company:
-            for k, val in merged.items():
-                v_title = (val.get("title") or val.get("feature_name") or "").strip().lower()
-                v_company = (val.get("company_name") or val.get("query_tag") or val.get("organization") or "").strip().lower()
-                if v_company == company and v_title == title:
-                    match_key = k
-                    break
-                    
-        if match_key:
-            existing = merged[match_key]
-            # Keep earliest publication date
-            if item["_authoritative_date"] < existing["_authoritative_date"]:
-                existing["_authoritative_date"] = item["_authoritative_date"]
-                if "release_date" in existing and "release_date" in item:
-                    existing["release_date"] = item["release_date"]
-                if "time" in existing and "time" in item:
-                    existing["time"] = item["time"]
-                if "timestamp" in existing and "timestamp" in item:
-                    existing["timestamp"] = item["timestamp"]
-                    
-            # Keep longest summary
-            existing_summary = existing.get("summary") or existing.get("description") or existing.get("technical_summary") or ""
-            item_summary = item.get("summary") or item.get("description") or item.get("technical_summary") or ""
-            if len(item_summary) > len(existing_summary):
-                if "summary" in existing:
-                    existing["summary"] = item_summary
-                if "description" in existing:
-                    existing["description"] = item_summary
-                if "technical_summary" in existing:
-                    existing["technical_summary"] = item_summary
-                if "feature_name" in existing and "feature_name" in item and len(item.get("feature_name", "")) > len(existing.get("feature_name", "")):
-                    existing["feature_name"] = item["feature_name"]
-                if "title" in existing and "title" in item and len(item.get("title", "")) > len(existing.get("title", "")):
-                    existing["title"] = item["title"]
-
-            # Merge citations
-            citations = existing.setdefault("citations", [])
-            if url and url not in citations:
-                citations.append(url)
-            for c in item.get("citations", []):
-                if c and c not in citations:
-                    citations.append(c)
-        else:
-            # Initialize citations
-            item["citations"] = [url] if url else []
-            key = url if url else f"{company}|{title}"
-            merged[key] = item
-            
-    return list(merged.values())
+from src.services.data.duplicate_removal_engine import deduplicate_and_merge_signals as merge_and_deduplicate
 
 # --- MODELS ---
 class GlobalMetrics(BaseModel):

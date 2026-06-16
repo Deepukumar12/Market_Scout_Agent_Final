@@ -24,14 +24,13 @@ def format_ist(dt: datetime, format_str: str = "%d %b %Y, %I:%M %p") -> str:
 def parse_datetime_to_ist(val: Any) -> Optional[datetime]:
     """
     Parses any value (datetime, string, etc.) into an IST-aware datetime.
-    If it's just a YYYY-MM-DD string, treats it as that day at 00:00 in Asia/Kolkata timezone.
+    Ensures the calendar day from the source is preserved exactly in IST without timezone-induced day shifting.
     """
     if not val:
         return None
     if isinstance(val, datetime):
-        if val.tzinfo is None:
-            val = val.replace(tzinfo=timezone.utc)
-        return val.astimezone(IST)
+        # Preserve calendar day exactly by attaching IST directly
+        return datetime(val.year, val.month, val.day, val.hour, val.minute, val.second, tzinfo=IST)
     
     if not isinstance(val, str):
         return None
@@ -44,18 +43,23 @@ def parse_datetime_to_ist(val: Any) -> Optional[datetime]:
     if len(s) >= 10 and re.match(r'^\d{4}-\d{2}-\d{2}', s):
         try:
             dt = datetime.strptime(s[:10], "%Y-%m-%d")
-            # Set to IST timezone directly so calendar day is preserved
             return dt.replace(tzinfo=IST)
         except ValueError:
             pass
+
+    # Try parsing with dateparser to preserve calendar day
+    try:
+        import dateparser
+        parsed = dateparser.parse(s)
+        if parsed:
+            return datetime(parsed.year, parsed.month, parsed.day, parsed.hour, parsed.minute, parsed.second, tzinfo=IST)
+    except Exception:
+        pass
             
     # Try parsing as ISO/datetime strings
     try:
-        # replace Z just in case
         dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(IST)
+        return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=IST)
     except ValueError:
         pass
         
@@ -75,9 +79,7 @@ def parse_datetime_to_ist(val: Any) -> Optional[datetime]:
     ):
         try:
             dt = datetime.strptime(s_trunc.replace("Z", "+00:00"), fmt)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt.astimezone(IST)
+            return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=IST)
         except (ValueError, TypeError):
             continue
             
@@ -91,9 +93,9 @@ def get_authoritative_publication_date(doc: Dict[str, Any]) -> datetime:
     2. release_date
     3. updated_date / updated_at
     4. published_at / pushed_at (GitHub release timestamp)
-    5. scraped_at / ingested_at (documentation/ingestion timestamp fallbacks)
-    6. created_at (absolute final fallback)
+    5. created_at (absolute final fallback)
     
+    Excludes database insertion time (scraped_at, ingested_at).
     Returns an IST-aware datetime.
     """
     date_fields = [
@@ -104,8 +106,6 @@ def get_authoritative_publication_date(doc: Dict[str, Any]) -> datetime:
         "updated_at",
         "published_at",
         "pushed_at",
-        "scraped_at",
-        "ingested_at",
         "created_at"
     ]
     
@@ -118,3 +118,4 @@ def get_authoritative_publication_date(doc: Dict[str, Any]) -> datetime:
             
     # Absolute fallback
     return get_now_ist()
+
